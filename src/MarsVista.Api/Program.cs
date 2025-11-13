@@ -1,5 +1,8 @@
 using MarsVista.Api.Data;
+using MarsVista.Api.Services;
 using Microsoft.EntityFrameworkCore;
+using Polly;
+using Polly.Extensions.Http;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,6 +15,18 @@ builder.Services.AddDbContext<MarsVistaDbContext>(options =>
         npgsqlOptions => npgsqlOptions.EnableRetryOnFailure()
     )
     .UseSnakeCaseNamingConvention());
+
+// HTTP client for NASA API with resilience policies
+builder.Services.AddHttpClient("NASA", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(30);
+    client.DefaultRequestHeaders.Add("User-Agent", "MarsVistaAPI/1.0");
+})
+.AddPolicyHandler(GetRetryPolicy())
+.AddPolicyHandler(GetCircuitBreakerPolicy());
+
+// Scraper services
+builder.Services.AddScoped<IScraperService, PerseveranceScraper>();
 
 // Register database seeder
 builder.Services.AddScoped<DatabaseSeeder>();
@@ -43,3 +58,28 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+// Retry policy with exponential backoff
+static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy()
+{
+    return HttpPolicyExtensions
+        .HandleTransientHttpError() // 5xx, 408, network failures
+        .OrResult(msg => msg.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+        .WaitAndRetryAsync(
+            retryCount: 3,
+            sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
+            onRetry: (outcome, timespan, retryCount, context) =>
+            {
+                Console.WriteLine($"Request failed. Waiting {timespan.TotalSeconds}s before retry {retryCount}...");
+            });
+}
+
+// Circuit breaker - stop hitting NASA API if it's down
+static IAsyncPolicy<HttpResponseMessage> GetCircuitBreakerPolicy()
+{
+    return HttpPolicyExtensions
+        .HandleTransientHttpError()
+        .CircuitBreakerAsync(
+            handledEventsAllowedBeforeBreaking: 5,
+            durationOfBreak: TimeSpan.FromMinutes(1));
+}
