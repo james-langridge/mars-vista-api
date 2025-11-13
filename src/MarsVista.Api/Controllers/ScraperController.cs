@@ -90,6 +90,118 @@ public class ScraperController : ControllerBase
     }
 
     /// <summary>
+    /// Bulk scrape a range of sols for a rover
+    /// </summary>
+    /// <param name="roverName">Rover name</param>
+    /// <param name="startSol">Starting sol (inclusive)</param>
+    /// <param name="endSol">Ending sol (inclusive, defaults to latest)</param>
+    /// <param name="delayMs">Delay in milliseconds between requests (default 1000ms)</param>
+    [HttpPost("{roverName}/bulk")]
+    public async Task<IActionResult> BulkScrape(
+        string roverName,
+        [FromQuery] int startSol = 1,
+        [FromQuery] int? endSol = null,
+        [FromQuery] int delayMs = 1000)
+    {
+        var scraper = _scrapers.FirstOrDefault(s =>
+            s.RoverName.Equals(roverName, StringComparison.OrdinalIgnoreCase));
+
+        if (scraper == null)
+        {
+            return NotFound(new { error = $"No scraper found for rover: {roverName}" });
+        }
+
+        // Validate parameters
+        if (startSol < 0)
+        {
+            return BadRequest(new { error = "startSol must be >= 0" });
+        }
+
+        if (delayMs < 0 || delayMs > 10000)
+        {
+            return BadRequest(new { error = "delayMs must be between 0 and 10000" });
+        }
+
+        // Get latest sol if endSol not specified
+        var actualEndSol = endSol ?? await GetLatestSolAsync(scraper);
+
+        if (actualEndSol < startSol)
+        {
+            return BadRequest(new { error = "endSol must be >= startSol" });
+        }
+
+        var totalSols = actualEndSol - startSol + 1;
+
+        _logger.LogInformation(
+            "Bulk scrape triggered for {RoverName}: sols {StartSol}-{EndSol} ({TotalSols} sols), {DelayMs}ms delay",
+            roverName, startSol, actualEndSol, totalSols, delayMs);
+
+        var startTime = DateTime.UtcNow;
+        var totalPhotos = 0;
+        var successfulSols = 0;
+        var skippedSols = 0;
+        var failedSols = new List<int>();
+
+        try
+        {
+            for (var sol = startSol; sol <= actualEndSol; sol++)
+            {
+                try
+                {
+                    var count = await scraper.ScrapeSolAsync(sol);
+                    totalPhotos += count;
+
+                    if (count > 0)
+                    {
+                        successfulSols++;
+                        _logger.LogInformation(
+                            "Sol {Sol}: {Count} photos scraped ({Progress}/{Total})",
+                            sol, count, sol - startSol + 1, totalSols);
+                    }
+                    else
+                    {
+                        skippedSols++;
+                        _logger.LogDebug("Sol {Sol}: 0 photos (already scraped or no photos)", sol);
+                    }
+
+                    // Add delay between requests (except for last one)
+                    if (sol < actualEndSol && delayMs > 0)
+                    {
+                        await Task.Delay(delayMs);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    failedSols.Add(sol);
+                    _logger.LogError(ex, "Failed to scrape sol {Sol}", sol);
+                    // Continue with next sol instead of stopping
+                }
+            }
+
+            var duration = DateTime.UtcNow - startTime;
+
+            return Ok(new
+            {
+                rover = roverName,
+                startSol,
+                endSol = actualEndSol,
+                totalSols,
+                successfulSols,
+                skippedSols,
+                failedSols = failedSols.Count > 0 ? failedSols : null,
+                totalPhotosScraped = totalPhotos,
+                durationSeconds = (int)duration.TotalSeconds,
+                timestamp = DateTime.UtcNow
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Bulk scrape failed for {RoverName}", roverName);
+            return StatusCode(500, new { error = "Bulk scrape failed", message = ex.Message });
+        }
+    }
+
+    /// <summary>
     /// Get available scrapers
     /// </summary>
     [HttpGet]
@@ -99,9 +211,25 @@ public class ScraperController : ControllerBase
         {
             rover = s.RoverName,
             scrapeUrl = $"/api/scraper/{s.RoverName.ToLower()}",
-            scrapeSolUrl = $"/api/scraper/{s.RoverName.ToLower()}/sol/{{sol}}"
+            scrapeSolUrl = $"/api/scraper/{s.RoverName.ToLower()}/sol/{{sol}}",
+            bulkScrapeUrl = $"/api/scraper/{s.RoverName.ToLower()}/bulk?startSol=1&endSol=100"
         });
 
         return Ok(scraperInfo);
+    }
+
+    /// <summary>
+    /// Helper to get latest sol for a rover
+    /// </summary>
+    private async Task<int> GetLatestSolAsync(IScraperService scraper)
+    {
+        // For now, hardcode based on rover name
+        // TODO: Could fetch from NASA API dynamically
+        return scraper.RoverName switch
+        {
+            "Perseverance" => 1682,
+            "Curiosity" => 4683,
+            _ => 1000
+        };
     }
 }
