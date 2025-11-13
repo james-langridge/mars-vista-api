@@ -1,5 +1,7 @@
+using MarsVista.Api.Data;
 using MarsVista.Api.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace MarsVista.Api.Controllers;
 
@@ -199,6 +201,55 @@ public class ScraperController : ControllerBase
             _logger.LogError(ex, "Bulk scrape failed for {RoverName}", roverName);
             return StatusCode(500, new { error = "Bulk scrape failed", message = ex.Message });
         }
+    }
+
+    /// <summary>
+    /// Get scraping progress for a rover
+    /// </summary>
+    [HttpGet("{roverName}/progress")]
+    public async Task<IActionResult> GetProgress(string roverName)
+    {
+        var scraper = _scrapers.FirstOrDefault(s =>
+            s.RoverName.Equals(roverName, StringComparison.OrdinalIgnoreCase));
+
+        if (scraper == null)
+        {
+            return NotFound(new { error = $"No scraper found for rover: {roverName}" });
+        }
+
+        // Get database context through DI
+        var context = HttpContext.RequestServices.GetRequiredService<MarsVistaDbContext>();
+
+        var rover = await context.Rovers
+            .Include(r => r.Photos)
+            .FirstOrDefaultAsync(r => r.Name.ToLower() == roverName.ToLower());
+
+        if (rover == null)
+        {
+            return NotFound(new { error = $"Rover not found: {roverName}" });
+        }
+
+        var totalPhotos = rover.Photos.Count;
+        var solsWithPhotos = rover.Photos.Select(p => p.Sol).Distinct().Count();
+        var latestSol = rover.Photos.Any() ? rover.Photos.Max(p => p.Sol) : 0;
+        var oldestSol = rover.Photos.Any() ? rover.Photos.Min(p => p.Sol) : 0;
+        var lastPhotoDate = rover.Photos.Any() ? rover.Photos.Max(p => p.CreatedAt) : (DateTime?)null;
+
+        // Get expected max sol for this rover
+        var expectedMaxSol = await GetLatestSolAsync(scraper);
+
+        return Ok(new
+        {
+            rover = roverName,
+            totalPhotos,
+            solsScraped = solsWithPhotos,
+            expectedTotalSols = expectedMaxSol,
+            percentComplete = expectedMaxSol > 0 ? Math.Round((double)solsWithPhotos / expectedMaxSol * 100, 2) : 0,
+            oldestSol,
+            latestSol,
+            lastPhotoScraped = lastPhotoDate,
+            timestamp = DateTime.UtcNow
+        });
     }
 
     /// <summary>
