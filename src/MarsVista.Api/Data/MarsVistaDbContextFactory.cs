@@ -13,7 +13,8 @@ public class MarsVistaDbContextFactory : IDesignTimeDbContextFactory<MarsVistaDb
         // In a real scenario, you might read this from environment variables
         var connectionString = "Host=localhost;Port=5432;Database=marsvista_dev;Username=marsvista;Password=marsvista_dev_password";
 
-        optionsBuilder.UseNpgsql(connectionString);
+        optionsBuilder.UseNpgsql(connectionString)
+            .UseSnakeCaseNamingConvention();
 
         return new MarsVistaDbContext(optionsBuilder.Options);
     }
