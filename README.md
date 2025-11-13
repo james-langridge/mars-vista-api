@@ -50,9 +50,35 @@ The API will be available at `http://localhost:5127`
 
 ### Scraper Endpoints
 
-**Scrape specific sol for Perseverance:**
+**Bulk scrape (recommended for full data collection):**
 ```bash
-POST /api/scraper/perseverance/sol/{sol}
+POST /api/scraper/{rover}/bulk?startSol=1&endSol=1682&delayMs=1000
+```
+
+Example - scrape all Perseverance data:
+```bash
+curl -X POST "http://localhost:5127/api/scraper/perseverance/bulk?startSol=1&endSol=1682&delayMs=1000"
+```
+
+Response:
+```json
+{
+  "rover": "perseverance",
+  "startSol": 1,
+  "endSol": 1682,
+  "totalSols": 1682,
+  "successfulSols": 1650,
+  "skippedSols": 32,
+  "failedSols": null,
+  "totalPhotosScraped": 887593,
+  "durationSeconds": 32400,
+  "timestamp": "2025-11-13T21:00:00Z"
+}
+```
+
+**Scrape specific sol:**
+```bash
+POST /api/scraper/{rover}/sol/{sol}
 ```
 
 Example:
@@ -60,19 +86,28 @@ Example:
 curl -X POST "http://localhost:5127/api/scraper/perseverance/sol/1000"
 ```
 
+**Scrape latest photos:**
+```bash
+POST /api/scraper/{rover}
+```
+
+**Get scraping progress:**
+```bash
+GET /api/scraper/{rover}/progress
+```
+
 Response:
 ```json
 {
   "rover": "perseverance",
-  "sol": 1000,
-  "photosScraped": 385,
-  "timestamp": "2023-12-13T09:18:57.463Z"
+  "totalPhotos": 450000,
+  "solsScraped": 850,
+  "expectedTotalSols": 1682,
+  "percentComplete": 50.53,
+  "oldestSol": 1,
+  "latestSol": 1200,
+  "lastPhotoScraped": "2025-11-13T21:00:00Z"
 }
-```
-
-**Scrape latest photos for Perseverance:**
-```bash
-POST /api/scraper/perseverance
 ```
 
 ## Database Schema
@@ -89,6 +124,24 @@ Key features:
 - JSONB storage preserves all NASA fields for future feature development
 - UTC timestamps for consistent timezone handling
 
+## Monitoring Scraper Progress
+
+For long-running bulk scrapes, use the included monitoring CLI:
+
+```bash
+./scrape-monitor.sh perseverance
+```
+
+Displays real-time progress:
+- Total photos scraped
+- Sols completed (e.g., 850/1682 = 50.53%)
+- Visual progress bar
+- Current speed (photos/second)
+- Estimated time remaining
+- Last update timestamp
+
+The monitor refreshes every 2 seconds and provides a clean, colorful interface for tracking multi-hour scraping sessions.
+
 ## Performance
 
 Tested with Perseverance rover data:
@@ -97,6 +150,7 @@ Tested with Perseverance rover data:
 - **Sol 1000**: 385 photos in 19.8 seconds
 - **Sol 1368**: 580 photos in 19.4 seconds
 - **Re-scrape (idempotent)**: 0 photos in 0.08 seconds
+- **Bulk scrape estimate**: ~9-10 hours for all 1,682 sols (with 1s delay)
 
 ## Development Status
 
@@ -104,8 +158,10 @@ Currently implemented:
 - ✅ PostgreSQL database with migrations
 - ✅ Rover and camera seed data
 - ✅ Perseverance NASA API scraper with resilience policies
-- ✅ Manual scraper endpoints
+- ✅ Bulk scraper endpoint for efficient multi-sol ingestion
+- ✅ Progress monitoring endpoint and CLI tool
 - ✅ Hybrid storage (indexed columns + JSONB)
+- ✅ Idempotent operations with duplicate detection
 
 Planned:
 - 🔄 Additional rover scrapers (Curiosity, Opportunity, Spirit)
