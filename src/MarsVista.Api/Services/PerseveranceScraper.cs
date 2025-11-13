@@ -348,14 +348,14 @@ public class PerseveranceScraper : IScraperService
     }
 
     /// <summary>
-    /// Safely extract DateTime from JSON element
+    /// Safely extract DateTime from JSON element (assumes UTC timestamps from NASA)
     /// </summary>
     private static DateTime? TryGetDateTime(JsonElement element, string property)
     {
         var str = TryGetString(element, property);
         if (str != null && DateTime.TryParse(str, out var dateTime))
         {
-            return dateTime;
+            return DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
         }
         return null;
     }
