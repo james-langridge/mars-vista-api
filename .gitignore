@@ -48,3 +48,10 @@ CLAUDE.md
 
 bin/
 obj/
+
+# Docker
+.env*
+
+# PostgreSQL
+*.sql
+*.dump
