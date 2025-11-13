@@ -13,11 +13,22 @@ builder.Services.AddDbContext<MarsVistaDbContext>(options =>
     )
     .UseSnakeCaseNamingConvention());
 
+// Register database seeder
+builder.Services.AddScoped<DatabaseSeeder>();
+
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
+
+// Seed database on startup in development
+if (app.Environment.IsDevelopment())
+{
+    using var scope = app.Services.CreateScope();
+    var seeder = scope.ServiceProvider.GetRequiredService<DatabaseSeeder>();
+    await seeder.SeedAsync();
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
