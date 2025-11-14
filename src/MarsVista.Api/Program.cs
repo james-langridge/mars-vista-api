@@ -30,7 +30,13 @@ builder.Services.AddScoped<IRoverQueryService, RoverQueryService>();
 builder.Services.AddScoped<IPhotoQueryService, PhotoQueryService>();
 
 // Scraper services (action layer - side effects)
+// Register scrapers by rover name for dynamic resolution
+builder.Services.AddKeyedScoped<IScraperService, PerseveranceScraper>("perseverance");
+builder.Services.AddKeyedScoped<IScraperService, CuriosityScraper>("curiosity");
+
+// Also register non-keyed for IEnumerable<IScraperService> injection
 builder.Services.AddScoped<IScraperService, PerseveranceScraper>();
+builder.Services.AddScoped<IScraperService, CuriosityScraper>();
 
 // Register database seeder
 builder.Services.AddScoped<DatabaseSeeder>();
