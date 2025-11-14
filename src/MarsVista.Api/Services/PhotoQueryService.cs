@@ -69,7 +69,9 @@ public class PhotoQueryService : IPhotoQueryService
             {
                 Id = p.Id,
                 Sol = p.Sol,
-                ImgSrc = p.ImgSrcMedium ?? p.ImgSrcLarge ?? p.ImgSrcFull ?? "",
+                ImgSrc = !string.IsNullOrEmpty(p.ImgSrcMedium) ? p.ImgSrcMedium :
+                         !string.IsNullOrEmpty(p.ImgSrcLarge) ? p.ImgSrcLarge :
+                         !string.IsNullOrEmpty(p.ImgSrcFull) ? p.ImgSrcFull : "",
                 EarthDate = p.EarthDate.HasValue ? p.EarthDate.Value.ToString("yyyy-MM-dd") : "",
                 Camera = new CameraDto
                 {
@@ -132,7 +134,9 @@ public class PhotoQueryService : IPhotoQueryService
             {
                 Id = p.Id,
                 Sol = p.Sol,
-                ImgSrc = p.ImgSrcMedium ?? p.ImgSrcLarge ?? p.ImgSrcFull ?? "",
+                ImgSrc = !string.IsNullOrEmpty(p.ImgSrcMedium) ? p.ImgSrcMedium :
+                         !string.IsNullOrEmpty(p.ImgSrcLarge) ? p.ImgSrcLarge :
+                         !string.IsNullOrEmpty(p.ImgSrcFull) ? p.ImgSrcFull : "",
                 EarthDate = p.EarthDate.HasValue ? p.EarthDate.Value.ToString("yyyy-MM-dd") : "",
                 Camera = new CameraDto
                 {
