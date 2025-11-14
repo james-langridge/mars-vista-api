@@ -48,6 +48,84 @@ The API will be available at `http://localhost:5127`
 
 ## API Endpoints
 
+### Query Endpoints (Public API)
+
+**List all rovers:**
+```bash
+GET /api/v1/rovers
+```
+
+**Get specific rover:**
+```bash
+GET /api/v1/rovers/{name}
+```
+
+**Query photos with filters:**
+```bash
+GET /api/v1/rovers/{name}/photos?sol=1000&camera=NAVCAM_LEFT&page=1&per_page=25
+```
+
+Query parameters:
+- `sol`: Martian sol number (e.g., `sol=1000`)
+- `earth_date`: Earth date in YYYY-MM-DD format (e.g., `earth_date=2024-06-15`)
+- `camera`: Camera name (e.g., `camera=NAVCAM_LEFT`)
+- `page`: Page number (default: 1)
+- `per_page`: Results per page (default: 25, max: 100)
+
+Example:
+```bash
+curl "http://localhost:5127/api/v1/rovers/perseverance/photos?sol=1000&per_page=10"
+```
+
+Response:
+```json
+{
+  "photos": [
+    {
+      "id": 194,
+      "sol": 1000,
+      "camera": {
+        "id": 5,
+        "name": "NAVCAM_LEFT",
+        "fullName": "Navigation Camera - Left"
+      },
+      "imgSrc": "https://mars.nasa.gov/mars2020-raw-images/...",
+      "earthDate": "2024-06-15",
+      "rover": {
+        "id": 1,
+        "name": "Perseverance",
+        "landingDate": "2021-02-18",
+        "launchDate": "2020-07-30",
+        "status": "active"
+      }
+    }
+  ],
+  "pagination": {
+    "total_count": 385,
+    "page": 1,
+    "per_page": 10,
+    "total_pages": 39
+  }
+}
+```
+
+**Get latest photos:**
+```bash
+GET /api/v1/rovers/{name}/latest?per_page=25
+```
+
+**Get specific photo by ID:**
+```bash
+GET /api/v1/photos/{id}
+```
+
+**Get rover photo manifest:**
+```bash
+GET /api/v1/manifests/{name}
+```
+
+Returns photos grouped by sol with camera counts.
+
 ### Scraper Endpoints
 
 **Bulk scrape (recommended for full data collection):**
@@ -162,12 +240,14 @@ Currently implemented:
 - ✅ Progress monitoring endpoint and CLI tool
 - ✅ Hybrid storage (indexed columns + JSONB)
 - ✅ Idempotent operations with duplicate detection
+- ✅ Public query API (v1) with filtering and pagination
+- ✅ Photo manifest endpoint
 
 Planned:
 - 🔄 Additional rover scrapers (Curiosity, Opportunity, Spirit)
-- 🔄 Public photo query endpoints (by sol, date, camera, rover)
 - 🔄 Advanced features (panoramas, stereo pairs, location search)
 - 🔄 Automated background scraping
+- 🔄 Redis caching layer for query performance
 
 ## License
 

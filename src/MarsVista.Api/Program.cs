@@ -25,7 +25,11 @@ builder.Services.AddHttpClient("NASA", client =>
 .AddPolicyHandler(GetRetryPolicy())
 .AddPolicyHandler(GetCircuitBreakerPolicy());
 
-// Scraper services
+// Query services (calculation layer - pure business logic)
+builder.Services.AddScoped<IRoverQueryService, RoverQueryService>();
+builder.Services.AddScoped<IPhotoQueryService, PhotoQueryService>();
+
+// Scraper services (action layer - side effects)
 builder.Services.AddScoped<IScraperService, PerseveranceScraper>();
 
 // Register database seeder
