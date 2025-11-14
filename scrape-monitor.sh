@@ -48,6 +48,9 @@ while true; do
     OLDEST_SOL=$(echo "$RESPONSE" | jq -r '.oldestSol // 0')
     LATEST_SOL=$(echo "$RESPONSE" | jq -r '.latestSol // 0')
     LAST_SCRAPED=$(echo "$RESPONSE" | jq -r '.lastPhotoScraped // "never"')
+    STATUS=$(echo "$RESPONSE" | jq -r '.status // "unknown"')
+    STATUS_MSG=$(echo "$RESPONSE" | jq -r '.statusMessage // "Unknown status"')
+    MINUTES_IDLE=$(echo "$RESPONSE" | jq -r '.minutesSinceLastUpdate // 0')
 
     # Calculate speed
     CURRENT_TIME=$(date +%s)
@@ -94,6 +97,36 @@ while true; do
     printf "%${EMPTY}s" | tr ' ' '░'
     printf "] ${BOLD}${PERCENT}%%${NC}\n"
 
+    echo ""
+
+    # Status indicator with color
+    case "$STATUS" in
+        "active")
+            STATUS_COLOR="${GREEN}"
+            STATUS_ICON="✓"
+            ;;
+        "slow")
+            STATUS_COLOR="${YELLOW}"
+            STATUS_ICON="⚠"
+            ;;
+        "stalled"|"stopped")
+            STATUS_COLOR="${RED}"
+            STATUS_ICON="✗"
+            ;;
+        "complete")
+            STATUS_COLOR="${GREEN}"
+            STATUS_ICON="✓"
+            ;;
+        *)
+            STATUS_COLOR="${BLUE}"
+            STATUS_ICON="○"
+            ;;
+    esac
+
+    echo -e "${STATUS_COLOR}${STATUS_ICON} Status:${NC}          ${BOLD}${STATUS_MSG}${NC}"
+    if [ "$MINUTES_IDLE" != "0" ] && [ "$MINUTES_IDLE" != "null" ]; then
+        echo -e "  ${STATUS_COLOR}Idle time:       ${BOLD}$(printf "%.1f" $MINUTES_IDLE)${NC}${STATUS_COLOR} minutes${NC}"
+    fi
     echo ""
     echo -e "${YELLOW}⚡${NC} Speed:           ${BOLD}${PHOTOS_PER_SEC}${NC} photos/sec"
     echo -e "${YELLOW}⏱${NC}  ETA:             ${BOLD}${ETA}${NC}"

@@ -297,6 +297,46 @@ public class ScraperController : ControllerBase
         // Get expected max sol for this rover
         var expectedMaxSol = await GetLatestSolAsync(scraper);
 
+        // Calculate health status based on last update time
+        var now = DateTime.UtcNow;
+        var minutesSinceLastUpdate = lastPhotoDate.HasValue
+            ? (now - lastPhotoDate.Value).TotalMinutes
+            : 0;
+
+        string status;
+        string statusMessage;
+
+        if (!lastPhotoDate.HasValue)
+        {
+            status = "idle";
+            statusMessage = "No photos scraped yet";
+        }
+        else if (solsWithPhotos >= expectedMaxSol)
+        {
+            status = "complete";
+            statusMessage = "All sols scraped";
+        }
+        else if (minutesSinceLastUpdate < 2)
+        {
+            status = "active";
+            statusMessage = "Scraping in progress";
+        }
+        else if (minutesSinceLastUpdate < 5)
+        {
+            status = "slow";
+            statusMessage = "Scraping slowly (possible network issues)";
+        }
+        else if (minutesSinceLastUpdate < 30)
+        {
+            status = "stalled";
+            statusMessage = "Scraper appears stalled (no updates for 5+ minutes)";
+        }
+        else
+        {
+            status = "stopped";
+            statusMessage = $"No activity for {(int)minutesSinceLastUpdate} minutes - likely stopped or NASA API down";
+        }
+
         return Ok(new
         {
             rover = roverName,
@@ -307,6 +347,9 @@ public class ScraperController : ControllerBase
             oldestSol,
             latestSol,
             lastPhotoScraped = lastPhotoDate,
+            minutesSinceLastUpdate = lastPhotoDate.HasValue ? Math.Round(minutesSinceLastUpdate, 1) : (double?)null,
+            status,
+            statusMessage,
             timestamp = DateTime.UtcNow
         });
     }
