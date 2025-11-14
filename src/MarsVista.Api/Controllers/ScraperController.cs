@@ -92,6 +92,65 @@ public class ScraperController : ControllerBase
     }
 
     /// <summary>
+    /// Resume bulk scraping from the last scraped sol
+    /// </summary>
+    /// <param name="roverName">Rover name</param>
+    /// <param name="endSol">Ending sol (inclusive, defaults to latest)</param>
+    /// <param name="delayMs">Delay in milliseconds between requests (default 1000ms)</param>
+    [HttpPost("{roverName}/bulk/resume")]
+    public async Task<IActionResult> ResumeBulkScrape(
+        string roverName,
+        [FromQuery] int? endSol = null,
+        [FromQuery] int delayMs = 1000)
+    {
+        var scraper = _scrapers.FirstOrDefault(s =>
+            s.RoverName.Equals(roverName, StringComparison.OrdinalIgnoreCase));
+
+        if (scraper == null)
+        {
+            return NotFound(new { error = $"No scraper found for rover: {roverName}" });
+        }
+
+        // Get database context through DI
+        var context = HttpContext.RequestServices.GetRequiredService<MarsVistaDbContext>();
+
+        var rover = await context.Rovers
+            .Include(r => r.Photos)
+            .FirstOrDefaultAsync(r => r.Name.ToLower() == roverName.ToLower());
+
+        if (rover == null)
+        {
+            return NotFound(new { error = $"Rover not found: {roverName}" });
+        }
+
+        // Find the highest sol we've scraped
+        var lastScrapedSol = rover.Photos.Any() ? rover.Photos.Max(p => p.Sol) : 0;
+        var startSol = lastScrapedSol + 1;
+
+        // Get expected max sol for this rover
+        var actualEndSol = endSol ?? await GetLatestSolAsync(scraper);
+
+        if (startSol > actualEndSol)
+        {
+            return Ok(new
+            {
+                rover = roverName,
+                message = "Already caught up - all sols scraped",
+                lastScrapedSol,
+                expectedMaxSol = actualEndSol,
+                resumeNotNeeded = true
+            });
+        }
+
+        _logger.LogInformation(
+            "Resume bulk scrape for {RoverName}: starting from sol {StartSol} (last scraped: {LastSol})",
+            roverName, startSol, lastScrapedSol);
+
+        // Use the standard bulk scrape with the calculated start sol
+        return await BulkScrape(roverName, startSol, actualEndSol, delayMs);
+    }
+
+    /// <summary>
     /// Bulk scrape a range of sols for a rover
     /// </summary>
     /// <param name="roverName">Rover name</param>
