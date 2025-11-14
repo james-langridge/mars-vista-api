@@ -53,3 +53,14 @@ obj/
 # PostgreSQL
 *.sql
 *.dump
+
+# Runtime files
+*.log
+api.log
+
+# Data and backups
+backups/
+failed_sols.txt
+
+# Local settings
+.claude/settings.local.json
