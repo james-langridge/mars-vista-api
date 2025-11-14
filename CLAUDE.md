@@ -55,6 +55,28 @@ When implementing new features:
 
 Every non-trivial technical decision should be documented. Don't assume decisions based on implementation guides - sanity check with documented analysis. Question and decide differently if appropriate.
 
+### Commit and Push Workflow
+
+**When to commit:**
+1. After completing each atomic logical change (one bug fix, one feature, one refactoring)
+2. After finishing a story (may involve multiple atomic commits)
+3. Before switching context to a different task
+4. After tests pass and build succeeds
+5. After adding/updating documentation
+
+**When to push:**
+1. **ALWAYS after completing a story** - ensures work is backed up and visible
+2. After creating a significant set of related commits (3-5 commits)
+3. At the end of a work session
+4. Before asking the user to review your work
+5. After any commit that represents important progress
+
+**Important notes:**
+- Use the `commit-guide` skill for proper commit message formatting
+- Create atomic commits following the principles in the commit guide
+- Never commit broken code - build must pass before committing
+- Push completed stories immediately to ensure work is not lost
+
 ### Documentation Updates
 
 **When completing stories, update relevant documentation:**
