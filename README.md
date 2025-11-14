@@ -1,15 +1,17 @@
 # Mars Vista API
 
-A C#/.NET API for Mars rover photo data, designed as a modern alternative to NASA's Mars Photo API. Provides access to Perseverance rover images with complete metadata preservation and advanced querying capabilities.
+A C#/.NET API for Mars rover photo data, designed as a modern alternative to NASA's Mars Photo API. Provides access to Perseverance and Curiosity rover images with complete metadata preservation and advanced querying capabilities.
 
 ## Features
 
+- **Multi-Rover Support**: Perseverance and Curiosity scrapers with automatic NASA API adaptation
 - **Complete Data Preservation**: Stores all 30+ NASA metadata fields using hybrid PostgreSQL storage (indexed columns + JSONB)
-- **NASA API Scraper**: Automated ingestion from NASA's Mars 2020 raw image feeds
+- **NASA API Scrapers**: Automated ingestion from multiple NASA Mars rover image feeds
 - **High Performance**: Processes 500+ photos in under 20 seconds with bulk insert optimization
 - **Resilient HTTP Client**: Polly-based retry policies and circuit breakers for reliable NASA API communication
 - **Idempotent Operations**: Duplicate detection prevents re-scraping already stored photos
-- **Future-Ready**: Architecture supports additional rovers (Curiosity, Opportunity, Spirit) and advanced features (panoramas, stereo pairs, location-based search)
+- **Progress Monitoring**: Real-time CLI dashboard for tracking long-running scrapes
+- **Future-Ready**: Architecture supports additional rovers (Opportunity, Spirit) and advanced features (panoramas, stereo pairs, location-based search)
 
 ## Tech Stack
 
@@ -230,21 +232,31 @@ Tested with Perseverance rover data:
 - **Re-scrape (idempotent)**: 0 photos in 0.08 seconds
 - **Bulk scrape estimate**: ~9-10 hours for all 1,682 sols (with 1s delay)
 
+## Documentation
+
+Comprehensive guides available in the `docs/` directory:
+
+- **[API Endpoints](docs/API_ENDPOINTS.md)** - Complete API reference with examples for all endpoints
+- **[Database Access](docs/DATABASE_ACCESS.md)** - Database credentials, useful queries, and management commands
+- **[Curiosity Scraper Guide](docs/CURIOSITY_SCRAPER_GUIDE.md)** - Curiosity-specific scraper documentation
+
 ## Development Status
 
 Currently implemented:
 - ✅ PostgreSQL database with migrations
-- ✅ Rover and camera seed data
-- ✅ Perseverance NASA API scraper with resilience policies
+- ✅ Rover and camera seed data for all 4 rovers
+- ✅ Perseverance and Curiosity NASA API scrapers
 - ✅ Bulk scraper endpoint for efficient multi-sol ingestion
 - ✅ Progress monitoring endpoint and CLI tool
 - ✅ Hybrid storage (indexed columns + JSONB)
 - ✅ Idempotent operations with duplicate detection
 - ✅ Public query API (v1) with filtering and pagination
 - ✅ Photo manifest endpoint
+- ✅ Multi-rover support with strategy pattern
 
 Planned:
-- 🔄 Additional rover scrapers (Curiosity, Opportunity, Spirit)
+- 🔄 Additional rover scrapers (Opportunity, Spirit)
+- 🔄 Retry script for failed sols
 - 🔄 Advanced features (panoramas, stereo pairs, location search)
 - 🔄 Automated background scraping
 - 🔄 Redis caching layer for query performance
