@@ -107,7 +107,7 @@ DURATION=$((END_TIME - START_TIME))
 MINUTES=$((DURATION / 60))
 SECONDS=$((DURATION % 60))
 
-if [ $RESTORE_RESULT -ne 0 ] && [ $RESTORE_RESULT -ne 1 ]; then
+if [ -n "$RESTORE_RESULT" ] && [ "$RESTORE_RESULT" -ne 0 ] && [ "$RESTORE_RESULT" -ne 1 ]; then
     echo -e "${RED}✗ Restore may have encountered errors${NC}"
     echo -e "${YELLOW}Check output above for details${NC}"
 fi
