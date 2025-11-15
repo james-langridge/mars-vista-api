@@ -199,7 +199,21 @@ curl -X POST "http://localhost:5127/api/scraper/curiosity/bulk?startSol=1&endSol
 - Story files or tickets
 - Internal AI workflow artifacts
 
-These are internal development artifacts that are gitignored and should not appear in the public commit history.
+**Why not reference .claude/ in commits?**
+
+While `.claude/` files ARE committed to the repository (they contain valuable project context), they should not be mentioned in commit messages because:
+- They are internal planning/analysis documents, not user-facing features
+- Commit messages should focus on what changed in the actual codebase
+- The public commit history should describe technical changes, not documentation updates
+
+**Exception:** When `.claude/` files contain significant technical analysis that influenced implementation decisions, you may commit them, but the commit message should describe the technical insights gained, not the document itself.
+
+**What to commit in .claude/:**
+- ✅ Technical decision documents
+- ✅ Implementation guides and analysis
+- ✅ User stories and tickets
+- ✅ Architecture analysis
+- ❌ `settings.local.json` (gitignored)
 
 **Focus commit messages on:**
 - What changed in the actual codebase
