@@ -222,6 +222,70 @@ Displays real-time progress:
 
 The monitor refreshes every 2 seconds and provides a clean, colorful interface for tracking multi-hour scraping sessions.
 
+## Database Management
+
+### Backup and Restore
+
+**Create a local backup:**
+```bash
+./db-backup.sh [backup_name]
+```
+
+Creates a compressed PostgreSQL dump in `./backups/` directory. If no name is provided, uses timestamp (e.g., `marsvista_20251115_153000.dump`).
+
+Example:
+```bash
+# Auto-named backup with timestamp
+./db-backup.sh
+
+# Named backup
+./db-backup.sh curiosity_complete
+```
+
+**Restore to Railway (or other remote database):**
+```bash
+./db-restore-to-railway.sh [backup_file]
+```
+
+Automatically uses the latest backup from `./backups/` if no file is specified. Replaces the remote database with the backup contents.
+
+Example:
+```bash
+# Restore latest backup
+./db-restore-to-railway.sh
+
+# Restore specific backup
+./db-restore-to-railway.sh ./backups/curiosity_complete.dump
+```
+
+**Advanced sync (upsert mode):**
+```bash
+./db-sync-to-railway.sh [--dry-run]
+```
+
+Syncs local database to Railway using upserts (INSERT ... ON CONFLICT DO UPDATE). Useful when you want to merge data rather than replace. Use `--dry-run` to preview changes without modifying the remote database.
+
+### Utility Scripts
+
+Additional helper scripts for scraper operations:
+
+**Monitor scraper progress:**
+```bash
+./scrape-monitor.sh {rover}
+```
+
+**Resume scraping from a specific sol:**
+```bash
+./scrape-resume.sh {rover} {start_sol}
+```
+
+**Retry failed sols:**
+```bash
+./scrape-retry-failed.sh "489,888,929,931" curiosity
+```
+
+Can also accept full JSON response from bulk scrape to auto-extract failed sols.
+
 ## Performance
 
 Tested with Perseverance rover data:

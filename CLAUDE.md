@@ -31,7 +31,13 @@ Recreating the NASA Mars Rover API from scratch in C#/.NET (reference: /home/jam
 - Multi-rover support: Curiosity and Perseverance scrapers
 - Bulk scraper: POST /api/scraper/{rover}/bulk?startSol=X&endSol=Y
 - Progress monitoring: GET /api/scraper/{rover}/progress
-- CLI tool: ./scrape-monitor.sh {rover} for real-time visual progress
+- CLI tools:
+  - ./scrape-monitor.sh {rover} - Real-time visual progress monitoring
+  - ./scrape-retry-failed.sh - Retry failed sols from bulk scrape
+  - ./scrape-resume.sh - Resume scraping from specific sol
+  - ./db-backup.sh - Create local database backups
+  - ./db-restore-to-railway.sh - Restore backup to remote database
+  - ./db-sync-to-railway.sh - Sync/upsert local data to remote database
 - Query API: GET /api/v1/rovers/{name}/photos with filtering
 - Performance: 500+ photos in ~20 seconds, full rover scrape ~9-10 hours
 
@@ -123,6 +129,48 @@ Every non-trivial technical decision should be documented. Don't assume decision
 - Build/runtime issues (zombie processes on ports)
 
 This prevents re-encountering the same issues in future stories or conversation resumptions.
+
+### Database Backup and Deployment
+
+**Backing up the local database:**
+
+After completing major scrapes or milestones, create backups:
+
+```bash
+./db-backup.sh [optional_name]
+```
+
+Backups are stored in `./backups/` (gitignored) as PostgreSQL custom format dumps (.dump files).
+
+**Deploying to Railway (production):**
+
+When local database has new data to deploy:
+
+1. **Simple restore (recommended):** Replaces Railway database with local backup
+   ```bash
+   ./db-restore-to-railway.sh
+   ```
+   Automatically uses latest backup from `./backups/`
+
+2. **Upsert sync (advanced):** Merges local and Railway data
+   ```bash
+   ./db-sync-to-railway.sh --dry-run  # Preview changes
+   ./db-sync-to-railway.sh            # Perform sync
+   ```
+
+**Railway connection details** are hardcoded in the scripts (credentials in Railway dashboard under "Connect" tab).
+
+**Workflow example:**
+```bash
+# 1. Complete a large scrape locally
+curl -X POST "http://localhost:5127/api/scraper/curiosity/bulk?startSol=1&endSol=4683"
+
+# 2. Backup the results
+./db-backup.sh curiosity_complete
+
+# 3. Deploy to Railway
+./db-restore-to-railway.sh
+```
 
 ## Essential reference documents
 
