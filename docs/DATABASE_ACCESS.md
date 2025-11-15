@@ -4,7 +4,30 @@ Guide for accessing and querying the Mars Vista PostgreSQL database.
 
 ## Connection Details
 
-### From Command Line (psql)
+### Environment Variables
+
+Connection credentials are stored in `.env` file (gitignored):
+
+```bash
+# Local development database
+POSTGRES_USER=marsvista
+POSTGRES_PASSWORD=marsvista_dev_password
+POSTGRES_DB=marsvista_dev
+POSTGRES_PORT=5432
+
+# Railway production database
+RAILWAY_HOST=maglev.proxy.rlwy.net
+RAILWAY_PORT=38340
+RAILWAY_USER=postgres
+RAILWAY_PASSWORD=<from_railway_dashboard>
+RAILWAY_DB=railway
+```
+
+See `.env.example` for template.
+
+### Local Database (Docker)
+
+**From Command Line (psql):**
 
 ```bash
 # Using environment variable for password
@@ -14,7 +37,7 @@ PGPASSWORD=marsvista_dev_password psql -h localhost -U marsvista -d marsvista_de
 psql "postgresql://marsvista:marsvista_dev_password@localhost:5432/marsvista_dev"
 ```
 
-### Connection Parameters
+**Connection Parameters:**
 
 - **Host:** localhost
 - **Port:** 5432
@@ -22,11 +45,39 @@ psql "postgresql://marsvista:marsvista_dev_password@localhost:5432/marsvista_dev
 - **Username:** marsvista
 - **Password:** marsvista_dev_password
 
-### Application Connection String
+**Application Connection String:**
 
 ```
 Host=localhost;Port=5432;Database=marsvista_dev;Username=marsvista;Password=marsvista_dev_password
 ```
+
+### Railway Production Database
+
+**From Command Line (psql):**
+
+```bash
+# Using environment variable (load from .env)
+PGPASSWORD=$RAILWAY_PASSWORD psql -h $RAILWAY_HOST -U $RAILWAY_USER -p $RAILWAY_PORT -d $RAILWAY_DB
+
+# Or directly with credentials
+PGPASSWORD=<password> psql -h maglev.proxy.rlwy.net -U postgres -p 38340 -d railway
+
+# Or with connection string
+psql "$RAILWAY_DATABASE_URL"
+```
+
+**Connection Parameters:**
+
+- **Host:** maglev.proxy.rlwy.net
+- **Port:** 38340
+- **Database:** railway
+- **Username:** postgres
+- **Password:** (see Railway dashboard or `.env` file)
+
+**Current Data (as of 2025-11-15):**
+- **Curiosity:** 675,765 photos (sols 1-4,683, 4,310 unique sols)
+- **Perseverance:** 451,602 photos (sols 1-1,683, 1,475 unique sols)
+- **Total:** 1,127,367 photos
 
 ---
 
