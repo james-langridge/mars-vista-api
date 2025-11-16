@@ -145,6 +145,14 @@ public class OpportunityScraper : IScraperService
         var pendingPhotos = new List<Photo>();
         var pendingNasaIds = new HashSet<string>(); // Track IDs in current batch
 
+        // Load existing NASA IDs into memory for fast duplicate checking
+        _logger.LogInformation("Loading existing photo IDs for volume {Volume}...", volumeName);
+        var existingNasaIds = await _context.Photos
+            .Where(p => p.RoverId == rover.Id)
+            .Select(p => p.NasaId)
+            .ToHashSetAsync(cancellationToken);
+        _logger.LogInformation("Loaded {Count} existing photo IDs", existingNasaIds.Count);
+
         _logger.LogInformation("Parsing index file for volume {Volume}", volumeName);
 
         await foreach (var row in _parser.ParseStreamAsync(stream, cancellationToken))
@@ -153,11 +161,8 @@ public class OpportunityScraper : IScraperService
 
             try
             {
-                // Check if photo already exists in database
-                var existsInDb = await _context.Photos
-                    .AnyAsync(p => p.NasaId == row.ProductId, cancellationToken);
-
-                if (existsInDb)
+                // Check if photo already exists (in-memory lookup is much faster)
+                if (existingNasaIds.Contains(row.ProductId))
                 {
                     skippedCount++;
                     continue;
@@ -208,6 +213,12 @@ public class OpportunityScraper : IScraperService
                         await _context.SaveChangesAsync(cancellationToken);
 
                         insertedCount += pendingPhotos.Count;
+
+                        // Add newly inserted IDs to the existing set for future duplicate checks
+                        foreach (var nasaId in pendingNasaIds)
+                        {
+                            existingNasaIds.Add(nasaId);
+                        }
 
                         _logger.LogInformation(
                             "Volume {Volume}: Committed batch. Total inserted: {Inserted}, Processed: {Processed}",
