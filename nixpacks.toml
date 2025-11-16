@@ -1,0 +1,11 @@
+[phases.setup]
+nixPkgs = ["dotnet-sdk_9"]
+
+[phases.build]
+cmds = [
+  "dotnet restore src/MarsVista.Api/MarsVista.Api.csproj",
+  "dotnet publish src/MarsVista.Api/MarsVista.Api.csproj -c Release -o out"
+]
+
+[start]
+cmd = "dotnet out/MarsVista.Api.dll"
