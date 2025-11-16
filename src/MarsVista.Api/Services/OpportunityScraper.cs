@@ -141,7 +141,9 @@ public class OpportunityScraper : IScraperService
         var processedCount = 0;
         var insertedCount = 0;
         var skippedCount = 0;
+        var batchErrorCount = 0;
         var pendingPhotos = new List<Photo>();
+        var pendingNasaIds = new HashSet<string>(); // Track IDs in current batch
 
         _logger.LogInformation("Parsing index file for volume {Volume}", volumeName);
 
@@ -151,13 +153,21 @@ public class OpportunityScraper : IScraperService
 
             try
             {
-                // Check if photo already exists (idempotency)
-                var exists = await _context.Photos
+                // Check if photo already exists in database
+                var existsInDb = await _context.Photos
                     .AnyAsync(p => p.NasaId == row.ProductId, cancellationToken);
 
-                if (exists)
+                if (existsInDb)
                 {
                     skippedCount++;
+                    continue;
+                }
+
+                // Check if photo is duplicate within current batch
+                if (pendingNasaIds.Contains(row.ProductId))
+                {
+                    skippedCount++;
+                    _logger.LogDebug("Skipping duplicate within batch: {ProductId}", row.ProductId);
                     continue;
                 }
 
@@ -187,27 +197,49 @@ public class OpportunityScraper : IScraperService
                 // Convert to Photo entity
                 var photo = MapToPhoto(row, rover, camera, browseUrl);
                 pendingPhotos.Add(photo);
+                pendingNasaIds.Add(row.ProductId);
 
                 // Batch commit
                 if (pendingPhotos.Count >= BatchSize)
                 {
-                    await _context.Photos.AddRangeAsync(pendingPhotos, cancellationToken);
-                    await _context.SaveChangesAsync(cancellationToken);
+                    try
+                    {
+                        await _context.Photos.AddRangeAsync(pendingPhotos, cancellationToken);
+                        await _context.SaveChangesAsync(cancellationToken);
 
-                    insertedCount += pendingPhotos.Count;
-                    pendingPhotos.Clear();
+                        insertedCount += pendingPhotos.Count;
 
-                    _logger.LogInformation(
-                        "Volume {Volume}: Committed batch. Total inserted: {Inserted}, Processed: {Processed}",
-                        volumeName, insertedCount, processedCount);
+                        _logger.LogInformation(
+                            "Volume {Volume}: Committed batch. Total inserted: {Inserted}, Processed: {Processed}",
+                            volumeName, insertedCount, processedCount);
+                    }
+                    catch (Exception batchEx)
+                    {
+                        batchErrorCount++;
+                        _logger.LogError(batchEx,
+                            "Batch insert failed at row {Row}. Likely duplicates in batch. Skipping batch and continuing.",
+                            processedCount);
+
+                        // Detach failed entities to prevent tracking issues
+                        foreach (var failedPhoto in pendingPhotos)
+                        {
+                            _context.Entry(failedPhoto).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                        }
+                    }
+                    finally
+                    {
+                        // Always clear batch regardless of success/failure
+                        pendingPhotos.Clear();
+                        pendingNasaIds.Clear();
+                    }
                 }
 
                 // Progress logging
                 if (processedCount % ProgressLogInterval == 0)
                 {
                     _logger.LogInformation(
-                        "Volume {Volume}: Processed {Count} rows, inserted {Inserted}, skipped {Skipped}",
-                        volumeName, processedCount, insertedCount + pendingPhotos.Count, skippedCount);
+                        "Volume {Volume}: Processed {Count} rows, inserted {Inserted}, skipped {Skipped}, batch errors {BatchErrors}",
+                        volumeName, processedCount, insertedCount, skippedCount, batchErrorCount);
                 }
             }
             catch (Exception ex)
@@ -221,14 +253,28 @@ public class OpportunityScraper : IScraperService
         // Final commit for remaining photos
         if (pendingPhotos.Any())
         {
-            await _context.Photos.AddRangeAsync(pendingPhotos, cancellationToken);
-            await _context.SaveChangesAsync(cancellationToken);
-            insertedCount += pendingPhotos.Count;
+            try
+            {
+                await _context.Photos.AddRangeAsync(pendingPhotos, cancellationToken);
+                await _context.SaveChangesAsync(cancellationToken);
+                insertedCount += pendingPhotos.Count;
+            }
+            catch (Exception finalEx)
+            {
+                batchErrorCount++;
+                _logger.LogError(finalEx, "Final batch insert failed. Likely duplicates in batch.");
+
+                // Detach failed entities
+                foreach (var failedPhoto in pendingPhotos)
+                {
+                    _context.Entry(failedPhoto).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                }
+            }
         }
 
         _logger.LogInformation(
-            "Volume {Volume} complete: Processed {Processed} rows, inserted {Inserted}, skipped {Skipped}",
-            volumeName, processedCount, insertedCount, skippedCount);
+            "Volume {Volume} complete: Processed {Processed} rows, inserted {Inserted}, skipped {Skipped}, batch errors {BatchErrors}",
+            volumeName, processedCount, insertedCount, skippedCount, batchErrorCount);
 
         return insertedCount;
     }
