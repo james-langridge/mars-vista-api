@@ -480,6 +480,74 @@ curl -X POST "http://localhost:5127/api/scraper/curiosity/resume"
 
 ---
 
+### Opportunity Rover (PDS Volume Scraping)
+
+Opportunity uses a different scraping approach - parsing PDS (Planetary Data System) index files rather than querying JSON APIs, since NASA's traditional APIs don't support MER rovers.
+
+#### Scrape Single Volume
+
+Scrape a specific camera volume from PDS archives.
+
+```http
+POST /api/scraper/opportunity/volume/{volumeName}
+```
+
+**Parameters:**
+- `volumeName` (path, required) - PDS volume name
+
+**Available Volumes:**
+- `mer1po_0xxx` - PANCAM (366,510 photos)
+- `mer1no_0xxx` - NAVCAM (~500,000 photos)
+- `mer1ho_0xxx` - HAZCAM (~100,000 photos)
+- `mer1mo_0xxx` - Microscopic Imager
+- `mer1do_0xxx` - Descent Camera
+
+**Example:**
+```bash
+curl -X POST "http://localhost:5127/api/scraper/opportunity/volume/mer1po_0xxx"
+```
+
+**Response:**
+```json
+{
+  "rover": "Opportunity",
+  "volume": "mer1po_0xxx",
+  "photosScraped": 366510,
+  "timestamp": "2025-11-16T00:00:00.000Z"
+}
+```
+
+#### Scrape All Volumes
+
+Scrape all Opportunity volumes sequentially.
+
+```http
+POST /api/scraper/opportunity/all
+```
+
+**Example:**
+```bash
+curl -X POST "http://localhost:5127/api/scraper/opportunity/all"
+```
+
+**Response:**
+```json
+{
+  "rover": "Opportunity",
+  "message": "All volumes scraped",
+  "totalPhotosScraped": 1000000,
+  "timestamp": "2025-11-16T00:00:00.000Z"
+}
+```
+
+**Notes:**
+- Scraping is volume-based (not sol-based like other rovers)
+- Processes large index files (342 MB for PANCAM)
+- Expected time: ~90 minutes for all volumes
+- See [Opportunity Scraper Guide](OPPORTUNITY_SCRAPER_GUIDE.md) for details
+
+---
+
 ## Health Check
 
 Simple health check endpoint.
@@ -676,4 +744,5 @@ curl -X POST "http://localhost:5127/api/scraper/curiosity/resume"
 
 - [Database Access Guide](DATABASE_ACCESS.md)
 - [Curiosity Scraper Guide](CURIOSITY_SCRAPER_GUIDE.md)
+- [Opportunity Scraper Guide](OPPORTUNITY_SCRAPER_GUIDE.md)
 - [Main README](../README.md)
