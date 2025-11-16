@@ -27,10 +27,14 @@ public class PdsIndexParser
         {
             var fields = line.Split('\t');
 
-            if (fields.Length < 55)
+            // MER index files have variable field counts:
+            // - PANCAM, NAVCAM, HAZCAM, MI: 59 fields
+            // - DESCENT: 52 fields
+            // Minimum required: 51 fields (everything up to FlatFieldCorrection)
+            if (fields.Length < 51)
             {
                 _logger.LogWarning(
-                    "Malformed row at line {LineNumber}: expected 55 fields, got {Count}",
+                    "Malformed row at line {LineNumber}: expected at least 51 fields, got {Count}",
                     lineNumber, fields.Length);
                 return null;
             }
@@ -107,10 +111,11 @@ public class PdsIndexParser
                 RoverMotionCounter = ParseInt(fields[50]),
 
                 // Calibration flags (fields 51-54)
+                // DESCENT camera files only have 52 fields, so safely access optional fields
                 FlatFieldCorrection = Clean(fields[51]),
-                ShutterEffectCorrection = Clean(fields[52]),
-                PixelAveragingHeight = ParseInt(fields[53]),
-                PixelAveragingWidth = ParseInt(fields[54])
+                ShutterEffectCorrection = fields.Length > 52 ? Clean(fields[52]) : "",
+                PixelAveragingHeight = fields.Length > 53 ? ParseInt(fields[53]) : null,
+                PixelAveragingWidth = fields.Length > 54 ? ParseInt(fields[54]) : null
             };
         }
         catch (Exception ex)
