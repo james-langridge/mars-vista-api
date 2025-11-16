@@ -46,21 +46,17 @@ sleep 5
 
 # Start the complete scrape
 echo ""
-echo "📡 Sending scrape request..."
-curl -X POST "$API_URL/api/scraper/opportunity/all" \
-  -H "Content-Type: application/json" &
-
-CURL_PID=$!
-
-echo "Request sent (PID: $CURL_PID)"
+echo "📡 Starting scrape (foreground - press Ctrl+C to cancel)..."
 echo ""
-echo "✅ Scrape started! This will process all 5 camera volumes sequentially."
-echo ""
-echo "📊 Monitor progress:"
-echo "   ./scrape-monitor.sh opportunity"
-echo ""
-echo "📈 Or check database:"
+echo "💡 Monitor in another terminal with:"
 echo "   watch -n 5 './scrape-opportunity-status.sh'"
 echo ""
-echo "The scrape will continue in the background even if you close this terminal."
-echo "Check logs at: /tmp/marsvista3.log"
+
+curl -X POST "$API_URL/api/scraper/opportunity/all" \
+  -H "Content-Type: application/json"
+
+echo ""
+echo "✅ Scrape completed or interrupted!"
+echo ""
+echo "📊 Final status:"
+./scrape-opportunity-status.sh
