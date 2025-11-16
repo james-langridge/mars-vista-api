@@ -33,10 +33,15 @@ builder.Services.AddScoped<IPhotoQueryService, PhotoQueryService>();
 // Register scrapers by rover name for dynamic resolution
 builder.Services.AddKeyedScoped<IScraperService, PerseveranceScraper>("perseverance");
 builder.Services.AddKeyedScoped<IScraperService, CuriosityScraper>("curiosity");
+builder.Services.AddKeyedScoped<IScraperService, OpportunityScraper>("opportunity");
 
 // Also register non-keyed for IEnumerable<IScraperService> injection
 builder.Services.AddScoped<IScraperService, PerseveranceScraper>();
 builder.Services.AddScoped<IScraperService, CuriosityScraper>();
+builder.Services.AddScoped<IScraperService, OpportunityScraper>();
+
+// Register PDS index parser (used by Opportunity scraper)
+builder.Services.AddScoped<PdsIndexParser>();
 
 // Register database seeder
 builder.Services.AddScoped<DatabaseSeeder>();
