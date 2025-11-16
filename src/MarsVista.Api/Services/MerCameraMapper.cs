@@ -27,11 +27,15 @@ public static class MerCameraMapper
         { "FHAZ_LEFT", "FHAZ" },
         { "FHAZ_RIGHT", "FHAZ" },
         { "FHAZ", "FHAZ" },  // Fallback
+        { "FRONT_HAZCAM_LEFT", "FHAZ" },  // MER PDS format
+        { "FRONT_HAZCAM_RIGHT", "FHAZ" },
 
         // Rear Hazard Avoidance Camera (RHAZ)
         { "RHAZ_LEFT", "RHAZ" },
         { "RHAZ_RIGHT", "RHAZ" },
         { "RHAZ", "RHAZ" },  // Fallback
+        { "REAR_HAZCAM_LEFT", "RHAZ" },  // MER PDS format
+        { "REAR_HAZCAM_RIGHT", "RHAZ" },
 
         // Microscopic Imager (MI)
         // Database uses "MINITES" for this camera
@@ -42,6 +46,7 @@ public static class MerCameraMapper
         // Various possible names from PDS
         { "DESCENT", "ENTRY" },
         { "DESCENT_IMAGER", "ENTRY" },
+        { "DESCAM", "ENTRY" },  // MER PDS format
         { "EDL", "ENTRY" },  // Entry, Descent, Landing
         { "ENTRY", "ENTRY" }
     };
