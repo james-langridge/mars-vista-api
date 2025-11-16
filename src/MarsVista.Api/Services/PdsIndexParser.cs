@@ -28,10 +28,18 @@ public class PdsIndexParser
             var fields = line.Split('\t');
 
             // MER index files have variable field counts:
-            // - PANCAM, NAVCAM, HAZCAM, MI: 59 fields
-            // - DESCENT: 52 fields
-            // Minimum required: 51 fields (everything up to FlatFieldCorrection)
-            if (fields.Length < 51)
+            // - PANCAM, NAVCAM, HAZCAM, MI: 59 fields (standard format)
+            // - DESCENT: 52 fields (missing PathName field - different structure!)
+            // Detect DESCENT format by field count and instrument
+            var isDescentFormat = fields.Length == 52 &&
+                                  Clean(fields[3]).Contains("DESCAM", StringComparison.OrdinalIgnoreCase);
+
+            // DESCENT has different field structure (PathName AND FileName are missing)
+            // Standard: VolumeId, DataSetId, InstrumentHostId, InstrumentId, PathName, FileName, ReleaseId, ProductId...
+            // DESCENT:  VolumeId, DataSetId, InstrumentHostId, InstrumentId, ReleaseId, ProductId, ProductCreationTime...
+            var offset = isDescentFormat ? -2 : 0;  // Shift all fields after InstrumentId by -2 for DESCENT
+
+            if (fields.Length < 51 && !isDescentFormat)
             {
                 _logger.LogWarning(
                     "Malformed row at line {LineNumber}: expected at least 51 fields, got {Count}",
@@ -41,81 +49,84 @@ public class PdsIndexParser
 
             return new PdsIndexRow
             {
-                // Core identification (fields 0-8)
+                // Core identification (fields 0-3 same for all)
                 VolumeId = Clean(fields[0]),
                 DataSetId = Clean(fields[1]),
                 InstrumentHostId = Clean(fields[2]),
                 InstrumentId = Clean(fields[3]),
-                PathName = Clean(fields[4]),
-                FileName = Clean(fields[5]),
-                ReleaseId = Clean(fields[6]),
-                ProductId = Clean(fields[7]),
-                ProductCreationTime = ParseDateTime(fields[8]),
 
-                // Target and mission (fields 9-10)
-                TargetName = Clean(fields[9]),
-                MissionPhaseName = Clean(fields[10]),
+                // DESCENT is missing PathName AND FileName - use empty strings
+                PathName = isDescentFormat ? "" : Clean(fields[4]),
+                FileName = isDescentFormat ? "" : Clean(fields[5]),
+                ReleaseId = Clean(fields[6 + offset]),
+                ProductId = Clean(fields[7 + offset]),
+                ProductCreationTime = ParseDateTime(fields[8 + offset]),
 
-                // Time data (fields 11-20)
-                Sol = ParseInt(fields[11]) ?? 0,
-                StartTime = ParseDateTime(fields[12]),
-                StopTime = ParseDateTime(fields[13]),
-                EarthReceivedStart = ParseDateTime(fields[14]),
-                EarthReceivedStop = ParseDateTime(fields[15]),
-                SpacecraftClockStart = Clean(fields[16]),
-                SpacecraftClockStop = Clean(fields[17]),
-                SequenceId = Clean(fields[18]),
-                ObservationId = Clean(fields[19]),
-                LocalTrueSolarTime = Clean(fields[20]),
+                // Target and mission
+                TargetName = Clean(fields[9 + offset]),
+                MissionPhaseName = Clean(fields[10 + offset]),
 
-                // Image dimensions (fields 21-24)
-                Lines = ParseInt(fields[21]),
-                LineSamples = ParseInt(fields[22]),
-                FirstLine = ParseInt(fields[23]),
-                FirstLineSample = ParseInt(fields[24]),
+                // Time data
+                Sol = ParseInt(fields[11 + offset]) ?? 0,
+                StartTime = ParseDateTime(fields[12 + offset]),
+                StopTime = ParseDateTime(fields[13 + offset]),
+                EarthReceivedStart = ParseDateTime(fields[14 + offset]),
+                EarthReceivedStop = ParseDateTime(fields[15 + offset]),
+                SpacecraftClockStart = Clean(fields[16 + offset]),
+                SpacecraftClockStop = Clean(fields[17 + offset]),
+                SequenceId = Clean(fields[18 + offset]),
+                ObservationId = Clean(fields[19 + offset]),
+                LocalTrueSolarTime = Clean(fields[20 + offset]),
 
-                // Instrument configuration (fields 25-30)
-                InstrumentSerialNum = Clean(fields[25]),
-                InstrumentModeId = Clean(fields[26]),
-                InstCmprsRatio = ParseFloat(fields[27]),
-                InstCmprsMode = Clean(fields[28]),
-                InstCmprsFilter = Clean(fields[29]),
+                // Image dimensions
+                Lines = ParseInt(fields[21 + offset]),
+                LineSamples = ParseInt(fields[22 + offset]),
+                FirstLine = ParseInt(fields[23 + offset]),
+                FirstLineSample = ParseInt(fields[24 + offset]),
 
-                // Image metadata (fields 30-38)
-                ImageId = Clean(fields[30]),
-                ImageType = Clean(fields[31]),
-                ExposureDuration = ParseFloat(fields[32]),
-                ErrorPixels = ParseInt(fields[33]),
-                FilterName = Clean(fields[34]),
-                FilterNumber = ParseInt(fields[35]),
-                FrameId = Clean(fields[36]),
-                FrameType = Clean(fields[37]),
+                // Instrument configuration
+                InstrumentSerialNum = Clean(fields[25 + offset]),
+                InstrumentModeId = Clean(fields[26 + offset]),
+                InstCmprsRatio = ParseFloat(fields[27 + offset]),
+                InstCmprsMode = Clean(fields[28 + offset]),
+                InstCmprsFilter = Clean(fields[29 + offset]),
 
-                // Camera orientation (fields 38-44)
-                AzimuthFov = ParseFloat(fields[38]),
-                ElevationFov = ParseFloat(fields[39]),
-                SiteInstrumentAzimuth = ParseFloat(fields[40]),
-                SiteInstrumentElevation = ParseFloat(fields[41]),
-                RoverInstrumentAzimuth = ParseFloat(fields[42]),
-                RoverInstrumentElevation = ParseFloat(fields[43]),
+                // Image metadata
+                ImageId = Clean(fields[30 + offset]),
+                ImageType = Clean(fields[31 + offset]),
+                ExposureDuration = ParseFloat(fields[32 + offset]),
+                ErrorPixels = ParseInt(fields[33 + offset]),
+                FilterName = Clean(fields[34 + offset]),
+                FilterNumber = ParseInt(fields[35 + offset]),
+                FrameId = Clean(fields[36 + offset]),
+                FrameType = Clean(fields[37 + offset]),
 
-                // Solar position (fields 44-46)
-                SolarAzimuth = ParseFloat(fields[44]),
-                SolarElevation = ParseFloat(fields[45]),
-                SolarLongitude = ParseFloat(fields[46]),
+                // Camera orientation
+                AzimuthFov = ParseFloat(fields[38 + offset]),
+                ElevationFov = ParseFloat(fields[39 + offset]),
+                SiteInstrumentAzimuth = ParseFloat(fields[40 + offset]),
+                SiteInstrumentElevation = ParseFloat(fields[41 + offset]),
+                RoverInstrumentAzimuth = ParseFloat(fields[42 + offset]),
+                RoverInstrumentElevation = ParseFloat(fields[43 + offset]),
 
-                // Processing metadata (fields 47-50)
-                ApplicationProcessId = Clean(fields[47]),
-                ReferenceCoordSystem = Clean(fields[48]),
-                TelemetrySourceName = Clean(fields[49]),
-                RoverMotionCounter = ParseInt(fields[50]),
+                // Solar position
+                SolarAzimuth = ParseFloat(fields[44 + offset]),
+                SolarElevation = ParseFloat(fields[45 + offset]),
+                SolarLongitude = ParseFloat(fields[46 + offset]),
 
-                // Calibration flags (fields 51-54)
-                // DESCENT camera files only have 52 fields, so safely access optional fields
-                FlatFieldCorrection = Clean(fields[51]),
-                ShutterEffectCorrection = fields.Length > 52 ? Clean(fields[52]) : "",
-                PixelAveragingHeight = fields.Length > 53 ? ParseInt(fields[53]) : null,
-                PixelAveragingWidth = fields.Length > 54 ? ParseInt(fields[54]) : null
+                // Processing metadata
+                ApplicationProcessId = Clean(fields[47 + offset]),
+                ReferenceCoordSystem = Clean(fields[48 + offset]),
+                TelemetrySourceName = Clean(fields[49 + offset]),
+                RoverMotionCounter = ParseInt(fields[50 + offset]),
+
+                // Calibration flags (last 4 fields)
+                // DESCENT (52 fields): fields 48-51 (with offset -1)
+                // Standard (59 fields): fields 51-54 (with offset 0)
+                FlatFieldCorrection = Clean(fields[51 + offset]),
+                ShutterEffectCorrection = (fields.Length > 52 + offset) ? Clean(fields[52 + offset]) : "",
+                PixelAveragingHeight = (fields.Length > 53 + offset) ? ParseInt(fields[53 + offset]) : null,
+                PixelAveragingWidth = (fields.Length > 54 + offset) ? ParseInt(fields[54 + offset]) : null
             };
         }
         catch (Exception ex)
