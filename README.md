@@ -2,6 +2,40 @@
 
 A C#/.NET API for Mars rover photo data, designed as a modern alternative to NASA's Mars Photo API. Provides access to all four major Mars rovers (Perseverance, Curiosity, Opportunity, and Spirit) with complete metadata preservation and advanced querying capabilities.
 
+## Production API
+
+> **Note**: The API will be publicly available after Railway deployment is complete.
+
+Once deployed, the Mars Vista API will be accessible at:
+
+**Base URL**: `https://[your-railway-domain].up.railway.app` (URL will be updated after deployment)
+
+### Quick Start Example
+
+Get all rovers:
+```bash
+curl "https://[your-railway-domain].up.railway.app/api/v1/rovers"
+```
+
+Query Perseverance photos from Sol 1000:
+```bash
+curl "https://[your-railway-domain].up.railway.app/api/v1/rovers/perseverance/photos?sol=1000&per_page=10"
+```
+
+Check API health:
+```bash
+curl "https://[your-railway-domain].up.railway.app/health"
+```
+
+### Rate Limits
+
+Currently no rate limits enforced. Please be respectful:
+- No more than 10 requests per second
+- Cache responses when possible
+- Use pagination (`per_page` parameter) for large datasets
+
+Complete API documentation available in [API_ENDPOINTS.md](docs/API_ENDPOINTS.md).
+
 ## Features
 
 - **Multi-Rover Support**: All four major Mars rovers (Perseverance, Curiosity, Opportunity, Spirit) with automatic data source adaptation
@@ -286,6 +320,38 @@ Additional helper scripts for scraper operations:
 
 Can also accept full JSON response from bulk scrape to auto-extract failed sols.
 
+## Deployment
+
+The API is designed to be deployed on Railway alongside the PostgreSQL database.
+
+### Prerequisites
+- Railway account (Pro plan recommended)
+- Railway CLI installed: `npm install -g @railway/cli`
+- Production database already deployed on Railway
+
+### Quick Deploy
+
+```bash
+# Link to your Railway project
+railway link
+
+# Set production environment
+railway variables set ASPNETCORE_ENVIRONMENT=Production
+
+# Link to PostgreSQL service (auto-injects DATABASE_URL)
+railway service link Postgres
+
+# Deploy
+railway up
+
+# Get your public URL
+railway domain
+```
+
+After deployment, update the Production API section above with your actual Railway domain.
+
+For complete deployment instructions, troubleshooting, and monitoring, see [DEPLOYMENT.md](docs/DEPLOYMENT.md).
+
 ## Performance
 
 Tested with Perseverance rover data:
@@ -302,6 +368,7 @@ Comprehensive guides available in the `docs/` directory:
 
 - **[API Endpoints](docs/API_ENDPOINTS.md)** - Complete API reference with examples for all endpoints
 - **[Database Access](docs/DATABASE_ACCESS.md)** - Database credentials, useful queries, and management commands
+- **[Deployment Guide](docs/DEPLOYMENT.md)** - Complete Railway deployment instructions and troubleshooting
 - **[Curiosity Scraper Guide](docs/CURIOSITY_SCRAPER_GUIDE.md)** - Curiosity-specific scraper documentation
 - **[Opportunity Scraper Guide](docs/OPPORTUNITY_SCRAPER_GUIDE.md)** - Opportunity PDS scraper documentation
 - **[Spirit Scraper Guide](docs/SPIRIT_SCRAPER_GUIDE.md)** - Spirit PDS scraper documentation
