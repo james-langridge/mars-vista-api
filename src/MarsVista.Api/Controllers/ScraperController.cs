@@ -372,6 +372,73 @@ public class ScraperController : ControllerBase
     }
 
     /// <summary>
+    /// Scrape a specific PDS volume for Opportunity rover
+    /// </summary>
+    /// <param name="volumeName">Volume name (e.g., "mer1po_0xxx" for PANCAM)</param>
+    [HttpPost("opportunity/volume/{volumeName}")]
+    public async Task<IActionResult> ScrapeOpportunityVolume(string volumeName)
+    {
+        var scraper = _scrapers.OfType<OpportunityScraper>().FirstOrDefault();
+
+        if (scraper == null)
+        {
+            return NotFound(new { error = "Opportunity scraper not found" });
+        }
+
+        _logger.LogInformation("Manual volume scrape triggered for Opportunity: {VolumeName}", volumeName);
+
+        try
+        {
+            var count = await scraper.ScrapeVolumeAsync(volumeName);
+            return Ok(new
+            {
+                rover = "Opportunity",
+                volume = volumeName,
+                photosScraped = count,
+                timestamp = DateTime.UtcNow
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Volume scrape failed for {VolumeName}", volumeName);
+            return StatusCode(500, new { error = "Volume scrape failed", message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Scrape all PDS volumes for Opportunity rover
+    /// </summary>
+    [HttpPost("opportunity/all")]
+    public async Task<IActionResult> ScrapeAllOpportunityVolumes()
+    {
+        var scraper = _scrapers.OfType<OpportunityScraper>().FirstOrDefault();
+
+        if (scraper == null)
+        {
+            return NotFound(new { error = "Opportunity scraper not found" });
+        }
+
+        _logger.LogInformation("Scraping all Opportunity volumes");
+
+        try
+        {
+            var count = await scraper.ScrapeAllVolumesAsync();
+            return Ok(new
+            {
+                rover = "Opportunity",
+                message = "All volumes scraped",
+                totalPhotosScraped = count,
+                timestamp = DateTime.UtcNow
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "All volumes scrape failed for Opportunity");
+            return StatusCode(500, new { error = "All volumes scrape failed", message = ex.Message });
+        }
+    }
+
+    /// <summary>
     /// Helper to get latest sol for a rover
     /// </summary>
     private async Task<int> GetLatestSolAsync(IScraperService scraper)
@@ -382,6 +449,8 @@ public class ScraperController : ControllerBase
         {
             "Perseverance" => 1682,
             "Curiosity" => 4683,
+            "Opportunity" => 5111,  // Mission ended on sol 5111
+            "Spirit" => 2208,        // Mission ended on sol 2208
             _ => 1000
         };
     }
