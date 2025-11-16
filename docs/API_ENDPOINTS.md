@@ -548,6 +548,74 @@ curl -X POST "http://localhost:5127/api/scraper/opportunity/all"
 
 ---
 
+### Spirit Rover (PDS Volume Scraping)
+
+Spirit uses the same PDS scraping approach as Opportunity. Spirit (MER-2) was Opportunity's twin rover with identical hardware but a shorter mission (6 years vs 14.5 years).
+
+#### Scrape Single Volume
+
+Scrape a specific camera volume from PDS archives.
+
+```http
+POST /api/scraper/spirit/volume/{volumeName}
+```
+
+**Parameters:**
+- `volumeName` (path, required) - PDS volume name
+
+**Available Volumes:**
+- `mer2po_0xxx` - PANCAM (~150,000 photos)
+- `mer2no_0xxx` - NAVCAM (~50,000 photos)
+- `mer2ho_0xxx` - HAZCAM (~15,000 photos)
+- `mer2mo_0xxx` - Microscopic Imager (~10,000 photos)
+- `mer2do_0xxx` - Descent Camera (9 photos)
+
+**Example:**
+```bash
+curl -X POST "http://localhost:5127/api/scraper/spirit/volume/mer2po_0xxx"
+```
+
+**Response:**
+```json
+{
+  "rover": "Spirit",
+  "volume": "mer2po_0xxx",
+  "photosScraped": 150000,
+  "timestamp": "2025-11-16T00:00:00.000Z"
+}
+```
+
+#### Scrape All Volumes
+
+Scrape all Spirit volumes sequentially.
+
+```http
+POST /api/scraper/spirit/all
+```
+
+**Example:**
+```bash
+curl -X POST "http://localhost:5127/api/scraper/spirit/all"
+```
+
+**Response:**
+```json
+{
+  "rover": "Spirit",
+  "message": "All volumes scraped",
+  "totalPhotosScraped": 225000,
+  "timestamp": "2025-11-16T00:00:00.000Z"
+}
+```
+
+**Notes:**
+- Scraping is volume-based (not sol-based like other rovers)
+- Spirit's shorter mission means fewer photos (~225K vs Opportunity's ~548K)
+- Expected time: ~20-30 minutes for all volumes
+- See [Spirit Scraper Guide](SPIRIT_SCRAPER_GUIDE.md) for details
+
+---
+
 ## Health Check
 
 Simple health check endpoint.
@@ -745,4 +813,5 @@ curl -X POST "http://localhost:5127/api/scraper/curiosity/resume"
 - [Database Access Guide](DATABASE_ACCESS.md)
 - [Curiosity Scraper Guide](CURIOSITY_SCRAPER_GUIDE.md)
 - [Opportunity Scraper Guide](OPPORTUNITY_SCRAPER_GUIDE.md)
+- [Spirit Scraper Guide](SPIRIT_SCRAPER_GUIDE.md)
 - [Main README](../README.md)

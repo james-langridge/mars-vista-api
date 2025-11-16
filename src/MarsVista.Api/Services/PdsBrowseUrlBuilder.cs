@@ -100,11 +100,11 @@ public static class PdsBrowseUrlBuilder
             },
             "spirit" => new List<string>
             {
-                "mer2ps_0xxx",  // PANCAM
-                "mer2ns_0xxx",  // NAVCAM
-                "mer2hs_0xxx",  // HAZCAM
-                "mer2ms_0xxx",  // MI
-                "mer2ds_0xxx"   // DESCENT
+                "mer2po_0xxx",  // PANCAM
+                "mer2no_0xxx",  // NAVCAM
+                "mer2ho_0xxx",  // HAZCAM
+                "mer2mo_0xxx",  // MI
+                "mer2do_0xxx"   // DESCENT
             },
             _ => new List<string>()
         };

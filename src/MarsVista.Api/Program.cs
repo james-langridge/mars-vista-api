@@ -34,13 +34,15 @@ builder.Services.AddScoped<IPhotoQueryService, PhotoQueryService>();
 builder.Services.AddKeyedScoped<IScraperService, PerseveranceScraper>("perseverance");
 builder.Services.AddKeyedScoped<IScraperService, CuriosityScraper>("curiosity");
 builder.Services.AddKeyedScoped<IScraperService, OpportunityScraper>("opportunity");
+builder.Services.AddKeyedScoped<IScraperService, SpiritScraper>("spirit");
 
 // Also register non-keyed for IEnumerable<IScraperService> injection
 builder.Services.AddScoped<IScraperService, PerseveranceScraper>();
 builder.Services.AddScoped<IScraperService, CuriosityScraper>();
 builder.Services.AddScoped<IScraperService, OpportunityScraper>();
+builder.Services.AddScoped<IScraperService, SpiritScraper>();
 
-// Register PDS index parser (used by Opportunity scraper)
+// Register PDS index parser (used by MER scrapers: Opportunity and Spirit)
 builder.Services.AddScoped<PdsIndexParser>();
 
 // Register database seeder

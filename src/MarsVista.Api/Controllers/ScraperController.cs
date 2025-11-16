@@ -439,6 +439,73 @@ public class ScraperController : ControllerBase
     }
 
     /// <summary>
+    /// Scrape a specific PDS volume for Spirit rover
+    /// </summary>
+    /// <param name="volumeName">Volume name (e.g., "mer2ps_0xxx" for PANCAM)</param>
+    [HttpPost("spirit/volume/{volumeName}")]
+    public async Task<IActionResult> ScrapeSpiritVolume(string volumeName)
+    {
+        var scraper = _scrapers.OfType<SpiritScraper>().FirstOrDefault();
+
+        if (scraper == null)
+        {
+            return NotFound(new { error = "Spirit scraper not found" });
+        }
+
+        _logger.LogInformation("Manual volume scrape triggered for Spirit: {VolumeName}", volumeName);
+
+        try
+        {
+            var count = await scraper.ScrapeVolumeAsync(volumeName);
+            return Ok(new
+            {
+                rover = "Spirit",
+                volume = volumeName,
+                photosScraped = count,
+                timestamp = DateTime.UtcNow
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Volume scrape failed for {VolumeName}", volumeName);
+            return StatusCode(500, new { error = "Volume scrape failed", message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Scrape all PDS volumes for Spirit rover
+    /// </summary>
+    [HttpPost("spirit/all")]
+    public async Task<IActionResult> ScrapeAllSpiritVolumes()
+    {
+        var scraper = _scrapers.OfType<SpiritScraper>().FirstOrDefault();
+
+        if (scraper == null)
+        {
+            return NotFound(new { error = "Spirit scraper not found" });
+        }
+
+        _logger.LogInformation("Scraping all Spirit volumes");
+
+        try
+        {
+            var count = await scraper.ScrapeAllVolumesAsync();
+            return Ok(new
+            {
+                rover = "Spirit",
+                message = "All volumes scraped",
+                totalPhotosScraped = count,
+                timestamp = DateTime.UtcNow
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "All volumes scrape failed for Spirit");
+            return StatusCode(500, new { error = "All volumes scrape failed", message = ex.Message });
+        }
+    }
+
+    /// <summary>
     /// Helper to get latest sol for a rover
     /// </summary>
     private async Task<int> GetLatestSolAsync(IScraperService scraper)

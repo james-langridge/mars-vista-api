@@ -1,17 +1,17 @@
 # Mars Vista API
 
-A C#/.NET API for Mars rover photo data, designed as a modern alternative to NASA's Mars Photo API. Provides access to Perseverance and Curiosity rover images with complete metadata preservation and advanced querying capabilities.
+A C#/.NET API for Mars rover photo data, designed as a modern alternative to NASA's Mars Photo API. Provides access to all four major Mars rovers (Perseverance, Curiosity, Opportunity, and Spirit) with complete metadata preservation and advanced querying capabilities.
 
 ## Features
 
-- **Multi-Rover Support**: Perseverance and Curiosity scrapers with automatic NASA API adaptation
-- **Complete Data Preservation**: Stores all 30+ NASA metadata fields using hybrid PostgreSQL storage (indexed columns + JSONB)
-- **NASA API Scrapers**: Automated ingestion from multiple NASA Mars rover image feeds
-- **High Performance**: Processes 500+ photos in under 20 seconds with bulk insert optimization
+- **Multi-Rover Support**: All four major Mars rovers (Perseverance, Curiosity, Opportunity, Spirit) with automatic data source adaptation
+- **Complete Data Preservation**: Stores all 30-55 metadata fields using hybrid PostgreSQL storage (indexed columns + JSONB)
+- **Dual Scraper Architecture**: NASA JSON API for active rovers (Perseverance, Curiosity) and PDS index files for historic MER rovers (Opportunity, Spirit)
+- **High Performance**: Processes 500-1000+ photos per second with batch insert optimization and in-memory duplicate checking
 - **Resilient HTTP Client**: Polly-based retry policies and circuit breakers for reliable NASA API communication
 - **Idempotent Operations**: Duplicate detection prevents re-scraping already stored photos
 - **Progress Monitoring**: Real-time CLI dashboard for tracking long-running scrapes
-- **Future-Ready**: Architecture supports additional rovers (Opportunity, Spirit) and advanced features (panoramas, stereo pairs, location-based search)
+- **Rich Metadata**: PDS scrapers preserve 55 metadata fields including mast telemetry, solar position, and Mars local time - data unavailable from JSON APIs
 
 ## Tech Stack
 
@@ -303,6 +303,8 @@ Comprehensive guides available in the `docs/` directory:
 - **[API Endpoints](docs/API_ENDPOINTS.md)** - Complete API reference with examples for all endpoints
 - **[Database Access](docs/DATABASE_ACCESS.md)** - Database credentials, useful queries, and management commands
 - **[Curiosity Scraper Guide](docs/CURIOSITY_SCRAPER_GUIDE.md)** - Curiosity-specific scraper documentation
+- **[Opportunity Scraper Guide](docs/OPPORTUNITY_SCRAPER_GUIDE.md)** - Opportunity PDS scraper documentation
+- **[Spirit Scraper Guide](docs/SPIRIT_SCRAPER_GUIDE.md)** - Spirit PDS scraper documentation
 
 ## Development Status
 
@@ -310,20 +312,23 @@ Currently implemented:
 - ✅ PostgreSQL database with migrations
 - ✅ Rover and camera seed data for all 4 rovers
 - ✅ Perseverance and Curiosity NASA API scrapers
+- ✅ Opportunity and Spirit PDS index file scrapers
 - ✅ Bulk scraper endpoint for efficient multi-sol ingestion
+- ✅ Volume-based scraping for MER rovers (Opportunity, Spirit)
 - ✅ Progress monitoring endpoint and CLI tool
 - ✅ Hybrid storage (indexed columns + JSONB)
 - ✅ Idempotent operations with duplicate detection
+- ✅ In-memory duplicate checking for 1000x performance improvement
 - ✅ Public query API (v1) with filtering and pagination
 - ✅ Photo manifest endpoint
 - ✅ Multi-rover support with strategy pattern
+- ✅ Complete metadata preservation (55 fields for MER rovers)
 
 Planned:
-- 🔄 Additional rover scrapers (Opportunity, Spirit)
-- 🔄 Retry script for failed sols
 - 🔄 Advanced features (panoramas, stereo pairs, location search)
 - 🔄 Automated background scraping
 - 🔄 Redis caching layer for query performance
+- 🔄 Photo download and local storage
 
 ## License
 
