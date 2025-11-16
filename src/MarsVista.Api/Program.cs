@@ -8,10 +8,29 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
+// Railway provides DATABASE_URL in PostgreSQL URL format, convert to connection string
+var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+string connectionString;
+
+if (!string.IsNullOrEmpty(databaseUrl))
+{
+    // Parse Railway DATABASE_URL format: postgresql://user:pass@host:port/dbname
+    var uri = new Uri(databaseUrl);
+    var password = uri.UserInfo.Split(':')[1];
+    var username = uri.UserInfo.Split(':')[0];
+    connectionString = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.Trim('/')};Username={username};Password={password};SSL Mode=Require;Trust Server Certificate=true";
+}
+else
+{
+    // Fall back to appsettings.json for local development
+    connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+        ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+}
+
 // Add DbContext with snake_case naming convention
 builder.Services.AddDbContext<MarsVistaDbContext>(options =>
     options.UseNpgsql(
-        builder.Configuration.GetConnectionString("DefaultConnection"),
+        connectionString,
         npgsqlOptions => npgsqlOptions.EnableRetryOnFailure()
     )
     .UseSnakeCaseNamingConvention());
@@ -48,6 +67,17 @@ builder.Services.AddScoped<PdsIndexParser>();
 // Register database seeder
 builder.Services.AddScoped<DatabaseSeeder>();
 
+// Enable CORS for public API access
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
+
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
@@ -70,9 +100,42 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+// Enable CORS middleware
+app.UseCors();
+
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Health check endpoint for Railway and monitoring
+app.MapGet("/health", async (MarsVistaDbContext db) =>
+{
+    try
+    {
+        // Verify database connection
+        await db.Database.CanConnectAsync();
+
+        var roverCount = await db.Rovers.CountAsync();
+        var photoCount = await db.Photos.CountAsync();
+
+        return Results.Ok(new
+        {
+            status = "healthy",
+            timestamp = DateTime.UtcNow,
+            database = "connected",
+            rovers = roverCount,
+            photos = photoCount
+        });
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(
+            title: "Health check failed",
+            detail: ex.Message,
+            statusCode: 503
+        );
+    }
+});
 
 app.Run();
 
