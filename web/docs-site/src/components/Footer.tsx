@@ -35,7 +35,7 @@ export default function Footer() {
           <div>
             <h3 className="font-semibold mb-4">About</h3>
             <p className="text-gray-400">
-              Open-source Mars rover imagery API, recreating NASA's Mars Rover Photos API with enhanced data preservation and performance.
+              Mars rover imagery API, recreating NASA's Mars Rover Photos API with enhanced data preservation and performance.
             </p>
           </div>
         </div>
