@@ -30,6 +30,24 @@ All examples below use `localhost` for local development. For production, replac
 
 NASA-compatible API for querying Mars rover photo data.
 
+### Response Format
+
+All API endpoints support two response formats via the optional `?format` query parameter:
+
+**Default (snake_case)** - 100% compatible with original NASA Mars Photo API:
+```bash
+curl "http://localhost:5127/api/v1/rovers/curiosity/photos?sol=1000"
+# Returns: { "img_src": "...", "earth_date": "...", "full_name": "..." }
+```
+
+**Modern JavaScript (camelCase)** - Add `?format=camelCase`:
+```bash
+curl "http://localhost:5127/api/v1/rovers/curiosity/photos?sol=1000&format=camelCase"
+# Returns: { "imgSrc": "...", "earthDate": "...", "fullName": "..." }
+```
+
+**Migration from NASA API:** Simply replace the base URL - no code changes required! See [NASA_API_MIGRATION_GUIDE.md](NASA_API_MIGRATION_GUIDE.md) for details.
+
 ### Rovers
 
 #### Get All Rovers
@@ -196,16 +214,22 @@ Get the most recent photos from a rover (highest sol number).
 
 ```http
 GET /api/v1/rovers/{name}/latest
+GET /api/v1/rovers/{name}/latest_photos  (NASA API compatible alias)
 ```
 
 **Parameters:**
 - `name` (path, required) - Rover name
 - `page` (query, optional) - Page number (default: 1)
 - `per_page` (query, optional) - Results per page (default: 25, max: 100)
+- `format` (query, optional) - Response format: `snake_case` (default) or `camelCase`
 
-**Example:**
+**Examples:**
 ```bash
+# Modern endpoint
 curl "http://localhost:5127/api/v1/rovers/curiosity/latest?per_page=10"
+
+# NASA API compatible endpoint
+curl "http://localhost:5127/api/v1/rovers/curiosity/latest_photos?per_page=10"
 ```
 
 **Response:**

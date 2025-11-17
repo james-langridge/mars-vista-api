@@ -82,6 +82,17 @@ builder.Services.AddCors(options =>
 });
 
 // Add rate limiting to protect against spam/DDoS even without valid API key
+// Configure JSON serialization
+// Default: snake_case (via JsonPropertyName attributes on DTOs)
+// This makes the API backward compatible with the original NASA Mars Photo API
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // Keep property names as defined in DTOs (respects JsonPropertyName attributes)
+        options.JsonSerializerOptions.PropertyNamingPolicy = null;
+        options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
+    });
+
 builder.Services.AddRateLimiter(options =>
 {
     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
@@ -115,7 +126,6 @@ builder.Services.AddRateLimiter(options =>
     };
 });
 
-builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
@@ -139,6 +149,9 @@ app.UseHttpsRedirection();
 
 // Enable CORS middleware
 app.UseCors();
+
+// JSON format middleware (supports ?format=camelCase for modern JavaScript apps)
+app.UseMiddleware<JsonFormatMiddleware>();
 
 // Rate limiting (first defense - stops spam before API key check)
 app.UseRateLimiter();
