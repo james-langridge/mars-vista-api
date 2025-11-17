@@ -263,6 +263,12 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+// Test endpoint for Sentry error tracking (development/testing only)
+app.MapGet("/debug/sentry-test", () =>
+{
+    throw new InvalidOperationException("Test exception to verify Sentry error tracking is working correctly");
+});
+
 // Enhanced health check endpoint with detailed diagnostics
 app.MapHealthChecks("/health", new HealthCheckOptions
 {
