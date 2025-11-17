@@ -343,7 +343,7 @@ railway domain
 ```
 Service: mars-vista-api
 Status: Deployed
-URL: https://mars-vista-api-production.up.railway.app
+URL: https://api.marsvista.dev
 ```
 
 ### Phase 3: Verify Production Deployment (30 minutes)
@@ -410,7 +410,7 @@ Create test HTML file:
 
     <script>
         async function testAPI() {
-            const url = 'https://mars-vista-api-production.up.railway.app/api/v1/rovers';
+            const url = 'https://api.marsvista.dev/api/v1/rovers';
             try {
                 const response = await fetch(url);
                 const data = await response.json();
@@ -448,18 +448,18 @@ Add production API section:
 
 The Mars Vista API is publicly available at:
 
-**Base URL**: `https://mars-vista-api-production.up.railway.app`
+**Base URL**: `https://api.marsvista.dev`
 
 ### Quick Start
 
 Get all rovers:
 ```bash
-curl "https://mars-vista-api-production.up.railway.app/api/v1/rovers"
+curl "https://api.marsvista.dev/api/v1/rovers"
 ```
 
 Query Perseverance photos from Sol 1000:
 ```bash
-curl "https://mars-vista-api-production.up.railway.app/api/v1/rovers/perseverance/photos?sol=1000&per_page=10"
+curl "https://api.marsvista.dev/api/v1/rovers/perseverance/photos?sol=1000&per_page=10"
 ```
 
 ### API Documentation
@@ -617,7 +617,7 @@ Complete reference for all Mars Vista API endpoints.
 
 ## Base URLs
 
-- **Production**: `https://mars-vista-api-production.up.railway.app`
+- **Production**: `https://api.marsvista.dev`
 - **Local Development**: `http://localhost:5127`
 
 All examples below use the production URL. Replace with `http://localhost:5127` for local development.
@@ -632,7 +632,7 @@ Update all curl examples to use production URL:
 curl "http://localhost:5127/api/v1/rovers"
 
 # After:
-curl "https://mars-vista-api-production.up.railway.app/api/v1/rovers"
+curl "https://api.marsvista.dev/api/v1/rovers"
 ```
 
 ## Testing Checklist
@@ -667,7 +667,7 @@ Run these after deployment:
 
 ```bash
 # Set Railway URL
-RAILWAY_URL="https://mars-vista-api-production.up.railway.app"
+RAILWAY_URL="https://api.marsvista.dev"
 
 # Test 1: Health check
 curl "$RAILWAY_URL/health" | jq '.status'
@@ -767,7 +767,7 @@ If critical issues arise post-deployment:
 **Manual Health Checks**:
 ```bash
 # Every 5 minutes
-watch -n 300 'curl -s https://mars-vista-api-production.up.railway.app/health | jq .status'
+watch -n 300 'curl -s https://api.marsvista.dev/health | jq .status'
 ```
 
 **Future Enhancement**: Set up automated monitoring (Uptime Robot, Pingdom) in Story 013.

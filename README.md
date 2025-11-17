@@ -4,27 +4,25 @@ A C#/.NET API for Mars rover photo data, designed as a modern alternative to NAS
 
 ## Production API
 
-> **Note**: The API will be publicly available after Railway deployment is complete.
+The Mars Vista API is live and publicly accessible at:
 
-Once deployed, the Mars Vista API will be accessible at:
-
-**Base URL**: `https://[your-railway-domain].up.railway.app` (URL will be updated after deployment)
+**Base URL**: `https://api.marsvista.dev`
 
 ### Quick Start Example
 
 Get all rovers:
 ```bash
-curl "https://[your-railway-domain].up.railway.app/api/v1/rovers"
+curl "https://api.marsvista.dev/api/v1/rovers"
 ```
 
 Query Perseverance photos from Sol 1000:
 ```bash
-curl "https://[your-railway-domain].up.railway.app/api/v1/rovers/perseverance/photos?sol=1000&per_page=10"
+curl "https://api.marsvista.dev/api/v1/rovers/perseverance/photos?sol=1000&per_page=10"
 ```
 
 Check API health:
 ```bash
-curl "https://[your-railway-domain].up.railway.app/health"
+curl "https://api.marsvista.dev/health"
 ```
 
 ### Rate Limits
@@ -348,7 +346,7 @@ railway up
 railway domain
 ```
 
-After deployment, update the Production API section above with your actual Railway domain.
+After deployment, update the Production API section above with your actual api.marsvista.dev.
 
 For complete deployment instructions, troubleshooting, and monitoring, see [DEPLOYMENT.md](docs/DEPLOYMENT.md).
 

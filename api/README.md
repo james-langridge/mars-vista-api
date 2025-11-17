@@ -74,7 +74,7 @@ api/
 - **API Key**: Auto-configured (inherited from environment)
 
 ### Production
-- **Base URL**: `https://mars-vista-api-production.up.railway.app`
+- **Base URL**: `https://api.marsvista.dev`
 - **API Key**: Auto-configured (inherited from environment)
 
 ## Quick Test Workflow

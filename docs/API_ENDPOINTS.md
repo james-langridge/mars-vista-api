@@ -4,10 +4,10 @@ Complete reference for all Mars Vista API endpoints.
 
 ## Base URLs
 
-- **Production**: `https://[your-railway-domain].up.railway.app` (update after deployment)
+- **Production**: `https://api.marsvista.dev`
 - **Local Development**: `http://localhost:5127`
 
-All examples below use `localhost` for local development. For production, replace with your Railway domain.
+All examples below use `localhost` for local development. For production, use `https://api.marsvista.dev`.
 
 ---
 

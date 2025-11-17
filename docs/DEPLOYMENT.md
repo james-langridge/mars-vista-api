@@ -83,7 +83,7 @@ railway up
 railway domain
 ```
 
-Railway provides a URL like: `https://mars-vista-api-production.up.railway.app`
+Railway provides a URL like: `https://api.marsvista.dev`
 
 ## Monitoring Deployment
 

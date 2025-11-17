@@ -14,7 +14,7 @@ https://mars-photos.herokuapp.com/api/v1/...
 
 **After** (Mars Vista API):
 ```
-https://mars-vista-api-production.up.railway.app/api/v1/...
+https://api.marsvista.dev/api/v1/...
 ```
 
 **That's it!** All query parameters and response formats remain 100% compatible.
@@ -41,7 +41,7 @@ curl "https://api.nasa.gov/mars-photos/api/v1/rovers/curiosity/photos?sol=1000&c
 
 **Mars Vista API equivalent (identical response):**
 ```bash
-curl "https://mars-vista-api-production.up.railway.app/api/v1/rovers/curiosity/photos?sol=1000&camera=MAST&page=1"
+curl "https://api.marsvista.dev/api/v1/rovers/curiosity/photos?sol=1000&camera=MAST&page=1"
 ```
 
 **Response format (identical):**
@@ -83,7 +83,7 @@ Mars Vista API adds **optional** camelCase format for modern JavaScript/TypeScri
 ```javascript
 // Add ?format=camelCase to any endpoint
 const response = await fetch(
-  'https://mars-vista-api-production.up.railway.app/api/v1/rovers/curiosity/photos?sol=1000&format=camelCase'
+  'https://api.marsvista.dev/api/v1/rovers/curiosity/photos?sol=1000&format=camelCase'
 );
 
 const { photos } = await response.json();
@@ -176,7 +176,7 @@ photos = response.json()["photos"]
 ```python
 import requests
 
-url = "https://mars-vista-api-production.up.railway.app/api/v1/rovers/curiosity/photos"
+url = "https://api.marsvista.dev/api/v1/rovers/curiosity/photos"
 params = {"sol": 1000}  # No API key required (for now)
 response = requests.get(url, params=params)
 photos = response.json()["photos"]
@@ -193,14 +193,14 @@ fetch('https://api.nasa.gov/mars-photos/api/v1/rovers/curiosity/photos?sol=1000&
 
 **After (option 1: snake_case, drop-in compatible):**
 ```javascript
-fetch('https://mars-vista-api-production.up.railway.app/api/v1/rovers/curiosity/photos?sol=1000')
+fetch('https://api.marsvista.dev/api/v1/rovers/curiosity/photos?sol=1000')
   .then(res => res.json())
   .then(data => console.log(data.photos[0].img_src)); // snake_case
 ```
 
 **After (option 2: modern camelCase):**
 ```javascript
-fetch('https://mars-vista-api-production.up.railway.app/api/v1/rovers/curiosity/photos?sol=1000&format=camelCase')
+fetch('https://api.marsvista.dev/api/v1/rovers/curiosity/photos?sol=1000&format=camelCase')
   .then(res => res.json())
   .then(data => console.log(data.photos[0].imgSrc)); // camelCase
 ```
@@ -224,7 +224,7 @@ photos = JSON.parse(response.body)['photos']
 require 'net/http'
 require 'json'
 
-uri = URI('https://mars-vista-api-production.up.railway.app/api/v1/rovers/curiosity/photos')
+uri = URI('https://api.marsvista.dev/api/v1/rovers/curiosity/photos')
 params = { sol: 1000 }
 uri.query = URI.encode_www_form(params)
 response = Net::HTTP.get_response(uri)
@@ -237,28 +237,28 @@ Use these test requests to verify your migration:
 
 ```bash
 # Test 1: Get rovers list
-curl "https://mars-vista-api-production.up.railway.app/api/v1/rovers"
+curl "https://api.marsvista.dev/api/v1/rovers"
 
 # Test 2: Get Curiosity rover info
-curl "https://mars-vista-api-production.up.railway.app/api/v1/rovers/curiosity"
+curl "https://api.marsvista.dev/api/v1/rovers/curiosity"
 
 # Test 3: Query photos by sol
-curl "https://mars-vista-api-production.up.railway.app/api/v1/rovers/curiosity/photos?sol=1000&per_page=5"
+curl "https://api.marsvista.dev/api/v1/rovers/curiosity/photos?sol=1000&per_page=5"
 
 # Test 4: Query photos by earth_date
-curl "https://mars-vista-api-production.up.railway.app/api/v1/rovers/curiosity/photos?earth_date=2015-05-30"
+curl "https://api.marsvista.dev/api/v1/rovers/curiosity/photos?earth_date=2015-05-30"
 
 # Test 5: Get latest photos
-curl "https://mars-vista-api-production.up.railway.app/api/v1/rovers/curiosity/latest_photos?per_page=10"
+curl "https://api.marsvista.dev/api/v1/rovers/curiosity/latest_photos?per_page=10"
 
 # Test 6: Get photo manifest
-curl "https://mars-vista-api-production.up.railway.app/api/v1/manifests/curiosity"
+curl "https://api.marsvista.dev/api/v1/manifests/curiosity"
 
 # Test 7: Get specific photo by ID
-curl "https://mars-vista-api-production.up.railway.app/api/v1/photos/583821"
+curl "https://api.marsvista.dev/api/v1/photos/583821"
 
 # Test 8: Modern camelCase format (optional)
-curl "https://mars-vista-api-production.up.railway.app/api/v1/rovers/curiosity/photos?sol=1000&format=camelCase"
+curl "https://api.marsvista.dev/api/v1/rovers/curiosity/photos?sol=1000&format=camelCase"
 ```
 
 ## Differences from Original API

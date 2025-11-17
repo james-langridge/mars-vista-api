@@ -5,7 +5,7 @@ Comprehensive analysis of the Mars Vista API's scaling capacity, bottlenecks, an
 ## Current Production Metrics
 
 - **Deployment**: Railway Pro plan
-- **URL**: https://mars-vista-api-production.up.railway.app
+- **URL**: https://api.marsvista.dev
 - **Database**: Railway PostgreSQL Pro (1.98M photos)
 - **Response Time**: 557ms for typical photo queries (25 results)
 - **Health Check**: < 100ms
@@ -472,7 +472,7 @@ Add PostgreSQL cost: ~$10-50/month depending on size
      ],
    };
    export default function() {
-     http.get('https://mars-vista-api-production.up.railway.app/api/v1/rovers');
+     http.get('https://api.marsvista.dev/api/v1/rovers');
    }
    ```
 
