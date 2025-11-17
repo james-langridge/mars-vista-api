@@ -3,48 +3,17 @@ info:
   title: Mars Vista API
   version: 1.0.0
   description: |
-    **Mars Vista API** provides fast,  reliable access to Mars rover photography data from NASA's missions.
+    NASA Mars rover photo API.
 
-    This API is 100% compatible with NASA's Mars Photo API while offering significant improvements:
-    - **50-70% faster response times** (< 260ms average)
-    - **Complete NASA metadata preservation** in JSONB storage
-    - **No API key required** for public endpoints
-    - **Modern JSON formats** (snake_case and camelCase)
+    ## Endpoints
 
-    ## Features
-
-    - Query photos by sol, Earth date, or camera
-    - Access data from all 4 Mars rovers (Curiosity, Perseverance, Opportunity, Spirit)
-    - Get rover manifests with photo availability by sol
-    - Pagination support for large result sets
-    - Rate limiting: 100 requests per minute per IP
-
-    ## Quick Start
-
-    ```bash
-    # Get all rovers
-    curl "https://api.marsvista.dev/api/v1/rovers"
-
-    # Get Curiosity photos from sol 1000
-    curl "https://api.marsvista.dev/api/v1/rovers/curiosity/photos?sol=1000"
-
-    # Filter by camera
-    curl "https://api.marsvista.dev/api/v1/rovers/perseverance/photos?sol=100&camera=NAVCAM"
-    ```
-
-    ## Migration from NASA API
-
-    Simply change the base URL - no code changes required:
-
-    **Before:** `https://api.nasa.gov/mars-photos/api/v1/`
-    **After:** `https://api.marsvista.dev/api/v1/`
-
-  contact:
-    name: Mars Vista API
-    url: https://github.com/yourusername/mars-vista-api
-  license:
-    name: MIT
-    url: https://opensource.org/licenses/MIT
+    - `/api/v1/rovers` - List all rovers
+    - `/api/v1/rovers/{name}` - Get specific rover
+    - `/api/v1/rovers/{name}/photos` - Query photos by sol, date, or camera
+    - `/api/v1/rovers/{name}/latest` - Get latest photos
+    - `/api/v1/photos/{id}` - Get photo by ID
+    - `/api/v1/manifests/{name}` - Get rover manifest
+    - `/health` - Health check
 
 servers:
   - url: https://api.marsvista.dev
@@ -68,11 +37,7 @@ paths:
       tags:
         - Rovers
       summary: Get all rovers
-      description: |
-        Returns a list of all Mars rovers with their details, including cameras,
-        mission status, and photo counts.
-
-        **Response Time:** ~50-100ms
+      description: Returns a list of all Mars rovers with their details, including cameras, mission status, and photo counts.
       operationId: getAllRovers
       responses:
         '200':
@@ -116,10 +81,7 @@ paths:
       tags:
         - Rovers
       summary: Get specific rover
-      description: |
-        Returns detailed information about a specific Mars rover.
-
-        **Response Time:** ~100-150ms
+      description: Returns detailed information about a specific Mars rover.
       operationId: getRoverByName
       parameters:
         - $ref: '#/components/parameters/RoverName'
@@ -167,17 +129,9 @@ paths:
         - Photos
       summary: Query photos for a rover
       description: |
-        Query photos taken by a specific Mars rover with flexible filtering options.
+        Query photos taken by a specific Mars rover.
 
-        **Filters:**
-        - `sol`: Martian sol (mission day)
-        - `earth_date`: Earth date in YYYY-MM-DD format
-        - `camera`: Camera name (e.g., NAVCAM, MAST)
-
-        **At least one filter is required** (sol or earth_date).
-
-        **Response Time:** ~140-260ms for most queries
-        **Rate Limit:** 100 requests per minute per IP
+        Requires at least one of: `sol` or `earth_date` parameter.
       operationId: queryPhotos
       parameters:
         - $ref: '#/components/parameters/RoverName'
@@ -296,12 +250,7 @@ paths:
       tags:
         - Photos
       summary: Get latest photos from rover
-      description: |
-        Get the most recent photos from a rover (highest sol number).
-
-        **Alias:** `/api/v1/rovers/{name}/latest_photos` (NASA API compatible)
-
-        **Response Time:** ~140-260ms
+      description: Get the most recent photos from a rover (highest sol number).
       operationId: getLatestPhotos
       parameters:
         - $ref: '#/components/parameters/RoverName'
@@ -342,10 +291,7 @@ paths:
       tags:
         - Photos
       summary: Get photo by ID
-      description: |
-        Retrieve a specific photo by its unique identifier.
-
-        **Response Time:** ~50-100ms
+      description: Retrieve a specific photo by its unique identifier.
       operationId: getPhotoById
       parameters:
         - name: id
@@ -381,13 +327,7 @@ paths:
       tags:
         - Manifests
       summary: Get rover manifest
-      description: |
-        Get a summary of available photos organized by sol, including photo counts
-        and available cameras for each sol.
-
-        Useful for discovering which sols have photos before querying.
-
-        **Response Time:** ~200-250ms (optimized with covering index)
+      description: Get a summary of available photos organized by sol, including photo counts and available cameras for each sol.
       operationId: getRoverManifest
       parameters:
         - $ref: '#/components/parameters/RoverName'
@@ -432,10 +372,7 @@ paths:
       tags:
         - Health
       summary: Health check
-      description: |
-        Check API and database health status.
-
-        Returns service status, timestamp, and health check results for all dependencies.
+      description: Check API and database health status.
       operationId: healthCheck
       responses:
         '200':
@@ -688,17 +625,3 @@ components:
           example:
             error: "An unexpected error occurred"
 
-  securitySchemes:
-    ApiKeyAuth:
-      type: apiKey
-      in: header
-      name: X-API-Key
-      description: |
-        Optional API key for higher rate limits or premium features.
-
-        Public endpoints work without an API key (100 req/min limit).
-        Contact the API administrator for an API key if you need higher limits.
-
-security:
-  - {}
-  - ApiKeyAuth: []
