@@ -27,9 +27,8 @@ public class ApiKeyMiddleware
             return;
         }
 
-        // Skip authentication for health check and debug endpoints
-        if (context.Request.Path.StartsWithSegments("/health") ||
-            context.Request.Path.StartsWithSegments("/debug"))
+        // Skip authentication for health check endpoint
+        if (context.Request.Path.StartsWithSegments("/health"))
         {
             await _next(context);
             return;
