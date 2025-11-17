@@ -7,6 +7,11 @@ export default function Footer() {
             <h3 className="font-semibold mb-4">Resources</h3>
             <ul className="space-y-2">
               <li>
+                <a href="https://marsvista.dev" className="text-gray-400 hover:text-white transition-colors">
+                  Home
+                </a>
+              </li>
+              <li>
                 <a href="https://docs.marsvista.dev" className="text-gray-400 hover:text-white transition-colors">
                   Documentation
                 </a>
