@@ -146,4 +146,21 @@ public class RoversController : ControllerBase
             }
         });
     }
+
+    /// <summary>
+    /// Alias for GetLatestPhotos - provided for backward compatibility with NASA Mars Photo API
+    /// </summary>
+    /// <param name="name">Rover name</param>
+    /// <param name="page">Page number</param>
+    /// <param name="perPage">Results per page</param>
+    [HttpGet("{name}/latest_photos")]
+    public async Task<IActionResult> GetLatestPhotosLegacy(
+        string name,
+        [FromQuery] int page = 1,
+        [FromQuery(Name = "per_page")] int perPage = 25,
+        CancellationToken cancellationToken = default)
+    {
+        // Simply delegate to GetLatestPhotos - same implementation
+        return await GetLatestPhotos(name, page, perPage, cancellationToken);
+    }
 }
