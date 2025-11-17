@@ -1,6 +1,8 @@
+using System.Threading.RateLimiting;
 using MarsVista.Api.Data;
 using MarsVista.Api.Middleware;
 using MarsVista.Api.Services;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Polly;
 using Polly.Extensions.Http;
@@ -79,6 +81,40 @@ builder.Services.AddCors(options =>
     });
 });
 
+// Add rate limiting to protect against spam/DDoS even without valid API key
+builder.Services.AddRateLimiter(options =>
+{
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+    {
+        // Get IP address for rate limiting
+        var ipAddress = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+        return RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: ipAddress,
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 100,                          // 100 requests
+                Window = TimeSpan.FromMinutes(1),           // per minute
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0                              // no queueing
+            });
+    });
+
+    // Customize response when rate limit is exceeded
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        context.HttpContext.Response.StatusCode = 429;
+        await context.HttpContext.Response.WriteAsJsonAsync(new
+        {
+            error = "Too Many Requests",
+            message = "Rate limit exceeded. Maximum 100 requests per minute per IP address.",
+            retryAfter = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter)
+                ? retryAfter.TotalSeconds
+                : 60
+        }, cancellationToken);
+    };
+});
+
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
@@ -104,7 +140,10 @@ app.UseHttpsRedirection();
 // Enable CORS middleware
 app.UseCors();
 
-// API key authentication (protects all endpoints except /health)
+// Rate limiting (first defense - stops spam before API key check)
+app.UseRateLimiter();
+
+// API key authentication (second defense - protects all endpoints except /health)
 app.UseMiddleware<ApiKeyMiddleware>();
 
 app.UseAuthorization();
