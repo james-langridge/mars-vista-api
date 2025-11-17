@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import StatusCard from './components/StatusCard'
 import Header from './components/Header'
+import Footer from './components/Footer'
 import IncidentLog from './components/IncidentLog'
 import type { Monitor } from './types'
 
@@ -65,10 +66,10 @@ function App() {
   const overall = getOverallStatus()
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex flex-col">
       <Header />
 
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <main className="flex-1 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 w-full">
         {loading ? (
           <div className="flex items-center justify-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#d14524]"></div>
@@ -113,22 +114,11 @@ function App() {
               <IncidentLog logs={monitors[0].logs} />
             )}
 
-            {/* Footer Info */}
-            <div className="text-center text-sm text-slate-500 pt-8 border-t border-slate-200">
-              <p>
-                Status page powered by{' '}
-                <a href="https://uptimerobot.com" target="_blank" rel="noopener noreferrer" className="text-[#d14524] hover:underline">
-                  UptimeRobot
-                </a>
-                {' '}&middot;{' '}
-                <a href="https://api.marsvista.dev" target="_blank" rel="noopener noreferrer" className="text-[#d14524] hover:underline">
-                  API Documentation
-                </a>
-              </p>
-            </div>
           </div>
         )}
       </main>
+
+      <Footer />
     </div>
   )
 }
