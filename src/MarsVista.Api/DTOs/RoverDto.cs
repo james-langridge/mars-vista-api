@@ -115,6 +115,9 @@ public record PhotosBySolDto
     [JsonPropertyName("sol")]
     public int Sol { get; init; }
 
+    [JsonPropertyName("earth_date")]
+    public string EarthDate { get; init; } = string.Empty;
+
     [JsonPropertyName("total_photos")]
     public int TotalPhotos { get; init; }
 
