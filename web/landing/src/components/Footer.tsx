@@ -12,11 +12,6 @@ export default function Footer() {
                 </a>
               </li>
               <li>
-                <a href="https://api.marsvista.dev/api/v1/rovers" className="text-gray-400 hover:text-white transition-colors">
-                  API Reference
-                </a>
-              </li>
-              <li>
                 <a href="https://status.marsvista.dev" className="text-gray-400 hover:text-white transition-colors">
                   Status Page
                 </a>
