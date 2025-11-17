@@ -131,6 +131,14 @@ builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
+// Apply pending migrations on startup (both development and production)
+// This ensures Railway automatically applies migrations when new code is deployed
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<MarsVistaDbContext>();
+    await dbContext.Database.MigrateAsync();
+}
+
 // Seed database on startup in development
 if (app.Environment.IsDevelopment())
 {
