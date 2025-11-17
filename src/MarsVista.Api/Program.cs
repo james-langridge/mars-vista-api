@@ -2,12 +2,62 @@ using System.Threading.RateLimiting;
 using MarsVista.Api.Data;
 using MarsVista.Api.Middleware;
 using MarsVista.Api.Services;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Polly;
 using Polly.Extensions.Http;
+using Serilog;
+using Serilog.Context;
+using Serilog.Formatting.Compact;
+
+// Configure Serilog before building the application
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .MinimumLevel.Override("Microsoft", Serilog.Events.LogEventLevel.Warning)
+    .MinimumLevel.Override("Microsoft.EntityFrameworkCore", Serilog.Events.LogEventLevel.Warning)
+    .Enrich.FromLogContext()
+    .Enrich.WithEnvironmentName()
+    .Enrich.WithMachineName()
+    .Enrich.WithThreadId()
+    .WriteTo.Console(new CompactJsonFormatter())
+    .WriteTo.File(
+        new CompactJsonFormatter(),
+        "logs/marsvista-.json",
+        rollingInterval: RollingInterval.Day,
+        retainedFileCountLimit: 7)
+    .CreateLogger();
+
+try
+{
+    Log.Information("Starting Mars Vista API");
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Use Serilog for logging
+builder.Host.UseSerilog();
+
+// Configure Sentry for error tracking (only if DSN is provided)
+var sentryDsn = builder.Configuration["Sentry:Dsn"];
+if (!string.IsNullOrEmpty(sentryDsn))
+{
+    Log.Information("Configuring Sentry error tracking");
+    builder.WebHost.UseSentry(options =>
+    {
+        options.Dsn = sentryDsn;
+        options.Environment = builder.Environment.EnvironmentName;
+        options.TracesSampleRate = builder.Environment.IsProduction() ? 0.1 : 1.0; // 10% sampling in production, 100% in dev
+        options.AttachStacktrace = true;
+        options.SendDefaultPii = false; // Don't send PII
+        options.MaxBreadcrumbs = 50;
+        options.Debug = builder.Environment.IsDevelopment();
+    });
+}
+else
+{
+    Log.Warning("Sentry DSN not configured - error tracking disabled");
+}
 
 // Add services to the container.
 
@@ -129,6 +179,15 @@ builder.Services.AddRateLimiter(options =>
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
+// Add health checks
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<MarsVistaDbContext>("database")
+    .AddNpgSql(
+        connectionString,
+        name: "postgresql",
+        failureStatus: HealthStatus.Unhealthy,
+        tags: new[] { "db", "sql" });
+
 var app = builder.Build();
 
 // Apply pending migrations on startup (both development and production)
@@ -158,6 +217,39 @@ app.UseHttpsRedirection();
 // Enable CORS middleware
 app.UseCors();
 
+// Request logging with Serilog (logs HTTP requests with timing)
+app.UseSerilogRequestLogging(options =>
+{
+    options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
+    {
+        diagnosticContext.Set("RequestHost", httpContext.Request.Host.Value);
+        diagnosticContext.Set("RequestScheme", httpContext.Request.Scheme);
+        diagnosticContext.Set("RemoteIP", httpContext.Connection.RemoteIpAddress?.ToString());
+        diagnosticContext.Set("UserAgent", httpContext.Request.Headers["User-Agent"].ToString());
+
+        // Add correlation ID if present
+        if (httpContext.Items.TryGetValue("CorrelationId", out var correlationId))
+        {
+            diagnosticContext.Set("CorrelationId", correlationId);
+        }
+    };
+});
+
+// Correlation ID middleware (must come before request logging to be captured)
+app.Use(async (context, next) =>
+{
+    var correlationId = context.Request.Headers["X-Correlation-ID"].FirstOrDefault()
+        ?? Guid.NewGuid().ToString();
+
+    context.Response.Headers.Append("X-Correlation-ID", correlationId);
+    context.Items["CorrelationId"] = correlationId;
+
+    using (LogContext.PushProperty("CorrelationId", correlationId))
+    {
+        await next();
+    }
+});
+
 // JSON format middleware (supports ?format=camelCase for modern JavaScript apps)
 app.UseMiddleware<JsonFormatMiddleware>();
 
@@ -171,37 +263,43 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-// Health check endpoint for Railway and monitoring
-app.MapGet("/health", async (MarsVistaDbContext db) =>
+// Enhanced health check endpoint with detailed diagnostics
+app.MapHealthChecks("/health", new HealthCheckOptions
 {
-    try
+    ResponseWriter = async (context, report) =>
     {
-        // Verify database connection
-        await db.Database.CanConnectAsync();
+        context.Response.ContentType = "application/json";
 
-        var roverCount = await db.Rovers.CountAsync();
-        var photoCount = await db.Photos.CountAsync();
-
-        return Results.Ok(new
+        var result = new
         {
-            status = "healthy",
+            status = report.Status.ToString(),
             timestamp = DateTime.UtcNow,
-            database = "connected",
-            rovers = roverCount,
-            photos = photoCount
-        });
-    }
-    catch (Exception ex)
-    {
-        return Results.Problem(
-            title: "Health check failed",
-            detail: ex.Message,
-            statusCode: 503
-        );
+            duration = report.TotalDuration.TotalMilliseconds,
+            checks = report.Entries.Select(e => new
+            {
+                name = e.Key,
+                status = e.Value.Status.ToString(),
+                duration = e.Value.Duration.TotalMilliseconds,
+                description = e.Value.Description,
+                error = e.Value.Exception?.Message
+            })
+        };
+
+        await context.Response.WriteAsJsonAsync(result);
     }
 });
 
 app.Run();
+
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Application terminated unexpectedly");
+}
+finally
+{
+    Log.CloseAndFlush();
+}
 
 // Retry policy with exponential backoff
 static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy()
