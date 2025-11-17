@@ -5,7 +5,7 @@
 
 set -e
 
-BASE_URL="${1:-https://mars-vista-api-production.up.railway.app}"
+BASE_URL="${1:-https://api.marsvista.dev}"
 ITERATIONS="${2:-3}"
 
 echo "======================================================================"

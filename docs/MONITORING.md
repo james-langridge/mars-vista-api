@@ -95,7 +95,7 @@ Track individual requests across distributed logs and services.
 # Send request with custom correlation ID
 curl -H "X-Correlation-ID: my-request-123" \
      -H "X-API-Key: your_key" \
-     https://mars-vista-api-production.up.railway.app/api/v1/rovers
+     https://api.marsvista.dev/api/v1/rovers
 
 # Response includes the same correlation ID
 X-Correlation-ID: my-request-123
@@ -235,7 +235,7 @@ Free tier includes:
 
 1. Create account at [uptimerobot.com](https://uptimerobot.com)
 2. Add new HTTP monitor:
-   - **URL**: `https://mars-vista-api-production.up.railway.app/health`
+   - **URL**: `https://api.marsvista.dev/health`
    - **Check interval**: 5 minutes
    - **Alert threshold**: 2 consecutive failures
 3. Configure alert contacts (email, Slack, etc.)
@@ -292,7 +292,7 @@ Always include correlation IDs when debugging production issues:
 ```bash
 curl -H "X-Correlation-ID: debug-$(date +%s)" \
      -H "X-API-Key: your_key" \
-     https://mars-vista-api-production.up.railway.app/api/v1/rovers
+     https://api.marsvista.dev/api/v1/rovers
 ```
 
 ### 2. Monitor Health Check Endpoint
