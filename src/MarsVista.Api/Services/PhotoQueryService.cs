@@ -43,7 +43,9 @@ public class PhotoQueryService : IPhotoQueryService
 
         if (earthDate.HasValue)
         {
-            var date = earthDate.Value.Date;
+            // PostgreSQL requires DateTime with Kind=UTC for timestamp with time zone columns
+            // Convert to UTC and get date portion
+            var date = DateTime.SpecifyKind(earthDate.Value.Date, DateTimeKind.Utc);
             query = query.Where(p => p.EarthDate.HasValue && p.EarthDate.Value.Date == date);
         }
 
