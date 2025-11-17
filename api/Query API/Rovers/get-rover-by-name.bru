@@ -1,0 +1,15 @@
+meta {
+  name: Get Rover by Name
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/v1/rovers/curiosity
+  body: none
+  auth: inherit
+}
+
+headers {
+  X-API-Key: {{apiKey}}
+}

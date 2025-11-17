@@ -1,0 +1,19 @@
+meta {
+  name: Query Photos by Earth Date
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/v1/rovers/curiosity/photos?earth_date=2012-08-06
+  body: none
+  auth: inherit
+}
+
+headers {
+  X-API-Key: {{apiKey}}
+}
+
+params:query {
+  earth_date: 2012-08-06
+}

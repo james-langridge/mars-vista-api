@@ -1,0 +1,15 @@
+meta {
+  name: Scrape Single Volume (PANCAM)
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/scraper/opportunity/volume/mer1po_0xxx
+  body: none
+  auth: inherit
+}
+
+headers {
+  X-API-Key: {{apiKey}}
+}

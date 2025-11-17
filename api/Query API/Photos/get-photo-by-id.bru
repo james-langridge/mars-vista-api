@@ -1,0 +1,15 @@
+meta {
+  name: Get Photo by ID
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{baseUrl}}/api/v1/photos/451603
+  body: none
+  auth: inherit
+}
+
+headers {
+  X-API-Key: {{apiKey}}
+}

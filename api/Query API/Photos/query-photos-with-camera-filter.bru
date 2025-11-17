@@ -1,0 +1,20 @@
+meta {
+  name: Query Photos with Camera Filter
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/v1/rovers/curiosity/photos?sol=100&camera=MAST
+  body: none
+  auth: inherit
+}
+
+headers {
+  X-API-Key: {{apiKey}}
+}
+
+params:query {
+  sol: 100
+  camera: MAST
+}

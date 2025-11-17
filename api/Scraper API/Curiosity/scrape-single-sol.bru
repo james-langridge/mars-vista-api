@@ -1,0 +1,15 @@
+meta {
+  name: Scrape Single Sol
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/scraper/curiosity/sol/100
+  body: none
+  auth: inherit
+}
+
+headers {
+  X-API-Key: {{apiKey}}
+}

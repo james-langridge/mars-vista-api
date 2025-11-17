@@ -1,0 +1,15 @@
+meta {
+  name: Scrape All Volumes
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/scraper/opportunity/all
+  body: none
+  auth: inherit
+}
+
+headers {
+  X-API-Key: {{apiKey}}
+}
