@@ -1,4 +1,5 @@
 using MarsVista.Api.Data;
+using MarsVista.Api.Middleware;
 using MarsVista.Api.Services;
 using Microsoft.EntityFrameworkCore;
 using Polly;
@@ -102,6 +103,9 @@ app.UseHttpsRedirection();
 
 // Enable CORS middleware
 app.UseCors();
+
+// API key authentication (protects all endpoints except /health)
+app.UseMiddleware<ApiKeyMiddleware>();
 
 app.UseAuthorization();
 
