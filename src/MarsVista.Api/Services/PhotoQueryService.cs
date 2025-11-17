@@ -30,10 +30,9 @@ public class PhotoQueryService : IPhotoQueryService
         page = Math.Max(1, page);
         perPage = Math.Clamp(perPage, 1, 100);
 
-        // Start with base query
+        // Start with base query - NO Include()! Direct Select() projection is more efficient
+        // EF Core will automatically join the related tables when referenced in Select()
         var query = _context.Photos
-            .Include(p => p.Rover)
-            .Include(p => p.Camera)
             .Where(p => p.Rover.Name.ToLower() == roverName.ToLower());
 
         // Apply filters
@@ -56,13 +55,11 @@ public class PhotoQueryService : IPhotoQueryService
         // Get total count before pagination
         var totalCount = await query.CountAsync(cancellationToken);
 
-        // Order by camera and ID for consistent results
-        query = query
-            .OrderBy(p => p.CameraId)
-            .ThenBy(p => p.Id);
-
-        // Apply pagination
+        // Order by camera and ID for consistent results, then apply pagination and projection
+        // By removing Include() and going straight to Select(), we only fetch the columns we need
         var photos = await query
+            .OrderBy(p => p.CameraId)
+            .ThenBy(p => p.Id)
             .Skip((page - 1) * perPage)
             .Take(perPage)
             .Select(p => new PhotoDto
@@ -126,9 +123,8 @@ public class PhotoQueryService : IPhotoQueryService
         int id,
         CancellationToken cancellationToken = default)
     {
+        // No Include() needed - EF Core optimizes joins when using Select() projection
         var photo = await _context.Photos
-            .Include(p => p.Rover)
-            .Include(p => p.Camera)
             .Where(p => p.Id == id)
             .Select(p => new PhotoDto
             {
