@@ -1,0 +1,20 @@
+meta {
+  name: Scrape Bulk (Small Test)
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/scraper/perseverance/bulk?startSol=1&endSol=10
+  body: none
+  auth: inherit
+}
+
+headers {
+  X-API-Key: {{apiKey}}
+}
+
+params:query {
+  startSol: 1
+  endSol: 10
+}

@@ -1,0 +1,15 @@
+meta {
+  name: Resume Scraping
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/scraper/perseverance/resume
+  body: none
+  auth: inherit
+}
+
+headers {
+  X-API-Key: {{apiKey}}
+}

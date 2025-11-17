@@ -1,0 +1,15 @@
+meta {
+  name: Resume Scraping
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/scraper/curiosity/resume
+  body: none
+  auth: inherit
+}
+
+headers {
+  X-API-Key: {{apiKey}}
+}

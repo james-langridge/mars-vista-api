@@ -1,0 +1,19 @@
+meta {
+  name: Query Photos by Sol
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/rovers/curiosity/photos?sol=1
+  body: none
+  auth: inherit
+}
+
+headers {
+  X-API-Key: {{apiKey}}
+}
+
+params:query {
+  sol: 1
+}

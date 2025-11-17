@@ -1,0 +1,19 @@
+meta {
+  name: Get Latest Photos (NASA Compatible)
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/api/v1/rovers/curiosity/latest_photos?per_page=10
+  body: none
+  auth: inherit
+}
+
+headers {
+  X-API-Key: {{apiKey}}
+}
+
+params:query {
+  per_page: 10
+}

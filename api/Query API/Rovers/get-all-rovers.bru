@@ -1,0 +1,15 @@
+meta {
+  name: Get All Rovers
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/rovers
+  body: none
+  auth: inherit
+}
+
+headers {
+  X-API-Key: {{apiKey}}
+}
