@@ -40,7 +40,17 @@ export default function Footer() {
           </div>
         </div>
         <div className="mt-8 pt-8 border-t border-gray-800 text-center text-gray-400">
-          <p>Mars Vista API - Powered by NASA's Mars rover imagery</p>
+          <p>
+            Mars Vista API - Powered by NASA's Mars rover imagery - Built by{' '}
+            <a
+              href="https://langridge.dev"
+              className="text-gray-300 hover:text-white transition-colors"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              James Langridge
+            </a>
+          </p>
         </div>
       </div>
     </footer>
