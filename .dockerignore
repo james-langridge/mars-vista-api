@@ -1,0 +1,35 @@
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+.claude/
+docs/
+
+# Scripts
+*.sh
+
+# Docker
+docker-compose.yml
+Dockerfile
+.dockerignore
+
+# Build artifacts
+**/bin/
+**/obj/
+**/out/
+
+# Backups
+backups/
+
+# Environment
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
