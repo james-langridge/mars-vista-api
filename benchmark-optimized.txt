@@ -1,0 +1,174 @@
+======================================================================
+Mars Vista API Performance Benchmark
+======================================================================
+
+Base URL: https://mars-vista-api-production.up.railway.app
+Iterations per test: 3
+Date: Sun Nov 16 21:24:32 PST 2025
+
+======================================================================
+Consumer-Facing API Benchmarks (/api/v1/*)
+======================================================================
+
+======================================================================
+ROVER METADATA ENDPOINTS (N+1 and multiple query issues)
+======================================================================
+
+----------------------------------------------------------------------
+Testing: GET /api/v1/rovers (N+1 query issue)
+URL: https://mars-vista-api-production.up.railway.app/api/v1/rovers
+----------------------------------------------------------------------
+  Run 1: 598.032ms
+  Run 2: 589.236ms
+  Run 3: 544.71ms
+
+  Average: 577.32ms
+  Min:     544.71ms
+  Max:     598.032ms
+
+----------------------------------------------------------------------
+Testing: GET /api/v1/rovers/curiosity (3 queries for stats)
+URL: https://mars-vista-api-production.up.railway.app/api/v1/rovers/curiosity
+----------------------------------------------------------------------
+  Run 1: 360.482ms
+  Run 2: 487.234ms
+  Run 3: 449.01ms
+
+  Average: 432.24ms
+  Min:     360.482ms
+  Max:     487.234ms
+
+----------------------------------------------------------------------
+Testing: GET /api/v1/rovers/perseverance
+URL: https://mars-vista-api-production.up.railway.app/api/v1/rovers/perseverance
+----------------------------------------------------------------------
+  Run 1: 537.241ms
+  Run 2: 372.591ms
+  Run 3: 343.999ms
+
+  Average: 417.94ms
+  Min:     343.999ms
+  Max:     537.241ms
+
+======================================================================
+HIGH-TRAFFIC ENDPOINTS
+======================================================================
+
+----------------------------------------------------------------------
+Testing: GET /api/v1/rovers/curiosity/photos?sol=1000
+URL: https://mars-vista-api-production.up.railway.app/api/v1/rovers/curiosity/photos?sol=1000
+----------------------------------------------------------------------
+  Run 1: 347.616ms
+  Run 2: 382.533ms
+  Run 3: 355.264ms
+
+  Average: 361.80ms
+  Min:     347.616ms
+  Max:     382.533ms
+
+----------------------------------------------------------------------
+Testing: GET /api/v1/rovers/curiosity/photos?earth_date=2015-01-01
+URL: https://mars-vista-api-production.up.railway.app/api/v1/rovers/curiosity/photos?earth_date=2015-01-01
+----------------------------------------------------------------------
+  Run 1: 360.703ms
+  Run 2: 382.023ms
+  Run 3: 438.886ms
+
+  Average: 393.87ms
+  Min:     360.703ms
+  Max:     438.886ms
+
+----------------------------------------------------------------------
+Testing: GET /api/v1/rovers/curiosity/photos?sol=1000&camera=MAST
+URL: https://mars-vista-api-production.up.railway.app/api/v1/rovers/curiosity/photos?sol=1000&camera=MAST
+----------------------------------------------------------------------
+  Run 1: 371.08ms
+  Run 2: 322.335ms
+  Run 3: 411.916ms
+
+  Average: 368.44ms
+  Min:     322.335ms
+  Max:     411.916ms
+
+----------------------------------------------------------------------
+Testing: GET /api/v1/rovers/curiosity/photos?page=1&per_page=100
+URL: https://mars-vista-api-production.up.railway.app/api/v1/rovers/curiosity/photos?page=1&per_page=100
+----------------------------------------------------------------------
+  Run 1: 388.23ms
+  Run 2: 295.743ms
+  Run 3: 325.205ms
+
+  Average: 336.39ms
+  Min:     295.743ms
+  Max:     388.23ms
+
+----------------------------------------------------------------------
+Testing: GET /api/v1/rovers/curiosity/latest
+URL: https://mars-vista-api-production.up.railway.app/api/v1/rovers/curiosity/latest
+----------------------------------------------------------------------
+  Run 1: 361.572ms
+  Run 2: 358.429ms
+  Run 3: 345.282ms
+
+  Average: 355.09ms
+  Min:     345.282ms
+  Max:     361.572ms
+
+======================================================================
+ALREADY OPTIMIZED (Raw SQL)
+======================================================================
+
+----------------------------------------------------------------------
+Testing: GET /api/v1/manifests/curiosity
+URL: https://mars-vista-api-production.up.railway.app/api/v1/manifests/curiosity
+----------------------------------------------------------------------
+  Run 1: 442.289ms
+  Run 2: 389.012ms
+  Run 3: 389.687ms
+
+  Average: 406.99ms
+  Min:     389.012ms
+  Max:     442.289ms
+
+======================================================================
+BASELINE (Should be fast)
+======================================================================
+
+----------------------------------------------------------------------
+Testing: GET /api/v1/photos/1 (single photo by ID)
+URL: https://mars-vista-api-production.up.railway.app/api/v1/photos/1
+----------------------------------------------------------------------
+  Run 1: 327.044ms
+  Run 2: 501.982ms
+  Run 3: 269.347ms
+
+  Average: 366.12ms
+  Min:     269.347ms
+  Max:     501.982ms
+
+----------------------------------------------------------------------
+Testing: GET /health (health check)
+URL: https://mars-vista-api-production.up.railway.app/health
+----------------------------------------------------------------------
+  Run 1: 1810.16ms
+  Run 2: 445.949ms
+  Run 3: 423.131ms
+
+  Average: 893.08ms
+  Min:     423.131ms
+  Max:     1810.16ms
+
+======================================================================
+Benchmark Complete
+======================================================================
+
+Summary of expected issues (consumer-facing APIs only):
+  1. /api/v1/rovers - N+1 query (13 queries for 4 rovers)
+  2. /api/v1/rovers/{name} - 3 separate aggregation queries
+  3. Photo query endpoints - Include() overhead when projecting to DTO
+
+Next steps:
+  1. Save these results as baseline
+  2. Apply optimizations to consumer-facing endpoints
+  3. Re-run benchmark to measure improvements
+
