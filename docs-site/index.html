@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mars Vista API Documentation</title>
+  <meta name="description" content="Fast, reliable NASA Mars rover photo API - 100% compatible with NASA's API, 50-70% faster">
+
+  <!-- Open Graph / Social Media -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Mars Vista API Documentation">
+  <meta property="og:description" content="Query Mars rover photos from Curiosity, Perseverance, Opportunity, and Spirit">
+  <meta property="og:image" content="https://docs.marsvista.dev/assets/og-image.jpg">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/x-icon" href="./assets/favicon.ico">
+
+  <!-- Stoplight Elements -->
+  <link rel="stylesheet" href="https://unpkg.com/@stoplight/elements/styles.min.css">
+
+  <style>
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    /* Custom branding */
+    :root {
+      --primary-color: #d14524;
+      --accent-color: #e95e3e;
+    }
+
+    /* Header styling */
+    .custom-header {
+      background: linear-gradient(135deg, #d14524 0%, #e95e3e 100%);
+      color: white;
+      padding: 20px 40px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .custom-header h1 {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 600;
+    }
+
+    .custom-header p {
+      margin: 8px 0 0 0;
+      font-size: 16px;
+      opacity: 0.95;
+    }
+
+    .custom-header .links {
+      margin-top: 12px;
+    }
+
+    .custom-header a {
+      color: white;
+      text-decoration: none;
+      margin-right: 20px;
+      font-size: 14px;
+      opacity: 0.9;
+      transition: opacity 0.2s;
+    }
+
+    .custom-header a:hover {
+      opacity: 1;
+      text-decoration: underline;
+    }
+
+    /* Stoplight container */
+    .elements-container {
+      height: calc(100vh - 120px);
+    }
+
+    /* Mobile responsive */
+    @media (max-width: 768px) {
+      .custom-header {
+        padding: 16px 20px;
+      }
+
+      .custom-header h1 {
+        font-size: 24px;
+      }
+
+      .custom-header p {
+        font-size: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Custom Header -->
+  <div class="custom-header">
+    <h1>🔴 Mars Vista API</h1>
+    <p>Fast, reliable access to NASA Mars rover photography data</p>
+    <div class="links">
+      <a href="#/overview">Getting Started</a>
+      <a href="https://github.com/yourusername/mars-vista-api" target="_blank">GitHub</a>
+      <a href="https://api.marsvista.dev/health" target="_blank">API Status</a>
+    </div>
+  </div>
+
+  <!-- Stoplight Elements API Documentation -->
+  <div class="elements-container">
+    <elements-api
+      apiDescriptionUrl="./openapi.yaml"
+      router="hash"
+      layout="sidebar"
+      hideInternal="true"
+      tryItCredentialsPolicy="same-origin"
+    />
+  </div>
+
+  <!-- Load Stoplight Elements -->
+  <script src="https://unpkg.com/@stoplight/elements/web-components.min.js"></script>
+</body>
+</html>
