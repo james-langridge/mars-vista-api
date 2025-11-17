@@ -4,7 +4,15 @@ The Mars Vista API supports optional API key authentication to protect endpoints
 
 ## Overview
 
-When enabled, the API key middleware:
+The API has two layers of protection:
+
+### Layer 1: Rate Limiting (Always Active)
+- ✅ Limits any IP to **100 requests per minute**
+- ✅ Protects against spam/DDoS even without valid API key
+- ✅ Returns 429 Too Many Requests when exceeded
+- ✅ Resets every minute
+
+### Layer 2: API Key Authentication (Optional)
 - ✅ Protects all endpoints (except `/health`)
 - ✅ Accepts API key via header OR query parameter
 - ✅ Returns clear error messages for unauthorized requests
@@ -102,6 +110,27 @@ response = requests.get(
 ```
 
 ## Error Responses
+
+### Rate Limit Exceeded (429)
+
+If you exceed 100 requests per minute:
+
+**Request**:
+```bash
+# 101st request within same minute
+curl "https://api.marsvista.dev/api/v1/rovers"
+```
+
+**Response** (429 Too Many Requests):
+```json
+{
+  "error": "Too Many Requests",
+  "message": "Rate limit exceeded. Maximum 100 requests per minute per IP address.",
+  "retryAfter": 42
+}
+```
+
+The `retryAfter` field tells you how many seconds until the limit resets.
 
 ### No API Key Provided
 
