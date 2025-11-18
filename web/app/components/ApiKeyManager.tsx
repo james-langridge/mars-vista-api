@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import CopyButton from './CopyButton';
 
 interface ApiKeyInfo {
-  key?: string;
+  apiKey?: string;
   maskedKey?: string;
   tier: string;
   createdAt?: string;
@@ -134,13 +134,13 @@ export default function ApiKeyManager() {
             </label>
             <div className="flex gap-2">
               <code className="flex-1 bg-gray-900 p-3 rounded-lg font-mono text-sm break-all">
-                {showKey && apiKeyInfo.key ? apiKeyInfo.key : apiKeyInfo.maskedKey}
+                {showKey && apiKeyInfo.apiKey ? apiKeyInfo.apiKey : apiKeyInfo.maskedKey}
               </code>
-              {apiKeyInfo.key && (
-                <CopyButton text={apiKeyInfo.key} label="Copy" />
+              {apiKeyInfo.apiKey && (
+                <CopyButton text={apiKeyInfo.apiKey} label="Copy" />
               )}
             </div>
-            {!showKey && apiKeyInfo.key && (
+            {!showKey && apiKeyInfo.apiKey && (
               <button
                 onClick={() => setShowKey(true)}
                 className="text-sm text-blue-400 hover:text-blue-300 mt-2"
@@ -167,7 +167,7 @@ export default function ApiKeyManager() {
             <h3 className="font-semibold mb-2">Usage Example</h3>
             <div className="bg-gray-900 p-4 rounded-lg">
               <code className="text-sm text-gray-300 whitespace-pre-wrap break-all">
-{`curl -H "X-API-Key: ${apiKeyInfo.key || 'YOUR_API_KEY'}" \\
+{`curl -H "X-API-Key: ${apiKeyInfo.apiKey || 'YOUR_API_KEY'}" \\
   https://api.marsvista.dev/api/v1/rovers/curiosity/photos?sol=1000`}
               </code>
             </div>
@@ -207,7 +207,7 @@ export default function ApiKeyManager() {
             )}
           </div>
 
-          {showKey && apiKeyInfo.key && (
+          {showKey && apiKeyInfo.apiKey && (
             <div className="bg-blue-900/20 border border-blue-700 rounded-lg p-4">
               <p className="text-blue-400 text-sm">
                 <strong>Important:</strong> This is the only time you'll see your full API key.
