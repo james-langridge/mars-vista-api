@@ -1,4 +1,5 @@
 import { auth } from '@/server/auth-export';
+import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -8,6 +9,11 @@ export const metadata: Metadata = {
 
 export default async function Dashboard() {
   const session = await auth();
+
+  // Protect this page - redirect to signin if not authenticated
+  if (!session) {
+    redirect('/signin');
+  }
 
   return (
     <div className="space-y-8">
