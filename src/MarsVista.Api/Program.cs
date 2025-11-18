@@ -193,6 +193,19 @@ builder.Services.AddOpenApi(options =>
             document.Paths.Remove(path);
         }
 
+        // Also remove Health and Scraper tag definitions so they don't appear in sidebar
+        if (document.Tags != null)
+        {
+            var tagsToRemove = document.Tags
+                .Where(t => t.Name == "Health" || t.Name == "Scraper")
+                .ToList();
+
+            foreach (var tag in tagsToRemove)
+            {
+                document.Tags.Remove(tag);
+            }
+        }
+
         return Task.CompletedTask;
     });
 });
