@@ -177,7 +177,25 @@ builder.Services.AddRateLimiter(options =>
 });
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+// Configure OpenAPI to only include public API endpoints (exclude internal/admin endpoints)
+builder.Services.AddOpenApi(options =>
+{
+    options.AddDocumentTransformer((document, context, cancellationToken) =>
+    {
+        // Remove Health and Scraper endpoints from public documentation
+        var pathsToRemove = document.Paths
+            .Where(p => p.Key.StartsWith("/api/Health") || p.Key.StartsWith("/api/Scraper"))
+            .Select(p => p.Key)
+            .ToList();
+
+        foreach (var path in pathsToRemove)
+        {
+            document.Paths.Remove(path);
+        }
+
+        return Task.CompletedTask;
+    });
+});
 
 // Add health checks
 builder.Services.AddHealthChecks()
