@@ -3,9 +3,9 @@
 import { RedocStandalone } from 'redoc';
 
 export default function RedocWrapper() {
-  const specUrl = process.env.NEXT_PUBLIC_API_URL
-    ? `${process.env.NEXT_PUBLIC_API_URL}/openapi.json`
-    : 'https://api.marsvista.dev/openapi.json';
+  // Use bundled OpenAPI spec from public folder
+  // This is faster (no network request) and works offline
+  const specUrl = '/openapi.json';
 
   return (
     <RedocStandalone
