@@ -18,8 +18,18 @@ declare module 'next-auth' {
   }
 }
 
+declare module 'next-auth/jwt' {
+  interface JWT {
+    id: string;
+  }
+}
+
 export const authConfig = {
   trustHost: true,
+  // Use JWT strategy for edge-compatible sessions (middleware can verify without DB)
+  session: {
+    strategy: 'jwt',
+  },
   providers: [
     Resend({
       from: process.env.FROM_EMAIL || 'noreply@notifications.marsvista.dev',
@@ -43,11 +53,19 @@ export const authConfig = {
   ],
   adapter: PrismaAdapter(db),
   callbacks: {
-    session: ({ session, user }) => ({
+    // With JWT strategy, we need to populate the token with user id
+    jwt: async ({ token, user }) => {
+      if (user) {
+        token.id = user.id;
+      }
+      return token;
+    },
+    // Then pass it to the session
+    session: ({ session, token }) => ({
       ...session,
       user: {
         ...session.user,
-        id: user.id,
+        id: token.id as string,
       },
     }),
   },
