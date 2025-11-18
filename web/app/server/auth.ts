@@ -22,14 +22,14 @@ export const authConfig = {
   trustHost: true,
   providers: [
     Resend({
-      from: process.env.FROM_EMAIL || 'noreply@marsvista.dev',
+      from: process.env.FROM_EMAIL || 'noreply@notifications.marsvista.dev',
       sendVerificationRequest: async ({ identifier: email, url }) => {
         try {
           const html = await render(MagicLinkEmail({ url }));
           const resend = getResendClient();
 
           await resend.emails.send({
-            from: process.env.FROM_EMAIL || 'noreply@marsvista.dev',
+            from: process.env.FROM_EMAIL || 'noreply@notifications.marsvista.dev',
             to: email,
             subject: 'Sign in to Mars Vista',
             html,

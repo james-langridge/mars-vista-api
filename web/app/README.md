@@ -36,7 +36,7 @@ DATABASE_URL="postgresql://marsvista:marsvista_dev_password@localhost:5432/marsv
 
 # Resend
 RESEND_API_KEY=re_xxxxx
-FROM_EMAIL=noreply@marsvista.dev
+FROM_EMAIL=noreply@notifications.marsvista.dev
 
 # Auth.js
 AUTH_SECRET=<generate-with-openssl-rand-base64-32>
