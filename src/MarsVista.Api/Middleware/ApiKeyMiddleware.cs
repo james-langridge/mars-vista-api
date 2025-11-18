@@ -19,17 +19,18 @@ public class ApiKeyMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
-        // Skip authentication if no API key is configured (disabled)
-        if (string.IsNullOrEmpty(_apiKey))
+        // Only apply to scraper endpoints (admin access)
+        // User-facing endpoints use UserApiKeyAuthenticationMiddleware
+        if (!context.Request.Path.StartsWithSegments("/api/scraper"))
         {
-            _logger.LogWarning("API_KEY not configured - API is unprotected!");
             await _next(context);
             return;
         }
 
-        // Skip authentication for health check endpoint
-        if (context.Request.Path.StartsWithSegments("/health"))
+        // Skip authentication if no API key is configured (disabled)
+        if (string.IsNullOrEmpty(_apiKey))
         {
+            _logger.LogWarning("API_KEY not configured - scraper endpoints are unprotected!");
             await _next(context);
             return;
         }
