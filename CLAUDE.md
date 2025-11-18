@@ -12,7 +12,7 @@ Recreating the NASA Mars Rover API from scratch in C#/.NET (reference: /home/jam
 
 ### Current Implementation Status
 
-**Completed Stories (1-9):**
+**Completed Stories (1-10):**
 - Story 001: Project scaffolding and PostgreSQL setup
 - Story 002: Database schema with EF Core migrations
 - Story 003: Rover and camera seed data
@@ -22,6 +22,7 @@ Recreating the NASA Mars Rover API from scratch in C#/.NET (reference: /home/jam
 - Story 007: Public query API endpoints (NASA-compatible)
 - Story 008: Curiosity rover scraper with camera name mapping
 - Story 009: Unified Next.js frontend application with Auth.js authentication
+- Story 010: API key authentication and user management with rate limiting
 
 **System Capabilities:**
 
@@ -32,6 +33,18 @@ Recreating the NASA Mars Rover API from scratch in C#/.NET (reference: /home/jam
 - HTTP resilience: exponential backoff retry + circuit breaker
 - Idempotent photo ingestion with duplicate detection
 - Multi-rover support: Curiosity and Perseverance scrapers
+- **API Key Authentication:**
+  - Per-user API keys stored as SHA-256 hashes in photos database
+  - API key format: `mv_live_{40-char-random}` (47 chars total)
+  - Links to Auth.js users via email (logical link across databases)
+  - Internal API endpoints (`/api/v1/internal/*`) for trusted Next.js proxy
+  - Scraper endpoints use separate admin API key
+- **Rate Limiting:**
+  - Free tier: 60 req/hour, 500 req/day, 3 concurrent
+  - Pro tier: 5,000 req/hour, 100,000 req/day, 50 concurrent
+  - Enterprise tier: 100,000+ req/hour, unlimited daily, 100 concurrent
+  - In-memory tracking (sufficient for single-instance deployment)
+  - Rate limit headers on all responses (X-RateLimit-*)
 - Bulk scraper: POST /api/scraper/{rover}/bulk?startSol=X&endSol=Y
 - Progress monitoring: GET /api/scraper/{rover}/progress
 - CLI tools:
@@ -41,7 +54,7 @@ Recreating the NASA Mars Rover API from scratch in C#/.NET (reference: /home/jam
   - ./db-backup.sh - Create local database backups
   - ./db-restore-to-railway.sh - Restore backup to remote database
   - ./db-sync-to-railway.sh - Sync/upsert local data to remote database
-- Query API: GET /api/v1/rovers/{name}/photos with filtering
+- Query API: GET /api/v1/rovers/{name}/photos with filtering (requires API key)
 - Performance: 500+ photos in ~20 seconds, full rover scrape ~9-10 hours
 
 **Frontend (Next.js Web App):**
@@ -55,11 +68,20 @@ Recreating the NASA Mars Rover API from scratch in C#/.NET (reference: /home/jam
   - `/docs` - API documentation with Redoc integration
   - `/pricing` - Pricing tiers (Free, Pro, Enterprise)
   - `/signin` - Magic link email authentication
-  - `/dashboard` - User dashboard (protected route, shows session info)
-- Shared components: Header (with auth state), Footer, Hero, Features, QuickStart
+  - `/dashboard` - User dashboard with API key management (protected route)
+- **API Key Management:**
+  - Generate, view (masked), and regenerate API keys from dashboard
+  - Next.js API routes (`/api/keys/*`) act as trusted proxy to C# API
+  - Validates Auth.js session, calls C# internal endpoints with shared secret
+  - Copy-to-clipboard functionality with usage examples
+- Shared components: Header (with auth state), Footer, Hero, Features, QuickStart, ApiKeyManager, CopyButton
 - Auth middleware protects /dashboard routes
 - Loading states and error boundaries
 - Responsive design (mobile/tablet/desktop)
+- **Two Authentication Systems:**
+  - **Auth.js (Dashboard):** Magic link authentication for web dashboard access
+  - **API Keys (C# API):** Per-user keys for programmatic API access
+  - Linked by email: `User.email` (auth DB) ↔ `api_keys.user_email` (photos DB)
 - **Database Architecture:** Separate PostgreSQL database for auth (clean separation from photos DB)
   - Local: `marsvista_auth_dev` (Auth.js) vs `marsvista_dev` (Photos)
   - Railway: Separate PostgreSQL instances
@@ -200,7 +222,8 @@ curl -X POST "http://localhost:5127/api/scraper/curiosity/bulk?startSol=1&endSol
 ## Essential reference documents
 
 **User Documentation (docs/):**
-- `docs/API_ENDPOINTS.md` - Complete API reference with examples for all endpoints
+- `docs/API_ENDPOINTS.md` - Complete API reference with examples for all endpoints (includes authentication section)
+- `docs/AUTHENTICATION_GUIDE.md` - Comprehensive guide to API keys, rate limits, code examples, and troubleshooting
 - `docs/DATABASE_ACCESS.md` - Database credentials, queries, and management
 - `docs/CURIOSITY_SCRAPER_GUIDE.md` - Curiosity-specific scraper guide and implementation details
 

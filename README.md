@@ -8,34 +8,61 @@ The Mars Vista API is live and publicly accessible at:
 
 **Base URL**: `https://api.marsvista.dev`
 
-### Quick Start Example
+### Getting Started
 
-Get all rovers:
+**1. Get Your API Key**
+
+Sign in at [marsvista.dev/signin](https://marsvista.dev/signin) using magic link authentication (no password needed):
+- Enter your email address
+- Click the magic link sent to your email
+- Generate your API key from the dashboard
+
+**2. Make Your First Request**
+
+Use your API key in the `X-API-Key` header:
+
 ```bash
-curl "https://api.marsvista.dev/api/v1/rovers"
+# Get all available rovers
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.marsvista.dev/api/v1/rovers"
+
+# Query Perseverance photos from Sol 1000
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.marsvista.dev/api/v1/rovers/perseverance/photos?sol=1000&per_page=10"
 ```
 
-Query Perseverance photos from Sol 1000:
-```bash
-curl "https://api.marsvista.dev/api/v1/rovers/perseverance/photos?sol=1000&per_page=10"
-```
+**3. Check API Health (no auth required)**
 
-Check API health:
 ```bash
 curl "https://api.marsvista.dev/health"
 ```
 
 ### Rate Limits
 
-Currently no rate limits enforced. Please be respectful:
-- No more than 10 requests per second
-- Cache responses when possible
-- Use pagination (`per_page` parameter) for large datasets
+Rate limits are enforced per API key based on your tier:
+
+**Free Tier** (default):
+- 60 requests per hour
+- 500 requests per day
+- 3 concurrent requests
+
+**Pro Tier** ($9/month):
+- 5,000 requests per hour
+- 100,000 requests per day
+- 50 concurrent requests
+
+**Enterprise Tier** (custom pricing):
+- 100,000+ requests per hour
+- Unlimited daily requests
+- Custom SLA and support
+
+Upgrade at [marsvista.dev/pricing](https://marsvista.dev/pricing)
 
 Complete API documentation available in [API_ENDPOINTS.md](docs/API_ENDPOINTS.md).
 
 ## Features
 
+- **API Key Authentication**: Secure per-user API keys with tier-based rate limiting (free, pro, enterprise tiers)
 - **Multi-Rover Support**: All four major Mars rovers (Perseverance, Curiosity, Opportunity, Spirit) with automatic data source adaptation
 - **Complete Data Preservation**: Stores all 30-55 metadata fields using hybrid PostgreSQL storage (indexed columns + JSONB)
 - **Dual Scraper Architecture**: NASA JSON API for active rovers (Perseverance, Curiosity) and PDS index files for historic MER rovers (Opportunity, Spirit)
@@ -108,8 +135,11 @@ Query parameters:
 
 Example:
 ```bash
-curl "http://localhost:5127/api/v1/rovers/perseverance/photos?sol=1000&per_page=10"
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "http://localhost:5127/api/v1/rovers/perseverance/photos?sol=1000&per_page=10"
 ```
+
+Note: For local development, you can skip authentication by not configuring API key middleware, or use a test API key.
 
 Response:
 ```json
@@ -374,6 +404,9 @@ Comprehensive guides available in the `docs/` directory:
 ## Development Status
 
 Currently implemented:
+- ✅ API key authentication with per-user rate limiting
+- ✅ Next.js dashboard for API key management
+- ✅ Auth.js magic link authentication (passwordless)
 - ✅ PostgreSQL database with migrations
 - ✅ Rover and camera seed data for all 4 rovers
 - ✅ Perseverance and Curiosity NASA API scrapers

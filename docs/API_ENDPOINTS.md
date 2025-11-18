@@ -11,6 +11,90 @@ All examples below use `localhost` for local development. For production, use `h
 
 ---
 
+## Authentication
+
+All query API endpoints require authentication using an API key. Scraper endpoints use a separate admin API key.
+
+### Getting an API Key
+
+1. **Sign in** at [marsvista.dev/signin](https://marsvista.dev/signin)
+2. **Generate an API key** from your dashboard at [marsvista.dev/dashboard](https://marsvista.dev/dashboard)
+3. **Copy your key** - it will look like: `mv_live_a1b2c3d4e5f6789012345678901234567890abcd`
+4. **Use the key** in the `X-API-Key` header for all requests
+
+### Using Your API Key
+
+Include the `X-API-Key` header in all API requests:
+
+```bash
+curl -H "X-API-Key: mv_live_a1b2c3d4e5f6789012345678901234567890abcd" \
+  "https://api.marsvista.dev/api/v1/rovers/curiosity/photos?sol=1000"
+```
+
+### Rate Limits
+
+Rate limits are enforced per API key based on your tier:
+
+**Free Tier** (default):
+- 60 requests per hour
+- 500 requests per day
+- 3 concurrent requests
+
+**Pro Tier** ($9/month):
+- 5,000 requests per hour
+- 100,000 requests per day
+- 50 concurrent requests
+
+**Enterprise Tier** (custom pricing):
+- 100,000+ requests per hour
+- Unlimited daily requests
+- 100 concurrent requests
+- Custom SLA and support
+
+### Rate Limit Headers
+
+All API responses include rate limit information:
+
+```http
+X-RateLimit-Limit: 60
+X-RateLimit-Remaining: 43
+X-RateLimit-Reset: 1731859200
+X-RateLimit-Tier: free
+X-RateLimit-Upgrade-Url: https://marsvista.dev/pricing
+```
+
+### Error Responses
+
+**401 Unauthorized** - Missing or invalid API key:
+```json
+{
+  "error": "Unauthorized",
+  "message": "Invalid or missing API key. Sign in at https://marsvista.dev to get your API key."
+}
+```
+
+**429 Too Many Requests** - Rate limit exceeded:
+```json
+{
+  "error": "Rate limit exceeded",
+  "message": "You have exceeded the 60 requests per hour limit for the free tier.",
+  "tier": "free",
+  "limit": 60,
+  "resetAt": "2025-11-18T15:00:00Z",
+  "upgradeUrl": "https://marsvista.dev/pricing"
+}
+```
+
+### Health Check Endpoint
+
+The `/health` endpoint does NOT require authentication and can be used to verify API availability:
+
+```bash
+curl "http://localhost:5127/health"
+```
+
+---
+
 ## Table of Contents
 
 - [Query API (Public)](#query-api-public)
@@ -58,7 +142,8 @@ GET /api/v1/rovers
 
 **Example:**
 ```bash
-curl "http://localhost:5127/api/v1/rovers"
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "http://localhost:5127/api/v1/rovers"
 ```
 
 **Response:**
@@ -102,7 +187,8 @@ GET /api/v1/rovers/{name}
 
 **Example:**
 ```bash
-curl "http://localhost:5127/api/v1/rovers/curiosity"
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "http://localhost:5127/api/v1/rovers/curiosity"
 ```
 
 **Response:**
@@ -151,22 +237,26 @@ GET /api/v1/rovers/{name}/photos
 
 **Get photos from sol 1:**
 ```bash
-curl "http://localhost:5127/api/v1/rovers/curiosity/photos?sol=1"
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "http://localhost:5127/api/v1/rovers/curiosity/photos?sol=1"
 ```
 
 **Get photos from specific Earth date:**
 ```bash
-curl "http://localhost:5127/api/v1/rovers/curiosity/photos?earth_date=2012-08-06"
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "http://localhost:5127/api/v1/rovers/curiosity/photos?earth_date=2012-08-06"
 ```
 
 **Filter by camera:**
 ```bash
-curl "http://localhost:5127/api/v1/rovers/curiosity/photos?sol=100&camera=MAST"
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "http://localhost:5127/api/v1/rovers/curiosity/photos?sol=100&camera=MAST"
 ```
 
 **Pagination:**
 ```bash
-curl "http://localhost:5127/api/v1/rovers/curiosity/photos?sol=1&page=2&per_page=50"
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "http://localhost:5127/api/v1/rovers/curiosity/photos?sol=1&page=2&per_page=50"
 ```
 
 **Response:**
@@ -226,10 +316,12 @@ GET /api/v1/rovers/{name}/latest_photos  (NASA API compatible alias)
 **Examples:**
 ```bash
 # Modern endpoint
-curl "http://localhost:5127/api/v1/rovers/curiosity/latest?per_page=10"
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "http://localhost:5127/api/v1/rovers/curiosity/latest?per_page=10"
 
 # NASA API compatible endpoint
-curl "http://localhost:5127/api/v1/rovers/curiosity/latest_photos?per_page=10"
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "http://localhost:5127/api/v1/rovers/curiosity/latest_photos?per_page=10"
 ```
 
 **Response:**
@@ -256,7 +348,8 @@ GET /api/v1/photos/{id}
 
 **Example:**
 ```bash
-curl "http://localhost:5127/api/v1/photos/451603"
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "http://localhost:5127/api/v1/photos/451603"
 ```
 
 **Response:**
@@ -297,7 +390,8 @@ GET /api/v1/manifests/{name}
 
 **Example:**
 ```bash
-curl "http://localhost:5127/api/v1/manifests/curiosity"
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "http://localhost:5127/api/v1/manifests/curiosity"
 ```
 
 **Response:**
@@ -806,7 +900,8 @@ The scraper includes automatic resilience policies:
 
 **1. Check available rovers:**
 ```bash
-curl "http://localhost:5127/api/v1/rovers" | jq '.rovers[].name'
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "http://localhost:5127/api/v1/rovers" | jq '.rovers[].name'
 ```
 
 **2. Start bulk scrape:**
@@ -827,7 +922,8 @@ watch -n 5 'curl -s "http://localhost:5127/api/scraper/curiosity/progress" | jq'
 
 **5. Query scraped photos:**
 ```bash
-curl "http://localhost:5127/api/v1/rovers/curiosity/photos?sol=50" | jq '.photos[0]'
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "http://localhost:5127/api/v1/rovers/curiosity/photos?sol=50" | jq '.photos[0]'
 ```
 
 **6. Resume if interrupted:**
