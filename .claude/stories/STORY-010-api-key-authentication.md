@@ -29,20 +29,23 @@ Implement API key-based authentication system for the C# API that integrates wit
 
 **Auth.js (Story 009 - Already Implemented):**
 - **Purpose**: Dashboard sessions for web app
+- **Database**: Separate PostgreSQL instance (auth database)
 - **Tables**: `User`, `Session`, `VerificationToken` (Prisma-managed)
 - **Flow**: User signs in at `/signin` → accesses `/dashboard`
 - **Used for**: Managing account, viewing API keys, settings
 
 **API Key Auth (This Story - C# Implementation):**
 - **Purpose**: Authenticate API requests to `api.marsvista.dev`
+- **Database**: Separate PostgreSQL instance (photos database)
 - **Tables**: `api_keys`, `rate_limits` (EF Core-managed)
 - **Flow**: User generates API key in dashboard → uses key in API requests
 - **Used for**: Making requests to `/api/v1/*` endpoints
 
 **Link Between Systems:**
-- Both systems use the same PostgreSQL database
-- Linked by email: `User.email` (Auth.js) ↔ `api_keys.user_email` (API)
-- Dashboard queries both to show user's API keys and usage
+- Two separate PostgreSQL databases (no foreign keys between them)
+- Linked by email: `User.email` (auth DB) ↔ `api_keys.user_email` (photos DB)
+- Next.js dashboard queries C# API endpoints to show user's API keys
+- Email serves as the logical identifier across both systems
 
 **Libraries we WILL use:**
 - **Built-in Middleware**: Custom `AuthenticationHandler<T>` for API key validation
@@ -71,22 +74,23 @@ Implement API key-based authentication system for the C# API that integrates wit
 
 ### Database Schema
 
-**Note**: Auth.js tables (`User`, `Session`, `VerificationToken`) already exist from Story 009.
+**Important**: This story adds tables to the **photos database** (C# API), NOT the auth database.
+
+**Database Architecture:**
+- **Auth Database** (Prisma): `User`, `Session`, `VerificationToken`
+- **Photos Database** (EF Core): `rovers`, `cameras`, `photos`, `api_keys`, `rate_limits`
 
 ```sql
--- API keys table (links to Auth.js User by email)
+-- API keys table (stored in photos database)
+-- Links to User.email in auth database by email address (logical link, not FK)
 CREATE TABLE api_keys (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_email VARCHAR(255) NOT NULL,           -- Links to "User".email (Auth.js table)
+    user_email VARCHAR(255) NOT NULL UNIQUE,    -- Email from Auth.js User table
     api_key_hash VARCHAR(64) UNIQUE NOT NULL,   -- SHA-256 hash of the API key
     tier VARCHAR(20) DEFAULT 'free',            -- 'free', 'pro', 'enterprise'
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    last_used_at TIMESTAMP,
-
-    -- Foreign key to Auth.js User table
-    CONSTRAINT fk_api_keys_user FOREIGN KEY (user_email)
-        REFERENCES "User"(email) ON DELETE CASCADE
+    last_used_at TIMESTAMP
 );
 
 -- Rate limiting tracking (in-memory initially, table for future persistence)
@@ -105,11 +109,12 @@ CREATE INDEX idx_api_keys_user_email ON api_keys(user_email);
 CREATE INDEX idx_rate_limits_user_window ON rate_limits(user_email, window_start, window_type);
 ```
 
-**Simplified approach:**
-- No separate `users` table - reuse Auth.js `User` table
-- No `magic_link_tokens` - Auth.js handles email verification
-- `api_keys` links to existing Auth.js users by email
-- One user can have one API key (regenerate to get new one)
+**Key Points:**
+- `api_keys` and `rate_limits` are stored in the C# photos database
+- Email is the logical link between auth DB and photos DB
+- No foreign key constraint (can't have FK across databases)
+- C# API validates email exists before creating API keys
+- One user (email) can have one API key (regenerate to get new one)
 
 ### API Key Format
 
@@ -214,7 +219,7 @@ X-RateLimit-Upgrade-Url: https://marsvista.dev/pricing
 
 1. Create `ApiKey` entity model:
    - `Id` (Guid)
-   - `UserEmail` (string, foreign key to Auth.js User.email)
+   - `UserEmail` (string, indexed, unique - links to Auth.js User by email)
    - `ApiKeyHash` (string, SHA-256 hash)
    - `Tier` (string: 'free', 'pro', 'enterprise')
    - `IsActive` (bool)
@@ -227,9 +232,9 @@ X-RateLimit-Upgrade-Url: https://marsvista.dev/pricing
    - `WindowType` (string: 'hour', 'day')
    - `RequestCount` (int)
 
-3. Add entities to `MarsVistaDbContext`
-4. Create and apply EF Core migration
-5. Test migration locally (verify foreign key to Auth.js User table works)
+3. Add entities to `MarsVistaDbContext` (photos database)
+4. Create and apply EF Core migration to photos database
+5. Test migration locally (verify tables created in photos DB, not auth DB)
 
 ### Phase 2: Core Services (Day 1-2)
 
