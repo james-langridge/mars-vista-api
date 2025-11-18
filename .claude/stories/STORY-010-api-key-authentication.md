@@ -184,6 +184,9 @@ curl -H "X-API-Key: mv_live_a1b2c3..." \
 - Increment count
 - Return `429 Too Many Requests` if exceeded
 
+**⚠️ Multi-Instance Limitation:**
+In-memory rate limiting only works for single-instance deployments. If Railway auto-scales the API to multiple instances, rate limits will be inconsistent across instances (each instance tracks its own counts independently). This is acceptable for initial launch. Migrate to Redis-based distributed rate limiting when scaling beyond one instance.
+
 **Rate Limit Headers (standard):**
 ```
 X-RateLimit-Limit: 60
@@ -277,70 +280,110 @@ X-RateLimit-Upgrade-Url: https://marsvista.dev/pricing
     - Add middleware pipeline (auth before rate limit)
     - Exempt `/health` endpoint from auth
 
-11. Add `[Authorize]` attribute to rover endpoints:
-    - `RoverController`
-    - `PhotoController`
-    - `ManifestController`
+11. Replace existing `ApiKeyMiddleware` with new user-based authentication:
+    - Keep simple API_KEY check for scraper endpoints (`/api/scraper/*`)
+    - Apply new user API key authentication to public query endpoints:
+      - `RoverController` - `/api/v1/rovers/*`
+      - `PhotoController` - `/api/v1/rovers/{name}/photos`
+      - `ManifestController` - `/api/v1/manifests/*`
+    - Exempt `/health` endpoint from all authentication
+    - Exempt `/api/v1/internal/*` endpoints from user API key check (use INTERNAL_API_SECRET instead)
+
+**Note on Scraper Endpoints:**
+Scraper endpoints (`/api/scraper/*`) remain protected by the existing simple API_KEY middleware for admin access. These are internal tools, not public API endpoints. User-facing query endpoints require per-user API keys from this story.
 
 ### Phase 4: API Key Management Endpoints (Day 2-3)
 
-12. Create `ApiKeyController`:
-    - `POST /api/v1/keys/generate` - Generate new API key
-      - Verify Auth.js session (check session cookie)
+**Architecture Decision:** Next.js acts as a trusted proxy between the dashboard and C# API.
+- Next.js validates Auth.js sessions (already knows how to do this)
+- Next.js calls C# API with authenticated user's email
+- C# API trusts requests from Next.js via shared secret
+
+**Why this approach?**
+- Avoids tight coupling between Auth.js (Prisma) and C# API (EF Core)
+- No cross-domain session cookie complexity
+- Follows standard microservices pattern (trusted internal API)
+- Next.js already has session validation logic built-in
+
+12. Create Next.js API routes (`web/app/api/keys/*`):
+    - `POST /api/keys/generate` - Generate new API key
+      - Validates Auth.js session (server-side)
+      - Extracts user email from session
+      - Calls C# API: `POST /api/v1/internal/keys/generate` with email + internal secret
+      - Returns API key to client
+
+    - `POST /api/keys/regenerate` - Regenerate existing API key
+      - Validates Auth.js session
+      - Extracts user email from session
+      - Calls C# API: `POST /api/v1/internal/keys/regenerate` with email + internal secret
+      - Returns new API key to client
+
+    - `GET /api/keys/current` - Get current API key info (masked)
+      - Validates Auth.js session
+      - Extracts user email from session
+      - Calls C# API: `GET /api/v1/internal/keys/current` with email + internal secret
+      - Returns masked key info to client
+
+13. Create C# internal API controller (`ApiKeyInternalController`):
+    - `POST /api/v1/internal/keys/generate`
+      - Validates `X-Internal-Secret` header (shared secret with Next.js)
+      - Accepts `user_email` in request body (trusted from Next.js)
       - Check if user already has API key (one per user)
-      - Generate API key
+      - Generate API key using `IApiKeyService`
       - Store hash in database
       - Return plaintext key (only time it's visible)
 
-    - `POST /api/v1/keys/regenerate` - Regenerate existing API key
-      - Verify Auth.js session
-      - Invalidate old key
+    - `POST /api/v1/internal/keys/regenerate`
+      - Validates `X-Internal-Secret` header
+      - Accepts `user_email` in request body
+      - Invalidate old key (set `IsActive = false`)
       - Generate new key
       - Return new plaintext key
 
-    - `GET /api/v1/keys/current` - Get current API key info (masked)
-      - Verify Auth.js session
+    - `GET /api/v1/internal/keys/current`
+      - Validates `X-Internal-Secret` header
+      - Accepts `user_email` query parameter
+      - Query `api_keys` table for user's key
       - Return masked key, tier, created date, last used date
-      - Don't return plaintext key
 
-13. Add session validation helper:
-    - Verify Auth.js session cookie
-    - Query Prisma `Session` table to validate
-    - Extract user email from session
+14. Add internal API authentication middleware:
+    - Create `InternalApiMiddleware` to validate `X-Internal-Secret` header
+    - Only apply to `/api/v1/internal/*` endpoints
+    - Shared secret stored in environment variable: `INTERNAL_API_SECRET`
+    - Return 403 if secret missing or invalid
 
-14. Add validation and error handling:
-    - Handle "user already has API key" error
-    - Handle "no session" error
-    - Rate limit key generation (max 5 per hour per user)
+15. Add validation and error handling:
+    - Handle "user already has API key" error (return 409 Conflict)
+    - Handle "no API key found" error (return 404 Not Found)
+    - Rate limit key generation in Next.js route (max 5 per hour per user)
+    - Validate email format
 
-15. Test endpoints with curl (include session cookie)
+16. Test endpoints locally:
+    - Test Next.js routes with authenticated session
+    - Test C# internal endpoints with curl + internal secret
+    - Verify error cases (no secret, wrong secret, missing email)
 
 ### Phase 5: Dashboard Integration (Day 3-4)
 
-16. Update Dashboard page (`web/app/app/dashboard/page.tsx`):
+17. Update Dashboard page (`web/app/app/dashboard/page.tsx`):
     - Add API Key section
     - Create client component for API key management
-    - Fetch current API key on mount: `GET /api/v1/keys/current`
+    - Fetch current API key on mount: `GET /api/keys/current` (Next.js API route)
     - Show masked key if exists
     - Show "Generate API Key" button if no key
     - Show "Regenerate" button if key exists
 
-17. Create `components/ApiKeyManager.tsx` (client component):
+18. Create `components/ApiKeyManager.tsx` (client component):
     - State: `apiKey`, `isLoading`, `error`, `showKey`
-    - Function: `generateKey()` - calls `POST /api/v1/keys/generate`
-    - Function: `regenerateKey()` - calls `POST /api/v1/keys/regenerate`
+    - Function: `generateKey()` - calls `POST /api/keys/generate` (Next.js route)
+    - Function: `regenerateKey()` - calls `POST /api/keys/regenerate` (Next.js route)
     - Show confirmation dialog for regeneration
     - Display API key with copy-to-clipboard button
     - Show usage example with curl command
 
-18. Create `components/CopyButton.tsx`:
+19. Create `components/CopyButton.tsx`:
     - Copy API key to clipboard
     - Show "Copied!" feedback
-
-19. Add API client helper (`lib/api.ts`):
-    - Helper functions for calling C# API
-    - Include credentials for session cookie
-    - Error handling
 
 20. Update pricing page (`web/app/app/pricing/page.tsx`):
     - Update CTA button: "Sign In to Get Started"
@@ -418,8 +461,9 @@ X-RateLimit-Upgrade-Url: https://marsvista.dev/pricing
 
 32. Deploy C# API to Railway:
     - Run database migration
-    - Verify api_keys table created
-    - Verify foreign key to User table works
+    - Verify api_keys table created in photos database
+    - Verify email-based linking works (generate key with email, query succeeds)
+    - No foreign key exists (databases are separate - this is expected)
 
 33. Deploy Next.js frontend to Railway:
     - Verify dashboard shows API key section
@@ -439,10 +483,17 @@ X-RateLimit-Upgrade-Url: https://marsvista.dev/pricing
 
 ### Environment Variables (Railway)
 
+**IMPORTANT:** Two separate PostgreSQL databases are used:
+- **Photos Database** (`marsvista_dev`): Used by C# API for rovers, cameras, photos, api_keys
+- **Auth Database** (`marsvista_auth_dev`): Used by Next.js/Auth.js for User, Session, VerificationToken
+
 **C# API** (`api.marsvista.dev`):
 ```bash
-# Database (shared with Next.js)
-DATABASE_URL=postgresql://user:pass@host:port/dbname
+# Photos Database (separate from auth database)
+DATABASE_URL=postgresql://user:pass@host:port/marsvista_dev
+
+# Internal API Secret (shared with Next.js for trusted internal calls)
+INTERNAL_API_SECRET=<generate-secure-random-secret>
 
 # Application URLs
 FRONTEND_URL=https://marsvista.dev
@@ -456,8 +507,13 @@ RATE_LIMIT_DAILY_PRO=100000
 
 **Next.js** (`marsvista.dev`):
 ```bash
+# Auth Database (separate from photos database)
+DATABASE_URL=postgresql://user:pass@host:port/marsvista_auth_dev
+
+# Internal API Secret (same value as C# API)
+INTERNAL_API_SECRET=<same-secret-as-csharp-api>
+
 # Already configured in Story 009
-DATABASE_URL=postgresql://user:pass@host:port/dbname
 RESEND_API_KEY=re_xxxxx
 AUTH_SECRET=<secret>
 NEXTAUTH_URL=https://marsvista.dev
@@ -563,24 +619,40 @@ NEXT_PUBLIC_API_URL=https://api.marsvista.dev
    - **Less code**: Reuse Auth.js magic links, no duplicate email system
    - **Follows Grug principles**: Simple > clever
 
-3. **Why link api_keys to Auth.js User by email?**
+3. **Why Next.js API routes as proxy (not direct C# session validation)?**
+   - **Decoupling**: C# API doesn't need to understand Auth.js/Prisma
+   - **No cross-domain cookie complexity**: Session cookies stay on marsvista.dev
+   - **Standard microservices pattern**: Trusted internal API calls
+   - **Next.js already validates sessions**: No duplicate logic needed
+   - **Simpler**: Shared secret authentication vs. complex session validation
+
+4. **Why link api_keys to Auth.js User by email (not UUID)?**
    - Auth.js User table already has verified emails
-   - Email is natural foreign key (unique, human-readable)
+   - Email is natural logical identifier (unique, human-readable)
    - Avoids UUID synchronization between Prisma and EF Core
    - Easy to query in both systems
+   - No foreign key possible (separate databases)
 
-4. **Why in-memory rate limiting initially?**
+5. **Why two separate PostgreSQL databases?**
+   - **Clean separation of concerns**: Auth data vs. application data
+   - **Independent scaling**: Can scale databases separately if needed
+   - **Different migration systems**: Prisma Migrate vs. EF Core Migrations
+   - **No migration conflicts**: Auth.js and C# API don't interfere
+   - **Professional microservices pattern**: Each service owns its data
+
+6. **Why in-memory rate limiting initially?**
    - Sufficient for single-instance deployment
    - No Redis cost until needed
    - Easy to migrate to Redis later when scaling
+   - Railway currently runs single instance
 
-5. **API key format choice (`mv_live_{random}`)?**
+7. **API key format choice (`mv_live_{random}`)?**
    - Prefix makes keys identifiable in logs
    - Environment marker prevents prod/dev key mixup
    - Standard pattern (like Stripe: `sk_live_...`)
    - 40 hex chars = 160 bits of entropy (very secure)
 
-6. **Why hash API keys in database?**
+8. **Why hash API keys in database?**
    - Security: leaked database doesn't expose keys
    - Same principle as password hashing
    - SHA-256 is fast and sufficient (not bcrypt - keys are random)
