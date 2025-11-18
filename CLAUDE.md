@@ -26,7 +26,7 @@ Recreating the NASA Mars Rover API from scratch in C#/.NET (reference: /home/jam
 **System Capabilities:**
 
 **Backend (C#/.NET API):**
-- PostgreSQL 15 database with Docker Compose
+- PostgreSQL 15 photos database with Docker Compose (separate from auth database)
 - Complete rover/camera data for Perseverance, Curiosity, Opportunity, Spirit
 - Hybrid storage: indexed columns + JSONB for 100% NASA data preservation
 - HTTP resilience: exponential backoff retry + circuit breaker
@@ -60,7 +60,11 @@ Recreating the NASA Mars Rover API from scratch in C#/.NET (reference: /home/jam
 - Auth middleware protects /dashboard routes
 - Loading states and error boundaries
 - Responsive design (mobile/tablet/desktop)
-- Database: Shares same PostgreSQL instance with C# API (separate tables)
+- **Database Architecture:** Separate PostgreSQL database for auth (clean separation from photos DB)
+  - Local: `marsvista_auth_dev` (Auth.js) vs `marsvista_dev` (Photos)
+  - Railway: Separate PostgreSQL instances
+  - Migration systems: Prisma Migrate (Auth.js) vs EF Core (C# API)
+  - No migration conflicts, professional microservices pattern
 
 **Scraper Implementation Pattern:**
 - **ALWAYS use direct JSON parsing** (Perseverance approach): `JsonDocument.Parse(element.GetRawText())`

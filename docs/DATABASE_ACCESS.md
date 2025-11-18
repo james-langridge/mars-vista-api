@@ -1,6 +1,26 @@
 # Database Access Guide
 
-Guide for accessing and querying the Mars Vista PostgreSQL database.
+Guide for accessing and querying the Mars Vista PostgreSQL databases.
+
+## Database Architecture
+
+Mars Vista uses **two separate PostgreSQL databases** for clean separation of concerns:
+
+1. **Photos Database** (C# API)
+   - Purpose: Rover photos, cameras, and metadata
+   - Managed by: Entity Framework Core (C#)
+   - Migration tracking: `__EFMigrationsHistory` table
+
+2. **Auth Database** (Next.js Web App)
+   - Purpose: User authentication and sessions
+   - Managed by: Prisma (TypeScript)
+   - Migration tracking: `_prisma_migrations` table
+
+This separation provides:
+- ✅ No migration conflicts between systems
+- ✅ Independent scaling and optimization
+- ✅ Clear ownership boundaries
+- ✅ Professional microservices pattern
 
 ## Connection Details
 
@@ -9,23 +29,29 @@ Guide for accessing and querying the Mars Vista PostgreSQL database.
 Connection credentials are stored in `.env` file (gitignored):
 
 ```bash
-# Local development database
+# Local Photos Database (C# API)
 POSTGRES_USER=marsvista
 POSTGRES_PASSWORD=marsvista_dev_password
 POSTGRES_DB=marsvista_dev
 POSTGRES_PORT=5432
 
-# Railway production database
+# Local Auth Database (Next.js)
+# DATABASE_URL="postgresql://marsvista:marsvista_dev_password@localhost:5432/marsvista_auth_dev"
+
+# Railway Photos Database (Production)
 RAILWAY_HOST=maglev.proxy.rlwy.net
 RAILWAY_PORT=38340
 RAILWAY_USER=postgres
 RAILWAY_PASSWORD=<from_railway_dashboard>
 RAILWAY_DB=railway
+
+# Railway Auth Database (Production)
+# Connection details in Railway dashboard (separate instance)
 ```
 
 See `.env.example` for template.
 
-### Local Database (Docker)
+### Local Photos Database (Docker)
 
 **From Command Line (psql):**
 
@@ -41,17 +67,43 @@ psql "postgresql://marsvista:marsvista_dev_password@localhost:5432/marsvista_dev
 
 - **Host:** localhost
 - **Port:** 5432
-- **Database:** marsvista_dev
+- **Database:** marsvista_dev (photos)
 - **Username:** marsvista
 - **Password:** marsvista_dev_password
 
-**Application Connection String:**
+**Application Connection String (C# API):**
 
 ```
 Host=localhost;Port=5432;Database=marsvista_dev;Username=marsvista;Password=marsvista_dev_password
 ```
 
-### Railway Production Database
+### Local Auth Database (Docker)
+
+**From Command Line (psql):**
+
+```bash
+# Connect to auth database
+PGPASSWORD=marsvista_dev_password psql -h localhost -U marsvista -d marsvista_auth_dev
+
+# Or with connection string
+psql "postgresql://marsvista:marsvista_dev_password@localhost:5432/marsvista_auth_dev"
+```
+
+**Connection Parameters:**
+
+- **Host:** localhost
+- **Port:** 5432
+- **Database:** marsvista_auth_dev (authentication)
+- **Username:** marsvista
+- **Password:** marsvista_dev_password
+
+**Application Connection String (Next.js):**
+
+```
+DATABASE_URL="postgresql://marsvista:marsvista_dev_password@localhost:5432/marsvista_auth_dev"
+```
+
+### Railway Photos Database (Production)
 
 **From Command Line (psql):**
 
@@ -79,11 +131,31 @@ psql "$RAILWAY_DATABASE_URL"
 - **Perseverance:** 451,602 photos (sols 1-1,683, 1,475 unique sols)
 - **Total:** 1,127,367 photos
 
+### Railway Auth Database (Production)
+
+**From Command Line (psql):**
+
+```bash
+# Connection details available in Railway dashboard
+# Separate PostgreSQL instance from photos database
+PGPASSWORD=<auth_password> psql -h nozomi.proxy.rlwy.net -U postgres -p 30913 -d railway
+```
+
+**Connection Parameters:**
+
+- **Host:** nozomi.proxy.rlwy.net
+- **Port:** 30913
+- **Database:** railway (auth)
+- **Username:** postgres
+- **Password:** (see Railway dashboard)
+
+**Purpose:** User authentication, sessions, verification tokens
+
 ---
 
 ## Database Schema
 
-### Core Tables
+### Photos Database Tables (C# API)
 
 **rovers** - Mars rover metadata
 - `id` - Primary key
@@ -110,6 +182,29 @@ psql "$RAILWAY_DATABASE_URL"
 - `img_src_small` - Thumbnail image URL
 - `raw_data` - Complete NASA API response (JSONB)
 - Plus 30+ additional metadata fields
+
+### Auth Database Tables (Next.js)
+
+**User** - User accounts
+- `id` - Primary key (CUID)
+- `email` - User email (unique, indexed)
+- `emailVerified` - Email verification timestamp
+- `name` - User display name
+- `image` - Profile image URL
+- `createdAt` - Account creation timestamp
+- `updatedAt` - Last update timestamp
+
+**Session** - Active user sessions
+- `id` - Primary key (CUID)
+- `sessionToken` - Unique session token (indexed)
+- `userId` - Foreign key to User
+- `expires` - Session expiration timestamp
+
+**VerificationToken** - Magic link tokens
+- `identifier` - Email address
+- `token` - Unique verification token
+- `expires` - Token expiration timestamp
+- Composite primary key on (identifier, token)
 
 ---
 
