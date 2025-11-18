@@ -12,7 +12,7 @@ Recreating the NASA Mars Rover API from scratch in C#/.NET (reference: /home/jam
 
 ### Current Implementation Status
 
-**Completed Stories (1-8):**
+**Completed Stories (1-9):**
 - Story 001: Project scaffolding and PostgreSQL setup
 - Story 002: Database schema with EF Core migrations
 - Story 003: Rover and camera seed data
@@ -21,8 +21,11 @@ Recreating the NASA Mars Rover API from scratch in C#/.NET (reference: /home/jam
 - Story 006: Perseverance NASA API scraper with manual trigger endpoints
 - Story 007: Public query API endpoints (NASA-compatible)
 - Story 008: Curiosity rover scraper with camera name mapping
+- Story 009: Unified Next.js frontend application with Auth.js authentication
 
 **System Capabilities:**
+
+**Backend (C#/.NET API):**
 - PostgreSQL 15 database with Docker Compose
 - Complete rover/camera data for Perseverance, Curiosity, Opportunity, Spirit
 - Hybrid storage: indexed columns + JSONB for 100% NASA data preservation
@@ -40,6 +43,24 @@ Recreating the NASA Mars Rover API from scratch in C#/.NET (reference: /home/jam
   - ./db-sync-to-railway.sh - Sync/upsert local data to remote database
 - Query API: GET /api/v1/rovers/{name}/photos with filtering
 - Performance: 500+ photos in ~20 seconds, full rover scrape ~9-10 hours
+
+**Frontend (Next.js Web App):**
+- Location: `web/app/`
+- Next.js 16 with App Router and TypeScript
+- Auth.js (NextAuth v5) with magic link authentication via Resend
+- Prisma ORM for Auth.js database tables (User, Session, VerificationToken)
+- Tailwind CSS for styling
+- Pages implemented:
+  - `/` - Landing page with hero, features, and quick start
+  - `/docs` - API documentation with Redoc integration
+  - `/pricing` - Pricing tiers (Free, Pro, Enterprise)
+  - `/signin` - Magic link email authentication
+  - `/dashboard` - User dashboard (protected route, shows session info)
+- Shared components: Header (with auth state), Footer, Hero, Features, QuickStart
+- Auth middleware protects /dashboard routes
+- Loading states and error boundaries
+- Responsive design (mobile/tablet/desktop)
+- Database: Shares same PostgreSQL instance with C# API (separate tables)
 
 **Scraper Implementation Pattern:**
 - **ALWAYS use direct JSON parsing** (Perseverance approach): `JsonDocument.Parse(element.GetRawText())`

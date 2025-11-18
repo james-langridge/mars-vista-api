@@ -1,7 +1,7 @@
 # Story 009: Unified Next.js Frontend Application
 
 ## Status
-Planning
+✅ Completed
 
 ## Overview
 Consolidate separate Vite apps (`web/landing/` and `web/docs-site/`) into a single Next.js application that will host landing page, documentation, pricing, and signup/verification pages. Keep `status-site/` separate as it has different deployment requirements.
