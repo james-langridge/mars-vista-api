@@ -130,6 +130,13 @@ export default function Pricing() {
         <h2 className="text-2xl font-bold mb-4">Frequently Asked Questions</h2>
         <div className="space-y-4">
           <div>
+            <h3 className="font-semibold mb-2">How do I get started?</h3>
+            <p className="text-gray-300">
+              Sign in with your email to access the dashboard. From there, you can generate your API key
+              and start making requests immediately. No credit card required for the free tier.
+            </p>
+          </div>
+          <div>
             <h3 className="font-semibold mb-2">Can I upgrade or downgrade my plan?</h3>
             <p className="text-gray-300">
               Yes, you can change your plan at any time. Changes take effect immediately, and we'll

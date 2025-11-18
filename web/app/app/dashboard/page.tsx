@@ -1,6 +1,7 @@
 import { auth } from '@/server/auth-export';
 import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
+import ApiKeyManager from '@/components/ApiKeyManager';
 
 export const metadata: Metadata = {
   title: 'Dashboard - Mars Vista API',
@@ -32,7 +33,7 @@ export default async function Dashboard() {
         </div>
 
         <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-          <h3 className="text-sm font-medium text-gray-400 mb-2">API Keys</h3>
+          <h3 className="text-sm font-medium text-gray-400 mb-2">Requests This Hour</h3>
           <p className="text-2xl font-bold">0</p>
           <p className="text-sm text-gray-400 mt-2">Coming soon</p>
         </div>
@@ -44,6 +45,8 @@ export default async function Dashboard() {
         </div>
       </div>
 
+      <ApiKeyManager />
+
       <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
         <h2 className="text-xl font-bold mb-4">Get Started</h2>
         <div className="space-y-4">
@@ -54,7 +57,7 @@ export default async function Dashboard() {
             <div>
               <h3 className="font-semibold mb-1">Generate an API Key</h3>
               <p className="text-gray-400 text-sm">
-                Create your first API key to start making requests. (Coming in Story 010)
+                Create your first API key above to start making requests.
               </p>
             </div>
           </div>
