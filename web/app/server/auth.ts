@@ -6,7 +6,9 @@ import { render } from '@react-email/render';
 import { MagicLinkEmail } from '@/components/emails/MagicLinkEmail';
 import { Resend as ResendClient } from 'resend';
 
-const resend = new ResendClient(process.env.RESEND_API_KEY);
+function getResendClient() {
+  return new ResendClient(process.env.RESEND_API_KEY);
+}
 
 declare module 'next-auth' {
   interface Session extends DefaultSession {
@@ -24,6 +26,7 @@ export const authConfig = {
       sendVerificationRequest: async ({ identifier: email, url }) => {
         try {
           const html = await render(MagicLinkEmail({ url }));
+          const resend = getResendClient();
 
           await resend.emails.send({
             from: process.env.FROM_EMAIL || 'noreply@marsvista.dev',
