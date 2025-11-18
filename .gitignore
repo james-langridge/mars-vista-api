@@ -53,6 +53,9 @@ obj/
 *.sql
 *.dump
 
+# Exception: Allow Prisma migration SQL files (must be version controlled)
+!web/app/prisma/migrations/**/migration.sql
+
 # Runtime files
 *.log
 api.log
