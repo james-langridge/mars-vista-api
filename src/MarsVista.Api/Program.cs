@@ -101,6 +101,11 @@ builder.Services.AddHttpClient("NASA", client =>
 builder.Services.AddScoped<IRoverQueryService, RoverQueryService>();
 builder.Services.AddScoped<IPhotoQueryService, PhotoQueryService>();
 
+// API key and rate limiting services
+builder.Services.AddMemoryCache(); // Required for in-memory rate limiting
+builder.Services.AddSingleton<IApiKeyService, ApiKeyService>();
+builder.Services.AddSingleton<IRateLimitService, RateLimitService>();
+
 // Scraper services (action layer - side effects)
 // Register scrapers by rover name for dynamic resolution
 builder.Services.AddKeyedScoped<IScraperService, PerseveranceScraper>("perseverance");
@@ -287,8 +292,14 @@ app.UseMiddleware<JsonFormatMiddleware>();
 // Rate limiting (first defense - stops spam before API key check)
 app.UseRateLimiter();
 
-// API key authentication (second defense - protects all endpoints except /health)
+// Internal API authentication (protects /api/v1/internal/* endpoints)
+app.UseMiddleware<InternalApiMiddleware>();
+
+// Simple API key authentication for scraper endpoints (admin access)
 app.UseMiddleware<ApiKeyMiddleware>();
+
+// User API key authentication (protects /api/v1/* public endpoints)
+app.UseMiddleware<UserApiKeyAuthenticationMiddleware>();
 
 app.UseAuthorization();
 

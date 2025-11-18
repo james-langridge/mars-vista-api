@@ -14,6 +14,8 @@ public class MarsVistaDbContext : DbContext
     public DbSet<Rover> Rovers { get; set; }
     public DbSet<Camera> Cameras { get; set; }
     public DbSet<Photo> Photos { get; set; }
+    public DbSet<ApiKey> ApiKeys { get; set; }
+    public DbSet<RateLimit> RateLimits { get; set; }
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
@@ -137,6 +139,45 @@ public class MarsVistaDbContext : DbContext
                 .HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.UpdatedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP");
+        });
+
+        // ApiKey configuration
+        modelBuilder.Entity<ApiKey>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            // One user can have one API key (enforced by unique constraint on email)
+            entity.HasIndex(e => e.UserEmail).IsUnique();
+
+            // Fast lookup by API key hash during authentication
+            entity.HasIndex(e => e.ApiKeyHash).IsUnique();
+
+            // String length constraints
+            entity.Property(e => e.UserEmail).HasMaxLength(255).IsRequired();
+            entity.Property(e => e.ApiKeyHash).HasMaxLength(64).IsRequired(); // SHA-256 = 64 hex chars
+            entity.Property(e => e.Tier).HasMaxLength(20).HasDefaultValue("free");
+
+            // Timestamps
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.UpdatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+        });
+
+        // RateLimit configuration
+        modelBuilder.Entity<RateLimit>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            // Unique constraint: one record per user per window
+            entity.HasIndex(e => new { e.UserEmail, e.WindowStart, e.WindowType }).IsUnique();
+
+            // Fast lookup by user and window type
+            entity.HasIndex(e => new { e.UserEmail, e.WindowType });
+
+            // String length constraints
+            entity.Property(e => e.UserEmail).HasMaxLength(255).IsRequired();
+            entity.Property(e => e.WindowType).HasMaxLength(10).IsRequired();
         });
     }
 }
