@@ -56,7 +56,7 @@ Railway will auto-detect this as a Vite project and deploy with zero configurati
 
 ### Setup Steps
 
-1. Create a new Railway service from the `status-site` directory (or link to GitHub repo)
+1. Create a new Railway service from the `web/status-site` directory (or link to GitHub repo)
 2. Add environment variable in Railway dashboard:
    - `VITE_UPTIME_ROBOT_API_KEY` = your UptimeRobot monitor API key
 3. Deploy!
@@ -74,7 +74,7 @@ After deployment, configure your custom domain (e.g., `status.marsvista.dev`) in
 ## Project Structure
 
 ```
-status-site/
+web/status-site/
 ├── src/
 │   ├── components/
 │   │   ├── Header.tsx         # Site header with Mars Vista branding
