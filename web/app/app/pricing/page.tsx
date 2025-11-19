@@ -14,9 +14,9 @@ export default function Pricing() {
       period: 'forever',
       description: 'Perfect for getting started with Mars rover imagery',
       features: [
-        '10,000 requests per hour',
-        '100,000 requests per day',
-        '10 concurrent requests',
+        '1,000 requests per hour',
+        '10,000 requests per day',
+        '5 concurrent requests',
         'All rovers and cameras',
         'Full NASA metadata',
         'Community support',
@@ -24,17 +24,17 @@ export default function Pricing() {
       cta: 'Get Started',
       href: '/signin',
       highlighted: false,
-      badge: '10x NASA\'s limit',
+      badge: 'Matches NASA\'s limit',
     },
     {
       name: 'Pro',
-      price: 'Contact Us',
-      period: '',
+      price: '$20',
+      period: 'per month',
       description: 'For developers building production applications',
       features: [
-        '50,000 requests per hour',
-        '1,000,000 requests per day',
-        '50 concurrent requests',
+        '10,000 requests per hour',
+        '100,000 requests per day',
+        '25 concurrent requests',
         'All rovers and cameras',
         'Full NASA metadata',
         'Priority support',
@@ -43,7 +43,7 @@ export default function Pricing() {
       cta: 'Contact Sales',
       href: 'mailto:hello@marsvista.dev',
       highlighted: true,
-      badge: '50x NASA\'s limit',
+      badge: '10x NASA\'s limit',
     },
   ];
 
@@ -55,7 +55,7 @@ export default function Pricing() {
           Choose the plan that fits your needs. All plans include access to our complete Mars rover imagery database.
         </p>
         <p className="text-lg text-red-400 mt-4 font-medium">
-          Free tier offers 10x the rate limits of NASA&apos;s API Gateway
+          Free tier matches NASA&apos;s gateway, Pro tier offers 10x the limits
         </p>
       </div>
 
