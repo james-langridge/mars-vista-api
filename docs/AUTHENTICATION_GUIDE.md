@@ -123,44 +123,38 @@ MARS_VISTA_API_KEY=mv_live_a1b2c3d4e5f6789012345678901234567890abcd
 
 ### Free Tier (Default)
 
-When you create an account, you start on the free tier:
+When you create an account, you start on the free tier with generous limits:
 
-- **60 requests per hour** (1 per minute sustained)
-- **500 requests per day**
-- **3 concurrent requests**
+- **10,000 requests per hour** (166 per minute sustained)
+- **100,000 requests per day**
+- **10 concurrent requests**
+
+**10x better than NASA's API Gateway** (which offers 1,000 req/hour shared across all APIs)
 
 Perfect for:
 - Learning and experimentation
 - Personal projects
-- Low-traffic applications
+- Small to medium applications
+- Educational use
 
-### Pro Tier ($9/month)
+### Pro Tier (Contact for Pricing)
 
 Upgrade at [marsvista.dev/pricing](https://marsvista.dev/pricing):
 
-- **5,000 requests per hour** (83 per minute sustained)
-- **100,000 requests per day**
+- **50,000 requests per hour** (833 per minute sustained)
+- **1,000,000 requests per day** (1 million)
 - **50 concurrent requests**
+- **Usage analytics dashboard**
+- **Priority support**
+
+**50x better than NASA's API Gateway**
 
 Perfect for:
 - Production applications
+- High-traffic websites
 - Research projects
 - Commercial use
-
-### Enterprise Tier (Custom Pricing)
-
-Contact us for custom enterprise plans:
-
-- **100,000+ requests per hour**
-- **Unlimited daily requests**
-- **100 concurrent requests**
-- **Custom SLA and support**
-- **Dedicated infrastructure**
-
-Perfect for:
-- High-traffic applications
 - Mission-critical systems
-- Large-scale research
 
 ## Rate Limit Headers
 
@@ -168,8 +162,8 @@ Every API response includes rate limit information in the headers:
 
 ```http
 HTTP/1.1 200 OK
-X-RateLimit-Limit: 60
-X-RateLimit-Remaining: 43
+X-RateLimit-Limit: 10000
+X-RateLimit-Remaining: 9987
 X-RateLimit-Reset: 1731859200
 X-RateLimit-Tier: free
 X-RateLimit-Upgrade-Url: https://marsvista.dev/pricing
@@ -181,7 +175,7 @@ Content-Type: application/json
 - `X-RateLimit-Limit` - Maximum requests allowed in current window (hour)
 - `X-RateLimit-Remaining` - Requests remaining in current window
 - `X-RateLimit-Reset` - Unix timestamp when the limit resets
-- `X-RateLimit-Tier` - Your current tier (`free`, `pro`, `enterprise`)
+- `X-RateLimit-Tier` - Your current tier (`free` or `pro`)
 - `X-RateLimit-Upgrade-Url` - URL to upgrade your tier
 
 ### Checking Rate Limits in Code

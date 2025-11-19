@@ -21,12 +21,10 @@ public class RateLimitServiceTests
     }
 
     [Theory]
-    [InlineData("free", 60, 500)]
-    [InlineData("FREE", 60, 500)]
-    [InlineData("pro", 5000, 100000)]
-    [InlineData("PRO", 5000, 100000)]
-    [InlineData("enterprise", 100000, -1)]
-    [InlineData("ENTERPRISE", 100000, -1)]
+    [InlineData("free", 10000, 100000)]
+    [InlineData("FREE", 10000, 100000)]
+    [InlineData("pro", 50000, 1000000)]
+    [InlineData("PRO", 50000, 1000000)]
     public void GetLimitsForTier_ShouldReturnCorrectLimits(string tier, int expectedHourly, int expectedDaily)
     {
         // Act
@@ -47,8 +45,8 @@ public class RateLimitServiceTests
         var (hourlyLimit, dailyLimit) = _sut.GetLimitsForTier(unknownTier);
 
         // Assert
-        hourlyLimit.Should().Be(60);
-        dailyLimit.Should().Be(500);
+        hourlyLimit.Should().Be(10000);
+        dailyLimit.Should().Be(100000);
         _loggerMock.Verify(
             x => x.Log(
                 LogLevel.Warning,
@@ -71,8 +69,8 @@ public class RateLimitServiceTests
 
         // Assert
         allowed.Should().BeTrue();
-        hourlyRemaining.Should().Be(59); // 60 - 1
-        dailyRemaining.Should().Be(499); // 500 - 1
+        hourlyRemaining.Should().Be(9999); // 10000 - 1
+        dailyRemaining.Should().Be(99999); // 100000 - 1
     }
 
     [Fact]
@@ -82,21 +80,21 @@ public class RateLimitServiceTests
         var userEmail = "hourly-limit-test@example.com";
         var tier = "free";
 
-        // Act - Make 60 requests (the hourly limit)
-        for (int i = 0; i < 60; i++)
+        // Act - Make 10000 requests (the hourly limit)
+        for (int i = 0; i < 10000; i++)
         {
             var result = await _sut.CheckRateLimitAsync(userEmail, tier);
             result.allowed.Should().BeTrue($"request {i + 1} should be allowed");
         }
 
-        // Act - 61st request should be blocked
+        // Act - 10001st request should be blocked
         var (allowed, hourlyRemaining, dailyRemaining, _, _) = await _sut.CheckRateLimitAsync(userEmail, tier);
 
         // Assert
         allowed.Should().BeFalse();
         hourlyRemaining.Should().Be(0);
-        // Daily still has room (500 limit, 60 requests made)
-        dailyRemaining.Should().Be(440);
+        // Daily still has room (100000 limit, 10000 requests made)
+        dailyRemaining.Should().Be(90000);
     }
 
     [Fact]
@@ -106,14 +104,14 @@ public class RateLimitServiceTests
         var userEmail = "daily-limit-test@example.com";
         var tier = "free";
 
-        // Simulate 500 requests within daily limit but spread across different hours
-        // We'll directly manipulate the cache to simulate this without making 500 actual requests
+        // Simulate 100000 requests within daily limit but spread across different hours
+        // We'll directly manipulate the cache to simulate this without making 100000 actual requests
         var now = DateTime.UtcNow;
         var dayStart = new DateTime(now.Year, now.Month, now.Day, 0, 0, 0, DateTimeKind.Utc);
         var dailyKey = $"ratelimit:daily:{userEmail}:{dayStart:yyyyMMdd}";
 
-        // Set daily count to 500 (at the limit)
-        _cache.Set(dailyKey, 500, dayStart.AddDays(1));
+        // Set daily count to 100000 (at the limit)
+        _cache.Set(dailyKey, 100000, dayStart.AddDays(1));
 
         // Act - Next request should be blocked
         var (allowed, hourlyRemaining, dailyRemaining, _, _) = await _sut.CheckRateLimitAsync(userEmail, tier);
@@ -135,24 +133,8 @@ public class RateLimitServiceTests
 
         // Assert
         allowed.Should().BeTrue();
-        hourlyRemaining.Should().Be(4999); // 5000 - 1
-        dailyRemaining.Should().Be(99999); // 100000 - 1
-    }
-
-    [Fact]
-    public async Task CheckRateLimitAsync_EnterpriseTier_ShouldHaveUnlimitedDaily()
-    {
-        // Arrange
-        var userEmail = "enterprise@example.com";
-        var tier = "enterprise";
-
-        // Act
-        var (allowed, hourlyRemaining, dailyRemaining, _, _) = await _sut.CheckRateLimitAsync(userEmail, tier);
-
-        // Assert
-        allowed.Should().BeTrue();
-        hourlyRemaining.Should().Be(99999); // 100000 - 1
-        dailyRemaining.Should().Be(int.MaxValue); // Unlimited (-1 converts to MaxValue)
+        hourlyRemaining.Should().Be(49999); // 50000 - 1
+        dailyRemaining.Should().Be(999999); // 1000000 - 1
     }
 
     [Fact]
@@ -189,13 +171,13 @@ public class RateLimitServiceTests
         var user2 = "user2@example.com";
         var tier = "free";
 
-        // Act - User 1 makes 60 requests
-        for (int i = 0; i < 60; i++)
+        // Act - User 1 makes 10000 requests
+        for (int i = 0; i < 10000; i++)
         {
             await _sut.CheckRateLimitAsync(user1, tier);
         }
 
-        // User 1's 61st request should fail
+        // User 1's 10001st request should fail
         var user1Result = await _sut.CheckRateLimitAsync(user1, tier);
 
         // User 2's first request should succeed
@@ -204,7 +186,7 @@ public class RateLimitServiceTests
         // Assert
         user1Result.allowed.Should().BeFalse();
         user2Result.allowed.Should().BeTrue();
-        user2Result.hourlyRemaining.Should().Be(59);
+        user2Result.hourlyRemaining.Should().Be(9999);
     }
 
     [Fact]
@@ -214,13 +196,13 @@ public class RateLimitServiceTests
         var userEmail = "logger-test@example.com";
         var tier = "free";
 
-        // Make 60 requests to hit the limit
-        for (int i = 0; i < 60; i++)
+        // Make 10000 requests to hit the limit
+        for (int i = 0; i < 10000; i++)
         {
             await _sut.CheckRateLimitAsync(userEmail, tier);
         }
 
-        // Act - 61st request should log warning
+        // Act - 10001st request should log warning
         await _sut.CheckRateLimitAsync(userEmail, tier);
 
         // Assert
@@ -252,11 +234,11 @@ public class RateLimitServiceTests
         // Assert - Count how many were allowed
         var allowedCount = results.Count(r => r.allowed);
 
-        // Since we have thread-safe locking, exactly 60 should be allowed (hourly limit)
-        allowedCount.Should().Be(60);
+        // Since we have thread-safe locking, exactly 100 should be allowed (all requests, under the 10000 limit)
+        allowedCount.Should().Be(100);
 
-        // The last allowed request should report 0 remaining
+        // The last allowed request should report 9900 remaining (10000 - 100)
         var lastAllowedResult = results.Last(r => r.allowed);
-        lastAllowedResult.hourlyRemaining.Should().Be(0);
+        lastAllowedResult.hourlyRemaining.Should().Be(9900);
     }
 }

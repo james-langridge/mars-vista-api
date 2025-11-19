@@ -39,22 +39,19 @@ curl "https://api.marsvista.dev/health"
 
 ### Rate Limits
 
-Rate limits are enforced per API key based on your tier:
+Rate limits are enforced per API key based on your tier (10x better than NASA's API Gateway):
 
 **Free Tier** (default):
-- 60 requests per hour
-- 500 requests per day
-- 3 concurrent requests
-
-**Pro Tier** ($9/month):
-- 5,000 requests per hour
+- 10,000 requests per hour (10x NASA's limit)
 - 100,000 requests per day
-- 50 concurrent requests
+- 10 concurrent requests
 
-**Enterprise Tier** (custom pricing):
-- 100,000+ requests per hour
-- Unlimited daily requests
-- Custom SLA and support
+**Pro Tier** (contact for pricing):
+- 50,000 requests per hour (50x NASA's limit)
+- 1,000,000 requests per day
+- 50 concurrent requests
+- Usage analytics dashboard
+- Priority support
 
 Upgrade at [marsvista.dev/pricing](https://marsvista.dev/pricing)
 
@@ -62,7 +59,7 @@ Complete API documentation available in [API_ENDPOINTS.md](docs/API_ENDPOINTS.md
 
 ## Features
 
-- **API Key Authentication**: Secure per-user API keys with tier-based rate limiting (free, pro, enterprise tiers)
+- **API Key Authentication**: Secure per-user API keys with tier-based rate limiting (free and pro tiers)
 - **Multi-Rover Support**: All four major Mars rovers (Perseverance, Curiosity, Opportunity, Spirit) with automatic data source adaptation
 - **Complete Data Preservation**: Stores all 30-55 metadata fields using hybrid PostgreSQL storage (indexed columns + JSONB)
 - **Dual Scraper Architecture**: NASA JSON API for active rovers (Perseverance, Curiosity) and PDS index files for historic MER rovers (Opportunity, Spirit)

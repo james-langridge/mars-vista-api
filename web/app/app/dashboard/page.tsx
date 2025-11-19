@@ -29,7 +29,7 @@ export default async function Dashboard() {
         <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
           <h3 className="text-sm font-medium text-gray-400 mb-2">Current Plan</h3>
           <p className="text-2xl font-bold">Free</p>
-          <p className="text-sm text-gray-400 mt-2">60 req/hour, 500 req/day</p>
+          <p className="text-sm text-gray-400 mt-2">10,000 req/hour, 100,000 req/day</p>
         </div>
 
         <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">

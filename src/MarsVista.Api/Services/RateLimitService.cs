@@ -18,9 +18,8 @@ public class RateLimitService : IRateLimitService
     // Rate limit configurations by tier
     private static readonly Dictionary<string, (int hourly, int daily)> TierLimits = new()
     {
-        { "free", (60, 500) },
-        { "pro", (5000, 100000) },
-        { "enterprise", (100000, -1) } // -1 = unlimited
+        { "free", (10000, 100000) },
+        { "pro", (50000, 1000000) }
     };
 
     public RateLimitService(IMemoryCache cache, ILogger<RateLimitService> logger)
