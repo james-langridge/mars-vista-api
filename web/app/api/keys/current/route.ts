@@ -11,7 +11,7 @@ export async function GET() {
   try {
     // Call C# API internal endpoint to get current API key
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/v1/internal/keys/current?user_email=${encodeURIComponent(session.user.email)}`,
+      `${process.env.NEXT_PUBLIC_API_URL}/api/v1/internal/keys/current?userEmail=${encodeURIComponent(session.user.email)}`,
       {
         headers: {
           'X-Internal-Secret': process.env.INTERNAL_API_SECRET!,
