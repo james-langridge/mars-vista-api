@@ -14,8 +14,9 @@ export default function Pricing() {
       period: 'forever',
       description: 'Perfect for getting started with Mars rover imagery',
       features: [
-        '60 requests per hour',
-        '500 requests per day',
+        '10,000 requests per hour',
+        '100,000 requests per day',
+        '10 concurrent requests',
         'All rovers and cameras',
         'Full NASA metadata',
         'Community support',
@@ -23,40 +24,26 @@ export default function Pricing() {
       cta: 'Get Started',
       href: '/signin',
       highlighted: false,
+      badge: '10x NASA\'s limit',
     },
     {
       name: 'Pro',
-      price: '$9',
-      period: 'per month',
+      price: 'Contact Us',
+      period: '',
       description: 'For developers building production applications',
       features: [
-        '5,000 requests per hour',
-        '100,000 requests per day',
+        '50,000 requests per hour',
+        '1,000,000 requests per day',
+        '50 concurrent requests',
         'All rovers and cameras',
         'Full NASA metadata',
         'Priority support',
-        'Usage analytics',
+        'Usage analytics dashboard',
       ],
-      cta: 'Start Free Trial',
-      href: '/signin',
-      highlighted: true,
-    },
-    {
-      name: 'Enterprise',
-      price: 'Custom',
-      period: '',
-      description: 'For organizations with specific requirements',
-      features: [
-        'Unlimited requests',
-        'Dedicated infrastructure',
-        'SLA guarantee',
-        'Custom integrations',
-        'Priority support',
-        'Volume discounts',
-      ],
-      cta: 'Contact Us',
+      cta: 'Contact Sales',
       href: 'mailto:hello@marsvista.dev',
-      highlighted: false,
+      highlighted: true,
+      badge: '50x NASA\'s limit',
     },
   ];
 
@@ -67,9 +54,12 @@ export default function Pricing() {
         <p className="text-xl text-gray-300 max-w-2xl mx-auto">
           Choose the plan that fits your needs. All plans include access to our complete Mars rover imagery database.
         </p>
+        <p className="text-lg text-red-400 mt-4 font-medium">
+          Free tier offers 10x the rate limits of NASA&apos;s API Gateway
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto mb-16">
         {tiers.map((tier) => (
           <div
             key={tier.name}
@@ -81,7 +71,12 @@ export default function Pricing() {
           >
             {tier.highlighted && (
               <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-3 py-1 rounded-full text-sm font-medium">
-                Popular
+                Production Ready
+              </div>
+            )}
+            {tier.badge && (
+              <div className="inline-block bg-blue-900/50 border border-blue-700 text-blue-300 px-2 py-1 rounded text-xs font-medium mb-4">
+                {tier.badge}
               </div>
             )}
             <div className="mb-6">
