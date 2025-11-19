@@ -39,17 +39,17 @@ curl "https://api.marsvista.dev/health"
 
 ### Rate Limits
 
-Rate limits are enforced per API key based on your tier (10x better than NASA's API Gateway):
+Rate limits are enforced per API key based on your tier:
 
 **Free Tier** (default):
+- 1,000 requests per hour (matches NASA's API Gateway)
+- 10,000 requests per day
+- 5 concurrent requests
+
+**Pro Tier** ($20/month):
 - 10,000 requests per hour (10x NASA's limit)
 - 100,000 requests per day
-- 10 concurrent requests
-
-**Pro Tier** (contact for pricing):
-- 50,000 requests per hour (50x NASA's limit)
-- 1,000,000 requests per day
-- 50 concurrent requests
+- 25 concurrent requests
 - Usage analytics dashboard
 - Priority support
 

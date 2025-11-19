@@ -123,38 +123,40 @@ MARS_VISTA_API_KEY=mv_live_a1b2c3d4e5f6789012345678901234567890abcd
 
 ### Free Tier (Default)
 
-When you create an account, you start on the free tier with generous limits:
+When you create an account, you start on the free tier:
 
-- **10,000 requests per hour** (166 per minute sustained)
-- **100,000 requests per day**
-- **10 concurrent requests**
+- **1,000 requests per hour** (16 per minute sustained)
+- **10,000 requests per day**
+- **5 concurrent requests**
 
-**10x better than NASA's API Gateway** (which offers 1,000 req/hour shared across all APIs)
+**Matches NASA's API Gateway** (which offers 1,000 req/hour shared across all 16 APIs)
+
+**Advantage over NASA:** Our 1,000 req/hour is dedicated to Mars photos only, not shared with other APIs!
 
 Perfect for:
 - Learning and experimentation
 - Personal projects
-- Small to medium applications
+- Small applications
 - Educational use
 
-### Pro Tier (Contact for Pricing)
+### Pro Tier ($20/month)
 
 Upgrade at [marsvista.dev/pricing](https://marsvista.dev/pricing):
 
-- **50,000 requests per hour** (833 per minute sustained)
-- **1,000,000 requests per day** (1 million)
-- **50 concurrent requests**
+- **10,000 requests per hour** (166 per minute sustained)
+- **100,000 requests per day**
+- **25 concurrent requests**
 - **Usage analytics dashboard**
 - **Priority support**
 
-**50x better than NASA's API Gateway**
+**10x better than NASA's API Gateway**
 
 Perfect for:
 - Production applications
-- High-traffic websites
+- Growing startups
 - Research projects
 - Commercial use
-- Mission-critical systems
+- High-traffic websites
 
 ## Rate Limit Headers
 
@@ -162,8 +164,8 @@ Every API response includes rate limit information in the headers:
 
 ```http
 HTTP/1.1 200 OK
-X-RateLimit-Limit: 10000
-X-RateLimit-Remaining: 9987
+X-RateLimit-Limit: 1000
+X-RateLimit-Remaining: 987
 X-RateLimit-Reset: 1731859200
 X-RateLimit-Tier: free
 X-RateLimit-Upgrade-Url: https://marsvista.dev/pricing

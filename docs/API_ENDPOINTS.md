@@ -33,17 +33,17 @@ curl -H "X-API-Key: mv_live_a1b2c3d4e5f6789012345678901234567890abcd" \
 
 ### Rate Limits
 
-Rate limits are enforced per API key based on your tier (10x better than NASA's API Gateway):
+Rate limits are enforced per API key based on your tier:
 
 **Free Tier** (default):
+- 1,000 requests per hour (matches NASA's API Gateway)
+- 10,000 requests per day
+- 5 concurrent requests
+
+**Pro Tier** ($20/month):
 - 10,000 requests per hour (10x NASA's limit)
 - 100,000 requests per day
-- 10 concurrent requests
-
-**Pro Tier** (contact for pricing):
-- 50,000 requests per hour (50x NASA's limit)
-- 1,000,000 requests per day
-- 50 concurrent requests
+- 25 concurrent requests
 - Usage analytics dashboard
 - Priority support
 
@@ -52,8 +52,8 @@ Rate limits are enforced per API key based on your tier (10x better than NASA's 
 All API responses include rate limit information:
 
 ```http
-X-RateLimit-Limit: 10000
-X-RateLimit-Remaining: 9987
+X-RateLimit-Limit: 1000
+X-RateLimit-Remaining: 987
 X-RateLimit-Reset: 1731859200
 X-RateLimit-Tier: free
 X-RateLimit-Upgrade-Url: https://marsvista.dev/pricing
