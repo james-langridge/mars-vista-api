@@ -39,8 +39,12 @@ export default function ApiKeyManager() {
       }
 
       const data = await response.json();
+      console.log('✅ API Key data received:', data);
+      console.log('  - maskedKey:', data.maskedKey);
+      console.log('  - tier:', data.tier);
       setApiKeyInfo(data);
     } catch (err) {
+      console.error('❌ Failed to fetch API key:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch API key');
     } finally {
       setIsLoading(false);
@@ -134,13 +138,16 @@ export default function ApiKeyManager() {
             </label>
             <div className="flex gap-2">
               <code className="flex-1 bg-gray-900 p-3 rounded-lg font-mono text-sm break-all">
-                {showKey && apiKeyInfo.apiKey ? apiKeyInfo.apiKey : apiKeyInfo.maskedKey}
+                {(() => {
+                  const display = showKey && apiKeyInfo.apiKey ? apiKeyInfo.apiKey : apiKeyInfo.maskedKey;
+                  console.log('🔍 Rendering key display:', { showKey, hasApiKey: !!apiKeyInfo.apiKey, maskedKey: apiKeyInfo.maskedKey, displaying: display });
+                  return display || '(no key data)';
+                })()}
               </code>
               {apiKeyInfo.apiKey && (
                 <CopyButton text={apiKeyInfo.apiKey} label="Copy" />
               )}
-            </div>
-            {!showKey && apiKeyInfo.apiKey && (
+            </div>            {!showKey && apiKeyInfo.apiKey && (
               <button
                 onClick={() => setShowKey(true)}
                 className="text-sm text-blue-400 hover:text-blue-300 mt-2"
