@@ -1,73 +1,56 @@
-# React + TypeScript + Vite
+# Mars Vista Admin Dashboard
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Admin monitoring dashboard for the Mars Vista API.
 
-Currently, two official plugins are available:
+## Environment Variables
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Create a `.env` file in the root of this directory with the following variables:
 
-## React Compiler
+```bash
+# API Configuration
+VITE_API_URL=https://marsvista.dev
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# Admin Authentication
+VITE_ADMIN_EMAIL=admin@marsvista.com
+VITE_ADMIN_PASSWORD=your-secure-password-here
+VITE_ADMIN_API_KEY=mv_live_your_admin_api_key_here
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+See `.env.example` for a template.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Development
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev
 ```
+
+The dashboard will be available at http://localhost:5175/
+
+## Production Deployment
+
+Set the following environment variables in your deployment platform (Vercel/Netlify/Railway/etc.):
+
+- `VITE_API_URL` - Production API URL (e.g., https://marsvista.dev)
+- `VITE_ADMIN_EMAIL` - Admin login email
+- `VITE_ADMIN_PASSWORD` - Admin login password
+- `VITE_ADMIN_API_KEY` - Admin API key from the backend
+
+**Important:** These are build-time environment variables. You must rebuild the application after changing them.
+
+## Features
+
+- 📊 Overview - System statistics and rate limit violations
+- ⚡ Performance - Response time metrics, P95/P99, slow queries
+- 🎯 Endpoints - Top endpoints, rover/camera usage
+- 🚨 Errors - Error tracking by status code
+- 👥 Users - User management with usage stats
+- 📝 Activity - Recent API activity log
+
+Auto-refreshes every 30 seconds.
+
+## Tech Stack
+
+- React 19 + Vite + TypeScript
+- shadcn/ui components
+- Tailwind CSS v4
