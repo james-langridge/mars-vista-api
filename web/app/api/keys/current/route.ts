@@ -36,10 +36,10 @@ export async function GET() {
 
     // Return the masked key info
     return NextResponse.json({
-      maskedKey: data.masked_key,
+      maskedKey: data.keyPreview,
       tier: data.tier,
-      createdAt: data.created_at,
-      lastUsedAt: data.last_used_at,
+      createdAt: data.createdAt,
+      lastUsedAt: data.lastUsedAt,
     });
   } catch (error) {
     console.error('Error fetching current API key:', error);

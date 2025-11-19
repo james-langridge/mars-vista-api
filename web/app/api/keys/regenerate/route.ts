@@ -19,7 +19,7 @@ export async function POST() {
           'X-Internal-Secret': process.env.INTERNAL_API_SECRET!,
         },
         body: JSON.stringify({
-          user_email: session.user.email,
+          userEmail: session.user.email,
         }),
       }
     );
@@ -45,10 +45,9 @@ export async function POST() {
 
     // Return the new API key (only time it's visible in plaintext)
     return NextResponse.json({
-      apiKey: data.api_key,
-      maskedKey: data.masked_key,
+      apiKey: data.apiKey,
       tier: data.tier,
-      createdAt: data.created_at,
+      createdAt: data.createdAt,
     });
   } catch (error) {
     console.error('Error regenerating API key:', error);
