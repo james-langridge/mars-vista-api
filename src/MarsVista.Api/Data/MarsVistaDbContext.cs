@@ -16,6 +16,7 @@ public class MarsVistaDbContext : DbContext
     public DbSet<Photo> Photos { get; set; }
     public DbSet<ApiKey> ApiKeys { get; set; }
     public DbSet<RateLimit> RateLimits { get; set; }
+    public DbSet<UsageEvent> UsageEvents { get; set; }
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
@@ -156,6 +157,7 @@ public class MarsVistaDbContext : DbContext
             entity.Property(e => e.UserEmail).HasMaxLength(255).IsRequired();
             entity.Property(e => e.ApiKeyHash).HasMaxLength(64).IsRequired(); // SHA-256 = 64 hex chars
             entity.Property(e => e.Tier).HasMaxLength(20).HasDefaultValue("free");
+            entity.Property(e => e.Role).HasMaxLength(20).HasDefaultValue("user");
 
             // Timestamps
             entity.Property(e => e.CreatedAt)
@@ -178,6 +180,27 @@ public class MarsVistaDbContext : DbContext
             // String length constraints
             entity.Property(e => e.UserEmail).HasMaxLength(255).IsRequired();
             entity.Property(e => e.WindowType).HasMaxLength(10).IsRequired();
+        });
+
+        // UsageEvent configuration
+        modelBuilder.Entity<UsageEvent>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            // Indexes for common admin queries
+            entity.HasIndex(e => e.UserEmail);
+            entity.HasIndex(e => e.CreatedAt);
+            entity.HasIndex(e => e.StatusCode);
+            entity.HasIndex(e => new { e.UserEmail, e.CreatedAt });
+
+            // String length constraints
+            entity.Property(e => e.UserEmail).HasMaxLength(255).IsRequired();
+            entity.Property(e => e.Tier).HasMaxLength(20).IsRequired();
+            entity.Property(e => e.Endpoint).HasMaxLength(500).IsRequired();
+
+            // Timestamp with default value
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
         });
     }
 }

@@ -29,6 +29,12 @@ public class ApiKey : ITimestamped
     public string Tier { get; set; } = "free";
 
     /// <summary>
+    /// User's role: 'user' (default) or 'admin'
+    /// Admin role grants access to admin dashboard and endpoints.
+    /// </summary>
+    public string Role { get; set; } = "user";
+
+    /// <summary>
     /// Whether this API key is active and can be used.
     /// Set to false when regenerating to invalidate old keys.
     /// </summary>

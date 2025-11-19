@@ -301,6 +301,9 @@ app.UseMiddleware<ApiKeyMiddleware>();
 // User API key authentication (protects /api/v1/* public endpoints)
 app.UseMiddleware<UserApiKeyAuthenticationMiddleware>();
 
+// Usage tracking for admin dashboard analytics
+app.UseMiddleware<UsageTrackingMiddleware>();
+
 app.UseAuthorization();
 
 app.MapControllers();
