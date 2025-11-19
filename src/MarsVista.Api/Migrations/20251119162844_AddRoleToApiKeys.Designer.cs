@@ -4,6 +4,7 @@ using System.Text.Json;
 using MarsVista.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MarsVista.Api.Migrations
 {
     [DbContext(typeof(MarsVistaDbContext))]
-    partial class MarsVistaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251119162844_AddRoleToApiKeys")]
+    partial class AddRoleToApiKeys
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -437,69 +440,6 @@ namespace MarsVista.Api.Migrations
                         .HasDatabaseName("ix_rovers_name");
 
                     b.ToTable("rovers", (string)null);
-                });
-
-            modelBuilder.Entity("MarsVista.Api.Entities.UsageEvent", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<string>("Endpoint")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("endpoint");
-
-                    b.Property<int>("PhotosReturned")
-                        .HasColumnType("integer")
-                        .HasColumnName("photos_returned");
-
-                    b.Property<int>("ResponseTimeMs")
-                        .HasColumnType("integer")
-                        .HasColumnName("response_time_ms");
-
-                    b.Property<int>("StatusCode")
-                        .HasColumnType("integer")
-                        .HasColumnName("status_code");
-
-                    b.Property<string>("Tier")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasColumnName("tier");
-
-                    b.Property<string>("UserEmail")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)")
-                        .HasColumnName("user_email");
-
-                    b.HasKey("Id")
-                        .HasName("pk_usage_events");
-
-                    b.HasIndex("CreatedAt")
-                        .HasDatabaseName("ix_usage_events_created_at");
-
-                    b.HasIndex("StatusCode")
-                        .HasDatabaseName("ix_usage_events_status_code");
-
-                    b.HasIndex("UserEmail")
-                        .HasDatabaseName("ix_usage_events_user_email");
-
-                    b.HasIndex("UserEmail", "CreatedAt")
-                        .HasDatabaseName("ix_usage_events_user_email_created_at");
-
-                    b.ToTable("usage_events", (string)null);
                 });
 
             modelBuilder.Entity("MarsVista.Api.Entities.Camera", b =>

@@ -150,6 +150,7 @@ public class UserApiKeyAuthenticationMiddleware
         // Store user context for downstream middleware/controllers
         context.Items["UserEmail"] = apiKeyRecord.UserEmail;
         context.Items["UserTier"] = apiKeyRecord.Tier;
+        context.Items["UserRole"] = apiKeyRecord.Role;
         context.Items["ApiKeyId"] = apiKeyRecord.Id;
 
         // Update last_used_at timestamp (fire and forget - don't block request)
