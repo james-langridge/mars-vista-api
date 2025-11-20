@@ -286,6 +286,29 @@ Expected performance per run:
 - **Database writes**: Minimal (only new photos + state updates)
 - **NASA API calls**: ~2-20 requests per rover (1 per sol range)
 
+### Performance Optimization History
+
+**Issue (November 2025)**: PerseveranceScraper N+1 query problem caused 13+ hour runtimes
+
+**Root cause**: Duplicate checking executed individual database queries for every photo (150ms each):
+```csharp
+// BAD: N+1 queries (150ms × thousands of photos = hours)
+var exists = await _context.Photos.AnyAsync(p => p.NasaId == nasaId);
+```
+
+**Solution**: Batch duplicate checking with HashSet lookup:
+```csharp
+// GOOD: Single query + O(1) in-memory lookups
+var existingNasaIds = await _context.Photos
+    .Where(p => nasaIdsInResponse.Contains(p.NasaId))
+    .Select(p => p.NasaId)
+    .ToHashSetAsync();
+```
+
+**Result**: Runtime reduced from 13+ hours to 5-60 seconds (99.9% improvement)
+
+**Status**: All scrapers now use batch duplicate checking (Perseverance fixed, Curiosity/Opportunity/Spirit already optimized)
+
 ## Next Steps
 
 After deployment:

@@ -61,11 +61,28 @@ public class PerseveranceScraper : IScraperService
     private async Task<int> ProcessResponseAsync(string jsonResponse, CancellationToken cancellationToken)
     {
         var jsonDoc = JsonDocument.Parse(jsonResponse);
-        var images = jsonDoc.RootElement.GetProperty("images").EnumerateArray();
+        var images = jsonDoc.RootElement.GetProperty("images").EnumerateArray().ToList();
 
         var rover = await _context.Rovers
             .Include(r => r.Cameras)
             .FirstAsync(r => r.Name == RoverName, cancellationToken);
+
+        // PERFORMANCE: Batch fetch existing nasa_ids to avoid N+1 queries
+        // Extract all nasa_ids from the response
+        var nasaIdsInResponse = images
+            .Where(img => img.GetProperty("sample_type").GetString() == "Full")
+            .Select(img => img.GetProperty("imageid").GetString()!)
+            .ToHashSet();
+
+        // Fetch existing nasa_ids in a single query
+        var existingNasaIds = await _context.Photos
+            .Where(p => nasaIdsInResponse.Contains(p.NasaId))
+            .Select(p => p.NasaId)
+            .ToHashSetAsync(cancellationToken);
+
+        _logger.LogDebug(
+            "Batch duplicate check: {Total} photos in response, {Existing} already exist",
+            nasaIdsInResponse.Count, existingNasaIds.Count);
 
         var newPhotos = new List<Photo>();
 
@@ -83,11 +100,8 @@ public class PerseveranceScraper : IScraperService
 
                 var nasaId = imageElement.GetProperty("imageid").GetString()!;
 
-                // Check if photo already exists (idempotency)
-                var exists = await _context.Photos
-                    .AnyAsync(p => p.NasaId == nasaId, cancellationToken);
-
-                if (exists)
+                // Check if photo already exists (O(1) in-memory lookup)
+                if (existingNasaIds.Contains(nasaId))
                 {
                     _logger.LogDebug("Photo {NasaId} already exists, skipping", nasaId);
                     continue;
