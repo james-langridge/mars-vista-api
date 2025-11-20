@@ -45,3 +45,32 @@ export async function fetchErrors(limit = 50) {
 export async function fetchPerformanceTrends(period: '1h' | '24h' | '7d' | '30d' = '24h') {
   return fetchWithAuth(`/api/v1/admin/metrics/trends?period=${period}`)
 }
+
+// Scraper monitoring endpoints
+export async function fetchScraperStatus() {
+  return fetchWithAuth('/api/v1/admin/scraper/status')
+}
+
+export async function fetchScraperHistory(params: {
+  limit?: number
+  offset?: number
+  rover?: string
+  status?: string
+  startDate?: string
+  endDate?: string
+} = {}) {
+  const queryParams = new URLSearchParams()
+  if (params.limit) queryParams.set('limit', params.limit.toString())
+  if (params.offset) queryParams.set('offset', params.offset.toString())
+  if (params.rover) queryParams.set('rover', params.rover)
+  if (params.status) queryParams.set('status', params.status)
+  if (params.startDate) queryParams.set('startDate', params.startDate)
+  if (params.endDate) queryParams.set('endDate', params.endDate)
+
+  const query = queryParams.toString()
+  return fetchWithAuth(`/api/v1/admin/scraper/history${query ? `?${query}` : ''}`)
+}
+
+export async function fetchScraperMetrics(period: '24h' | '7d' | '30d' = '7d') {
+  return fetchWithAuth(`/api/v1/admin/scraper/metrics?period=${period}`)
+}
