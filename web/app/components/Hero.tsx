@@ -9,29 +9,15 @@ export default function Hero() {
             Mars Vista API
           </h1>
           <p className="text-xl sm:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto">
-            Access comprehensive Mars rover imagery from Curiosity, Perseverance, Opportunity, and Spirit missions
+            The complete, always-updated archive of Mars rover imagery. Over 1.9 million photos from Curiosity, Perseverance, Opportunity, and Spirit missions.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex justify-center">
             <Link
-              href="/docs"
-              className="px-8 py-3 bg-red-600 hover:bg-red-700 rounded-lg font-medium transition-colors"
+              href="/signin"
+              className="px-12 py-4 bg-red-600 hover:bg-red-700 rounded-lg font-semibold text-lg transition-colors shadow-lg"
             >
-              Read Documentation
+              Get Started
             </Link>
-            <a
-              href="https://api.marsvista.dev/api/v1/rovers"
-              className="px-8 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg font-medium transition-colors"
-            >
-              Try API
-            </a>
-            <a
-              href="https://status.marsvista.dev"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-8 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg font-medium transition-colors"
-            >
-              Status
-            </a>
           </div>
         </div>
       </div>
