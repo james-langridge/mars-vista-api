@@ -102,7 +102,7 @@ export default function Statistics() {
     {
       title: 'New Photos This Week',
       value: formatNumber(stats.photos_added_last_7_days),
-      description: 'Fresh images automatically scraped daily from NASA\'s latest rover transmissions',
+      description: 'Fresh images fetched daily from NASA\'s latest rover transmissions',
       fontSize: 'text-4xl',
     },
     {
