@@ -89,9 +89,14 @@ try
     using var scope = host.Services.CreateScope();
     var incrementalScraper = scope.ServiceProvider.GetRequiredService<IIncrementalScraperService>();
 
+    var jobStartTime = DateTime.UtcNow;
     var totalPhotos = 0;
     var successfulRovers = 0;
     var failedRovers = new List<string>();
+
+    // Create job history record for this multi-rover scrape run
+    var jobHistory = await incrementalScraper.CreateJobHistoryAsync(config.ActiveRovers.Count);
+    Log.Information("Created job history {JobId} for multi-rover scrape", jobHistory.Id);
 
     foreach (var roverName in config.ActiveRovers)
     {
@@ -100,7 +105,7 @@ try
             Log.Information("Starting incremental scrape for {Rover} with {Lookback}-sol lookback",
                 roverName, config.LookbackSols);
 
-            var result = await incrementalScraper.ScrapeIncrementalAsync(roverName, config.LookbackSols);
+            var result = await incrementalScraper.ScrapeIncrementalWithJobHistoryAsync(roverName, jobHistory.Id, config.LookbackSols);
 
             if (result.Success)
             {
@@ -123,6 +128,19 @@ try
             Log.Error(ex, "Failed to scrape {Rover}", roverName);
         }
     }
+
+    // Update job history with final results
+    jobHistory.JobCompletedAt = DateTime.UtcNow;
+    jobHistory.TotalDurationSeconds = (int)(jobHistory.JobCompletedAt.Value - jobStartTime).TotalSeconds;
+    jobHistory.TotalRoversSucceeded = successfulRovers;
+    jobHistory.TotalPhotosAdded = totalPhotos;
+    jobHistory.Status = failedRovers.Count == 0 ? "success" :
+                        (successfulRovers > 0 ? "partial" : "failed");
+    jobHistory.ErrorSummary = failedRovers.Count > 0
+        ? $"Failed rovers: {string.Join(", ", failedRovers)}"
+        : null;
+
+    await incrementalScraper.UpdateJobHistoryAsync(jobHistory);
 
     // Summary
     Log.Information(
