@@ -135,9 +135,6 @@ builder.Services.AddScoped<IIncrementalScraperService, IncrementalScraperService
 builder.Services.Configure<ScraperScheduleOptions>(
     builder.Configuration.GetSection(ScraperScheduleOptions.SectionName));
 
-// Background service for daily automated scraping (optional, can be disabled via config)
-builder.Services.AddHostedService<DailyScraperBackgroundService>();
-
 // Enable CORS for public API access
 builder.Services.AddCors(options =>
 {
