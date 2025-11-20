@@ -1,6 +1,5 @@
 import { auth } from '@/server/auth-export';
 import { redirect } from 'next/navigation';
-import Link from 'next/link';
 import SignOutButton from '@/components/SignOutButton';
 
 export default async function DashboardLayout({
@@ -24,30 +23,7 @@ export default async function DashboardLayout({
               <p className="font-medium truncate">{session.user.email}</p>
             </div>
 
-            <nav className="space-y-2">
-              <Link
-                href="/dashboard"
-                className="block px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"
-              >
-                Overview
-              </Link>
-              <Link
-                href="/dashboard/api-keys"
-                className="block px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors text-gray-400"
-              >
-                API Keys
-                <span className="ml-2 text-xs bg-gray-700 px-2 py-0.5 rounded">Soon</span>
-              </Link>
-              <Link
-                href="/dashboard/usage"
-                className="block px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors text-gray-400"
-              >
-                Usage
-                <span className="ml-2 text-xs bg-gray-700 px-2 py-0.5 rounded">Soon</span>
-              </Link>
-            </nav>
-
-            <div className="mt-6 pt-6 border-t border-gray-700">
+            <div className="pt-6 border-t border-gray-700">
               <SignOutButton />
             </div>
           </div>
