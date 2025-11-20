@@ -7,6 +7,8 @@ import {
   fetchPerformanceMetrics,
   fetchEndpointUsage,
   fetchErrors,
+  fetchScraperStatus,
+  fetchScraperMetrics,
 } from '../utils/api'
 import { logout } from '../utils/auth'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -18,6 +20,7 @@ import RateLimitViolations from './RateLimitViolations'
 import PerformanceMetrics from './PerformanceMetrics'
 import EndpointUsage from './EndpointUsage'
 import ErrorTracking from './ErrorTracking'
+import ScraperMonitoring from './ScraperMonitoring'
 
 export default function Dashboard() {
   const [stats, setStats] = useState<any>(null)
@@ -27,6 +30,8 @@ export default function Dashboard() {
   const [performanceMetrics, setPerformanceMetrics] = useState<any>(null)
   const [endpointUsage, setEndpointUsage] = useState<any>(null)
   const [errorData, setErrorData] = useState<any>(null)
+  const [scraperStatus, setScraperStatus] = useState<any>(null)
+  const [scraperMetrics, setScraperMetrics] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -45,6 +50,8 @@ export default function Dashboard() {
         perfMetrics,
         endpointData,
         errorsData,
+        scraperStatusData,
+        scraperMetricsData,
       ] = await Promise.all([
         fetchStats(),
         fetchUsers(),
@@ -53,6 +60,8 @@ export default function Dashboard() {
         fetchPerformanceMetrics(),
         fetchEndpointUsage(),
         fetchErrors(50),
+        fetchScraperStatus(),
+        fetchScraperMetrics('7d'),
       ])
 
       setStats(statsData)
@@ -62,6 +71,8 @@ export default function Dashboard() {
       setPerformanceMetrics(perfMetrics)
       setEndpointUsage(endpointData)
       setErrorData(errorsData)
+      setScraperStatus(scraperStatusData)
+      setScraperMetrics(scraperMetricsData)
     } catch (error) {
       console.error('Failed to load data:', error)
     } finally {
@@ -105,6 +116,7 @@ export default function Dashboard() {
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList>
             <TabsTrigger value="overview">📊 Overview</TabsTrigger>
+            <TabsTrigger value="scraper">🤖 Scraper</TabsTrigger>
             <TabsTrigger value="performance">⚡ Performance</TabsTrigger>
             <TabsTrigger value="endpoints">🎯 Endpoints</TabsTrigger>
             <TabsTrigger value="errors">🚨 Errors</TabsTrigger>
@@ -115,6 +127,12 @@ export default function Dashboard() {
           <TabsContent value="overview" className="space-y-8">
             {stats && <StatsOverview stats={stats} />}
             {violations.length > 0 && <RateLimitViolations violations={violations} />}
+          </TabsContent>
+
+          <TabsContent value="scraper">
+            {scraperStatus && scraperMetrics && (
+              <ScraperMonitoring status={scraperStatus} metrics={scraperMetrics} />
+            )}
           </TabsContent>
 
           <TabsContent value="performance">

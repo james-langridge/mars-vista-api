@@ -1,16 +1,17 @@
 using MarsVista.Api.Data;
+using MarsVista.Api.Filters;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace MarsVista.Api.Controllers.V1;
 
 /// <summary>
-/// Internal API for scraper monitoring and management.
-/// Called by Next.js admin dashboard after validating Auth.js sessions.
-/// Protected by InternalApiMiddleware (X-Internal-Secret header).
+/// Admin API for scraper monitoring and management.
+/// Protected by AdminAuthorization filter - requires admin role.
 /// </summary>
 [ApiController]
-[Route("api/v1/internal/admin/scraper")]
+[Route("api/v1/admin/scraper")]
+[AdminAuthorization]
 [ApiExplorerSettings(IgnoreApi = true)]
 public class AdminScraperController : ControllerBase
 {
