@@ -17,6 +17,7 @@ public class MarsVistaDbContext : DbContext
     public DbSet<ApiKey> ApiKeys { get; set; }
     public DbSet<RateLimit> RateLimits { get; set; }
     public DbSet<UsageEvent> UsageEvents { get; set; }
+    public DbSet<ScraperState> ScraperStates { get; set; }
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
@@ -200,6 +201,26 @@ public class MarsVistaDbContext : DbContext
 
             // Timestamp with default value
             entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+        });
+
+        // ScraperState configuration
+        modelBuilder.Entity<ScraperState>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            // One state record per rover
+            entity.HasIndex(e => e.RoverName).IsUnique();
+
+            // String length constraints
+            entity.Property(e => e.RoverName).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.LastScrapeStatus).HasMaxLength(20).IsRequired();
+            entity.Property(e => e.ErrorMessage).HasMaxLength(1000);
+
+            // Timestamps with default values
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.UpdatedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP");
         });
     }
