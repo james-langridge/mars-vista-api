@@ -1,6 +1,8 @@
 using System.Threading.RateLimiting;
 using MarsVista.Api.Data;
 using MarsVista.Api.Middleware;
+using MarsVista.Api.Options;
+using MarsVista.Api.Repositories;
 using MarsVista.Api.Services;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.RateLimiting;
@@ -124,6 +126,17 @@ builder.Services.AddScoped<PdsIndexParser>();
 
 // Register database seeder
 builder.Services.AddScoped<DatabaseSeeder>();
+
+// Incremental scraper services
+builder.Services.AddScoped<IScraperStateRepository, ScraperStateRepository>();
+builder.Services.AddScoped<IIncrementalScraperService, IncrementalScraperService>();
+
+// Configure scraper schedule options
+builder.Services.Configure<ScraperScheduleOptions>(
+    builder.Configuration.GetSection(ScraperScheduleOptions.SectionName));
+
+// Background service for daily automated scraping (optional, can be disabled via config)
+builder.Services.AddHostedService<DailyScraperBackgroundService>();
 
 // Enable CORS for public API access
 builder.Services.AddCors(options =>
