@@ -1,4 +1,5 @@
 using MarsVista.Api.Data;
+using MarsVista.Api.Repositories;
 using MarsVista.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -10,13 +11,19 @@ namespace MarsVista.Api.Controllers;
 public class ScraperController : ControllerBase
 {
     private readonly IEnumerable<IScraperService> _scrapers;
+    private readonly IIncrementalScraperService _incrementalScraper;
+    private readonly IScraperStateRepository _stateRepository;
     private readonly ILogger<ScraperController> _logger;
 
     public ScraperController(
         IEnumerable<IScraperService> scrapers,
+        IIncrementalScraperService incrementalScraper,
+        IScraperStateRepository stateRepository,
         ILogger<ScraperController> logger)
     {
         _scrapers = scrapers;
+        _incrementalScraper = incrementalScraper;
+        _stateRepository = stateRepository;
         _logger = logger;
     }
 
@@ -502,6 +509,150 @@ public class ScraperController : ControllerBase
         {
             _logger.LogError(ex, "All volumes scrape failed for Spirit");
             return StatusCode(500, new { error = "All volumes scrape failed", message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Incremental scrape - only fetch new photos since last scrape
+    /// </summary>
+    /// <param name="roverName">Rover name</param>
+    /// <param name="lookbackSols">Number of sols to look back (default: 7)</param>
+    [HttpPost("{roverName}/incremental")]
+    public async Task<IActionResult> IncrementalScrape(
+        string roverName,
+        [FromQuery] int lookbackSols = 7)
+    {
+        var scraper = _scrapers.FirstOrDefault(s =>
+            s.RoverName.Equals(roverName, StringComparison.OrdinalIgnoreCase));
+
+        if (scraper == null)
+        {
+            return NotFound(new { error = $"No scraper found for rover: {roverName}" });
+        }
+
+        if (lookbackSols < 0 || lookbackSols > 100)
+        {
+            return BadRequest(new { error = "lookbackSols must be between 0 and 100" });
+        }
+
+        _logger.LogInformation(
+            "Incremental scrape triggered for {RoverName} with lookback {Lookback} sols",
+            roverName, lookbackSols);
+
+        try
+        {
+            var result = await _incrementalScraper.ScrapeIncrementalAsync(roverName, lookbackSols);
+
+            if (!result.Success)
+            {
+                return StatusCode(500, new
+                {
+                    error = "Incremental scrape failed",
+                    message = result.ErrorMessage,
+                    result
+                });
+            }
+
+            return Ok(new
+            {
+                rover = result.RoverName,
+                startSol = result.StartSol,
+                endSol = result.EndSol,
+                totalSols = result.TotalSols,
+                photosAdded = result.PhotosAdded,
+                successfulSols = result.SuccessfulSols,
+                skippedSols = result.SkippedSols,
+                failedSols = result.FailedSols.Count > 0 ? result.FailedSols : null,
+                durationSeconds = (int)result.Duration.TotalSeconds,
+                timestamp = DateTime.UtcNow
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Incremental scrape failed for {RoverName}", roverName);
+            return StatusCode(500, new { error = "Incremental scrape failed", message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Get scraper status and last scrape info
+    /// </summary>
+    [HttpGet("{roverName}/status")]
+    public async Task<IActionResult> GetScraperStatus(string roverName)
+    {
+        var scraper = _scrapers.FirstOrDefault(s =>
+            s.RoverName.Equals(roverName, StringComparison.OrdinalIgnoreCase));
+
+        if (scraper == null)
+        {
+            return NotFound(new { error = $"No scraper found for rover: {roverName}" });
+        }
+
+        var state = await _stateRepository.GetByRoverNameAsync(roverName);
+
+        if (state == null)
+        {
+            return Ok(new
+            {
+                rover = roverName,
+                status = "not_initialized",
+                message = "No scraper state found - incremental scraping not yet configured"
+            });
+        }
+
+        return Ok(new
+        {
+            rover = roverName,
+            lastScrapedSol = state.LastScrapedSol,
+            lastScrapeTimestamp = state.LastScrapeTimestamp,
+            lastScrapeStatus = state.LastScrapeStatus,
+            photosAddedLastRun = state.PhotosAddedLastRun,
+            errorMessage = state.ErrorMessage,
+            updatedAt = state.UpdatedAt
+        });
+    }
+
+    /// <summary>
+    /// Reset scraper state to a specific sol (admin only)
+    /// </summary>
+    [HttpPost("{roverName}/reset-state")]
+    public async Task<IActionResult> ResetScraperState(
+        string roverName,
+        [FromQuery] int sol)
+    {
+        var scraper = _scrapers.FirstOrDefault(s =>
+            s.RoverName.Equals(roverName, StringComparison.OrdinalIgnoreCase));
+
+        if (scraper == null)
+        {
+            return NotFound(new { error = $"No scraper found for rover: {roverName}" });
+        }
+
+        if (sol < 0)
+        {
+            return BadRequest(new { error = "sol must be >= 0" });
+        }
+
+        _logger.LogInformation(
+            "Resetting scraper state for {RoverName} to sol {Sol}",
+            roverName, sol);
+
+        try
+        {
+            await _incrementalScraper.ResetStateAsync(roverName, sol);
+
+            return Ok(new
+            {
+                rover = roverName,
+                message = $"Scraper state reset to sol {sol}",
+                lastScrapedSol = sol,
+                timestamp = DateTime.UtcNow
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to reset scraper state for {RoverName}", roverName);
+            return StatusCode(500, new { error = "Failed to reset scraper state", message = ex.Message });
         }
     }
 
