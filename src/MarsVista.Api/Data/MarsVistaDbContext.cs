@@ -18,6 +18,8 @@ public class MarsVistaDbContext : DbContext
     public DbSet<RateLimit> RateLimits { get; set; }
     public DbSet<UsageEvent> UsageEvents { get; set; }
     public DbSet<ScraperState> ScraperStates { get; set; }
+    public DbSet<ScraperJobHistory> ScraperJobHistories { get; set; }
+    public DbSet<ScraperJobRoverDetails> ScraperJobRoverDetails { get; set; }
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
@@ -221,6 +223,48 @@ public class MarsVistaDbContext : DbContext
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.UpdatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+        });
+
+        // ScraperJobHistory configuration
+        modelBuilder.Entity<ScraperJobHistory>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            // Index for fast queries by start time (most recent first)
+            entity.HasIndex(e => e.JobStartedAt).HasDatabaseName("idx_scraper_job_history_started");
+
+            // String length constraints
+            entity.Property(e => e.Status).HasMaxLength(20).IsRequired();
+
+            // Timestamp with default value
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+        });
+
+        // ScraperJobRoverDetails configuration
+        modelBuilder.Entity<ScraperJobRoverDetails>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            // Index for fast queries by job
+            entity.HasIndex(e => e.JobHistoryId).HasDatabaseName("idx_scraper_job_rover_details_job");
+
+            // Index for fast queries by rover
+            entity.HasIndex(e => e.RoverName).HasDatabaseName("idx_scraper_job_rover_details_rover");
+
+            // String length constraints
+            entity.Property(e => e.RoverName).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.Status).HasMaxLength(20).IsRequired();
+
+            // Foreign key with cascade delete
+            entity.HasOne(e => e.JobHistory)
+                .WithMany(h => h.RoverDetails)
+                .HasForeignKey(e => e.JobHistoryId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Timestamp with default value
+            entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP");
         });
     }

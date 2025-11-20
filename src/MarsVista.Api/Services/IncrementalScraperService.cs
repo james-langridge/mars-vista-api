@@ -13,6 +13,16 @@ public interface IIncrementalScraperService
         int lookbackSols = 7,
         CancellationToken cancellationToken = default);
 
+    Task<IncrementalScrapeResult> ScrapeIncrementalWithJobHistoryAsync(
+        string roverName,
+        int jobHistoryId,
+        int lookbackSols = 7,
+        CancellationToken cancellationToken = default);
+
+    Task<ScraperJobHistory> CreateJobHistoryAsync(int totalRovers, CancellationToken cancellationToken = default);
+
+    Task UpdateJobHistoryAsync(ScraperJobHistory jobHistory, CancellationToken cancellationToken = default);
+
     Task ResetStateAsync(string roverName, int sol);
 }
 
@@ -60,6 +70,20 @@ public class IncrementalScraperService : IIncrementalScraperService
     {
         var startTime = DateTime.UtcNow;
         var result = new IncrementalScrapeResult { RoverName = roverName };
+
+        // Create job history record
+        var jobHistory = new ScraperJobHistory
+        {
+            JobStartedAt = startTime,
+            TotalRoversAttempted = 1,
+            TotalRoversSucceeded = 0,
+            TotalPhotosAdded = 0,
+            Status = "in_progress"
+        };
+        _context.ScraperJobHistories.Add(jobHistory);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        ScraperJobRoverDetails? roverDetails = null;
 
         try
         {
@@ -113,6 +137,23 @@ public class IncrementalScraperService : IIncrementalScraperService
             result.StartSol = startSol;
             result.EndSol = endSol;
             result.TotalSols = endSol - startSol + 1;
+
+            // Create rover details record
+            roverDetails = new ScraperJobRoverDetails
+            {
+                JobHistoryId = jobHistory.Id,
+                RoverName = roverName,
+                StartSol = startSol,
+                EndSol = endSol,
+                SolsAttempted = result.TotalSols,
+                SolsSucceeded = 0,
+                SolsFailed = 0,
+                PhotosAdded = 0,
+                DurationSeconds = 0,
+                Status = "in_progress"
+            };
+            _context.ScraperJobRoverDetails.Add(roverDetails);
+            await _context.SaveChangesAsync(cancellationToken);
 
             _logger.LogInformation(
                 "Starting incremental scrape for {RoverName}: sols {StartSol}-{EndSol} ({TotalSols} sols, lookback: {Lookback})",
@@ -168,6 +209,29 @@ public class IncrementalScraperService : IIncrementalScraperService
 
             await _stateRepository.UpdateAsync(state);
 
+            // Update job history
+            if (roverDetails != null)
+            {
+                roverDetails.PhotosAdded = totalPhotos;
+                roverDetails.SolsSucceeded = result.SuccessfulSols;
+                roverDetails.SolsFailed = result.FailedSols.Count;
+                roverDetails.DurationSeconds = (int)result.Duration.TotalSeconds;
+                roverDetails.Status = result.Success ? (result.FailedSols.Count > 0 ? "partial" : "success") : "failed";
+                roverDetails.ErrorMessage = state.ErrorMessage;
+                roverDetails.FailedSols = result.FailedSols.Count > 0
+                    ? System.Text.Json.JsonSerializer.Serialize(result.FailedSols)
+                    : null;
+            }
+
+            jobHistory.JobCompletedAt = DateTime.UtcNow;
+            jobHistory.TotalDurationSeconds = (int)result.Duration.TotalSeconds;
+            jobHistory.TotalRoversSucceeded = result.Success ? 1 : 0;
+            jobHistory.TotalPhotosAdded = totalPhotos;
+            jobHistory.Status = result.Success ? (result.FailedSols.Count > 0 ? "partial" : "success") : "failed";
+            jobHistory.ErrorSummary = state.ErrorMessage;
+
+            await _context.SaveChangesAsync(cancellationToken);
+
             _logger.LogInformation(
                 "Incremental scrape completed for {RoverName}: {Photos} photos added in {Duration}s",
                 roverName, totalPhotos, (int)result.Duration.TotalSeconds);
@@ -192,8 +256,240 @@ public class IncrementalScraperService : IIncrementalScraperService
                 await _stateRepository.UpdateAsync(state);
             }
 
+            // Update job history
+            if (roverDetails != null)
+            {
+                roverDetails.Status = "failed";
+                roverDetails.ErrorMessage = ex.Message;
+                roverDetails.DurationSeconds = (int)result.Duration.TotalSeconds;
+            }
+
+            jobHistory.JobCompletedAt = DateTime.UtcNow;
+            jobHistory.TotalDurationSeconds = (int)result.Duration.TotalSeconds;
+            jobHistory.TotalRoversSucceeded = 0;
+            jobHistory.Status = "failed";
+            jobHistory.ErrorSummary = ex.Message;
+
+            await _context.SaveChangesAsync(cancellationToken);
+
             return result;
         }
+    }
+
+    public async Task<IncrementalScrapeResult> ScrapeIncrementalWithJobHistoryAsync(
+        string roverName,
+        int jobHistoryId,
+        int lookbackSols = 7,
+        CancellationToken cancellationToken = default)
+    {
+        var startTime = DateTime.UtcNow;
+        var result = new IncrementalScrapeResult { RoverName = roverName };
+
+        // Load existing job history
+        var jobHistory = await _context.ScraperJobHistories
+            .FirstOrDefaultAsync(j => j.Id == jobHistoryId, cancellationToken);
+
+        if (jobHistory == null)
+        {
+            throw new InvalidOperationException($"Job history {jobHistoryId} not found");
+        }
+
+        ScraperJobRoverDetails? roverDetails = null;
+
+        try
+        {
+            // Get scraper for this rover
+            var scraper = _scrapers.FirstOrDefault(s =>
+                s.RoverName.Equals(roverName, StringComparison.OrdinalIgnoreCase));
+
+            if (scraper == null)
+            {
+                result.Success = false;
+                result.ErrorMessage = $"No scraper found for rover: {roverName}";
+                return result;
+            }
+
+            // Get or create scraper state
+            var state = await _stateRepository.GetByRoverNameAsync(roverName);
+            if (state == null)
+            {
+                // Initialize state - will scrape from the beginning
+                state = new ScraperState
+                {
+                    RoverName = roverName,
+                    LastScrapedSol = 0,
+                    LastScrapeTimestamp = DateTime.UtcNow,
+                    LastScrapeStatus = "success",
+                    PhotosAddedLastRun = 0
+                };
+                state = await _stateRepository.CreateAsync(state);
+                _logger.LogInformation(
+                    "Initialized scraper state for {RoverName} - will perform full scrape",
+                    roverName);
+            }
+
+            // Mark scrape as in progress
+            state.LastScrapeStatus = "in_progress";
+            state.LastScrapeTimestamp = DateTime.UtcNow;
+            state.ErrorMessage = null;
+            await _stateRepository.UpdateAsync(state);
+
+            // Calculate sol range
+            var startSol = Math.Max(0, state.LastScrapedSol - lookbackSols);
+
+            // Query NASA to get the actual current mission sol
+            var currentMissionSol = await GetCurrentMissionSolFromNasaAsync(roverName, cancellationToken);
+            var endSol = currentMissionSol;
+
+            _logger.LogInformation(
+                "Current mission sol for {RoverName}: {CurrentSol}",
+                roverName, currentMissionSol);
+
+            result.StartSol = startSol;
+            result.EndSol = endSol;
+            result.TotalSols = endSol - startSol + 1;
+
+            // Create rover details record
+            roverDetails = new ScraperJobRoverDetails
+            {
+                JobHistoryId = jobHistoryId,
+                RoverName = roverName,
+                StartSol = startSol,
+                EndSol = endSol,
+                SolsAttempted = result.TotalSols,
+                SolsSucceeded = 0,
+                SolsFailed = 0,
+                PhotosAdded = 0,
+                DurationSeconds = 0,
+                Status = "in_progress"
+            };
+            _context.ScraperJobRoverDetails.Add(roverDetails);
+            await _context.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation(
+                "Starting incremental scrape for {RoverName}: sols {StartSol}-{EndSol} ({TotalSols} sols, lookback: {Lookback})",
+                roverName, startSol, endSol, result.TotalSols, lookbackSols);
+
+            // Scrape each sol
+            var totalPhotos = 0;
+            for (var sol = startSol; sol <= endSol && !cancellationToken.IsCancellationRequested; sol++)
+            {
+                try
+                {
+                    var count = await scraper.ScrapeSolAsync(sol, cancellationToken);
+                    totalPhotos += count;
+
+                    if (count > 0)
+                    {
+                        result.SuccessfulSols++;
+                        _logger.LogInformation(
+                            "{RoverName} sol {Sol}: {Count} photos added",
+                            roverName, sol, count);
+                    }
+                    else
+                    {
+                        result.SkippedSols++;
+                    }
+
+                    // Small delay to be nice to NASA's servers
+                    if (sol < endSol)
+                    {
+                        await Task.Delay(500, cancellationToken);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    result.FailedSols.Add(sol);
+                    _logger.LogError(ex, "Failed to scrape {RoverName} sol {Sol}", roverName, sol);
+                    // Continue with next sol instead of stopping
+                }
+            }
+
+            result.PhotosAdded = totalPhotos;
+            result.Duration = DateTime.UtcNow - startTime;
+            result.Success = !cancellationToken.IsCancellationRequested;
+
+            // Update state
+            state.LastScrapedSol = endSol;
+            state.LastScrapeTimestamp = DateTime.UtcNow;
+            state.LastScrapeStatus = result.Success ? "success" : "failed";
+            state.PhotosAddedLastRun = totalPhotos;
+            state.ErrorMessage = result.FailedSols.Count > 0
+                ? $"Failed to scrape {result.FailedSols.Count} sols: {string.Join(", ", result.FailedSols)}"
+                : null;
+
+            await _stateRepository.UpdateAsync(state);
+
+            // Update rover details
+            if (roverDetails != null)
+            {
+                roverDetails.PhotosAdded = totalPhotos;
+                roverDetails.SolsSucceeded = result.SuccessfulSols;
+                roverDetails.SolsFailed = result.FailedSols.Count;
+                roverDetails.DurationSeconds = (int)result.Duration.TotalSeconds;
+                roverDetails.Status = result.Success ? (result.FailedSols.Count > 0 ? "partial" : "success") : "failed";
+                roverDetails.ErrorMessage = state.ErrorMessage;
+                roverDetails.FailedSols = result.FailedSols.Count > 0
+                    ? System.Text.Json.JsonSerializer.Serialize(result.FailedSols)
+                    : null;
+                await _context.SaveChangesAsync(cancellationToken);
+            }
+
+            _logger.LogInformation(
+                "Incremental scrape completed for {RoverName}: {Photos} photos added in {Duration}s",
+                roverName, totalPhotos, (int)result.Duration.TotalSeconds);
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Incremental scrape failed for {RoverName}", roverName);
+
+            result.Success = false;
+            result.ErrorMessage = ex.Message;
+            result.Duration = DateTime.UtcNow - startTime;
+
+            // Update state to failed
+            var state = await _stateRepository.GetByRoverNameAsync(roverName);
+            if (state != null)
+            {
+                state.LastScrapeStatus = "failed";
+                state.LastScrapeTimestamp = DateTime.UtcNow;
+                state.ErrorMessage = ex.Message;
+                await _stateRepository.UpdateAsync(state);
+            }
+
+            // Update rover details
+            if (roverDetails != null)
+            {
+                roverDetails.Status = "failed";
+                roverDetails.ErrorMessage = ex.Message;
+                roverDetails.DurationSeconds = (int)result.Duration.TotalSeconds;
+                await _context.SaveChangesAsync(cancellationToken);
+            }
+
+            return result;
+        }
+    }
+
+    public async Task<ScraperJobHistory> CreateJobHistoryAsync(int totalRovers, CancellationToken cancellationToken = default)
+    {
+        var jobHistory = new ScraperJobHistory
+        {
+            JobStartedAt = DateTime.UtcNow,
+            TotalRoversAttempted = totalRovers,
+            TotalRoversSucceeded = 0,
+            TotalPhotosAdded = 0,
+            Status = "in_progress"
+        };
+        _context.ScraperJobHistories.Add(jobHistory);
+        await _context.SaveChangesAsync(cancellationToken);
+        return jobHistory;
+    }
+
+    public async Task UpdateJobHistoryAsync(ScraperJobHistory jobHistory, CancellationToken cancellationToken = default)
+    {
+        await _context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task ResetStateAsync(string roverName, int sol)
