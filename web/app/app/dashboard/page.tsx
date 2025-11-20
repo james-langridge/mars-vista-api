@@ -25,24 +25,10 @@ export default async function Dashboard() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-          <h3 className="text-sm font-medium text-gray-400 mb-2">Current Plan</h3>
-          <p className="text-2xl font-bold">Free</p>
-          <p className="text-sm text-gray-400 mt-2">1,000 req/hour, 10,000 req/day</p>
-        </div>
-
-        <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-          <h3 className="text-sm font-medium text-gray-400 mb-2">Requests This Hour</h3>
-          <p className="text-2xl font-bold">0</p>
-          <p className="text-sm text-gray-400 mt-2">Coming soon</p>
-        </div>
-
-        <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-          <h3 className="text-sm font-medium text-gray-400 mb-2">Requests Today</h3>
-          <p className="text-2xl font-bold">0</p>
-          <p className="text-sm text-gray-400 mt-2">Coming soon</p>
-        </div>
+      <div className="bg-gray-800 rounded-lg p-6 border border-gray-700 max-w-sm">
+        <h3 className="text-sm font-medium text-gray-400 mb-2">Current Plan</h3>
+        <p className="text-2xl font-bold">Free</p>
+        <p className="text-sm text-gray-400 mt-2">1,000 req/hour, 10,000 req/day</p>
       </div>
 
       <ApiKeyManager />
@@ -73,25 +59,13 @@ export default async function Dashboard() {
               </p>
             </div>
           </div>
-
-          <div className="flex items-start gap-4">
-            <div className="bg-gray-600 rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0">
-              3
-            </div>
-            <div>
-              <h3 className="font-semibold mb-1">Monitor Usage</h3>
-              <p className="text-gray-400 text-sm">
-                Track your API usage and upgrade your plan as needed.
-              </p>
-            </div>
-          </div>
         </div>
       </div>
 
       <div className="bg-blue-900/20 border border-blue-700 rounded-lg p-6">
         <h2 className="text-xl font-bold mb-2">Need Higher Limits?</h2>
         <p className="text-gray-300 mb-4">
-          Upgrade to Pro for 5,000 requests per hour and 100,000 requests per day, plus priority support.
+          Upgrade to Pro for 10,000 requests per hour and 100,000 requests per day, plus priority support.
         </p>
         <a
           href="/pricing"
