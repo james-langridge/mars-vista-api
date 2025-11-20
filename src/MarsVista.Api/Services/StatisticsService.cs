@@ -38,21 +38,11 @@ public class StatisticsService : IStatisticsService
                 .Select(p => p.EarthDate)
                 .FirstOrDefaultAsync(cancellationToken);
 
-            // Get photos added in the last 7 days from scraper jobs
-            var sevenDaysAgo = DateTime.UtcNow.AddDays(-7);
-
-            var recentJobs = await _context.ScraperJobHistories
-                .Where(j => j.JobStartedAt >= sevenDaysAgo)
-                .Select(j => j.Id)
-                .ToListAsync(cancellationToken);
-
-            long photosAddedLast7Days = 0;
-            if (recentJobs.Any())
-            {
-                photosAddedLast7Days = await _context.ScraperJobRoverDetails
-                    .Where(d => recentJobs.Contains(d.JobHistoryId))
-                    .SumAsync(d => (long)d.PhotosAdded, cancellationToken);
-            }
+            // Get photos taken in the last 7 days by checking earth_date
+            var sevenDaysAgo = DateTime.UtcNow.AddDays(-7).Date;
+            var photosAddedLast7Days = await _context.Photos
+                .Where(p => p.EarthDate.HasValue && p.EarthDate.Value >= sevenDaysAgo)
+                .LongCountAsync(cancellationToken);
 
             // Get most recent scraper job timestamp
             var mostRecentJob = await _context.ScraperJobHistories
