@@ -10,6 +10,11 @@ import {
   TableRow,
 } from '@/components/ui/table'
 
+interface PhotoDetail {
+  sol: number
+  nasaId: string
+}
+
 interface RoverDetail {
   roverName: string
   startSol: number
@@ -22,6 +27,7 @@ interface RoverDetail {
   status: string
   errorMessage: string | null
   failedSols: number[]
+  photosAddedDetails: PhotoDetail[]
 }
 
 interface Job {
@@ -271,6 +277,35 @@ export default function ScraperJobHistory() {
                                         </p>
                                       </div>
                                     </div>
+                                  </div>
+                                )}
+                                {rover.photosAddedDetails && rover.photosAddedDetails.length > 0 && (
+                                  <div className="mt-3 p-3 bg-blue-50 border-l-4 border-blue-400 rounded">
+                                    <details className="group">
+                                      <summary className="cursor-pointer text-sm font-medium text-blue-800 mb-2 flex items-center">
+                                        <span className="mr-2">📷</span>
+                                        {rover.photosAdded} photo{rover.photosAdded > 1 ? 's' : ''} added
+                                        <span className="ml-2 text-blue-600 group-open:rotate-90 transition-transform">▶</span>
+                                      </summary>
+                                      <div className="mt-2 max-h-60 overflow-y-auto">
+                                        <table className="min-w-full text-xs">
+                                          <thead className="bg-blue-100 sticky top-0">
+                                            <tr>
+                                              <th className="px-2 py-1 text-left font-semibold text-blue-900">Sol</th>
+                                              <th className="px-2 py-1 text-left font-semibold text-blue-900">NASA ID</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody className="divide-y divide-blue-200">
+                                            {rover.photosAddedDetails.map((photo, idx) => (
+                                              <tr key={idx} className="hover:bg-blue-100">
+                                                <td className="px-2 py-1 text-blue-800">{photo.sol}</td>
+                                                <td className="px-2 py-1 text-blue-700 font-mono">{photo.nasaId}</td>
+                                              </tr>
+                                            ))}
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                    </details>
                                   </div>
                                 )}
                               </div>

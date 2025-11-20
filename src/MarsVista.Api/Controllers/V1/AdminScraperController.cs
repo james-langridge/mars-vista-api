@@ -170,7 +170,10 @@ public class AdminScraperController : ControllerBase
                     errorMessage = r.ErrorMessage,
                     failedSols = !string.IsNullOrEmpty(r.FailedSols)
                         ? System.Text.Json.JsonSerializer.Deserialize<List<int>>(r.FailedSols) ?? new List<int>()
-                        : new List<int>()
+                        : new List<int>(),
+                    photosAddedDetails = !string.IsNullOrEmpty(r.PhotosAddedDetails)
+                        ? System.Text.Json.JsonSerializer.Deserialize<List<object>>(r.PhotosAddedDetails) ?? new List<object>()
+                        : new List<object>()
                 }).ToList()
             }).ToList();
 

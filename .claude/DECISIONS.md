@@ -187,12 +187,24 @@ Each decision includes:
 
 **Key insight:** Single database round trip with batched INSERT statements. Memory overhead negligible (100KB for 100 photos). All-or-nothing transaction ensures consistency. Can optimize to COPY command later if scraping 10,000+ photos becomes bottleneck.
 
+#### [Decision 021: NASA API Endpoint Selection Per Rover](decisions/DECISION-021-nasa-api-endpoint-selection.md)
+**Status:** Active
+**Decision:** Use mission-specific NASA endpoints (cannot be unified)
+
+**Summary:** Curiosity and Perseverance scrapers must use different NASA API endpoints because the APIs are mission-specific and non-interchangeable. Testing confirms: (1) Perseverance data is NOT available via raw_image_items endpoint, (2) Curiosity data is NOT available via RSS API endpoint. Performance benchmarking shows Perseverance RSS API is ~50x slower than Curiosity raw_image_items API (20-23s vs 0.4-0.7s per sol). This performance difference is inherent to NASA's infrastructure and cannot be optimized on our end.
+
+**Key insights:**
+- Endpoints are siloed by mission: `/rss/api/` (Mars 2020 only), `/api/v1/raw_image_items/` (MSL only)
+- Performance difference unavoidable: Perseverance consistently takes 20-23 seconds per sol request
+- Not flaky, just slow: Our 30-second timeouts and retry policies appropriately handle the slow API
+- Incremental scraper minimizes impact: 7-sol lookback = ~3 minutes for Perseverance, ~15 seconds for Curiosity
+
 ---
 
 ## Decision Statistics
 
-- **Total Decisions:** 18
-- **Active:** 18
+- **Total Decisions:** 19
+- **Active:** 19
 - **Superseded:** 0
 - **Deprecated:** 0
 
@@ -226,6 +238,9 @@ Each decision includes:
 **Resilience & Error Handling:**
 - HTTP Resilience Strategy (006A)
 - Unknown Camera Handling (006C)
+
+**External APIs & Integration:**
+- NASA API Endpoint Selection (021)
 
 **Infrastructure & DevOps:**
 - Docker Image Variant (002B)

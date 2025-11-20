@@ -144,6 +144,86 @@ Base Gallery → Sol/Camera Dropdowns → Photo List Pages → Individual Images
 Example path: /mer/gallery/all/1/f/001/1F128284889EFF00E1P1111L0M1.HTML
 ```
 
+## API Performance Characteristics
+
+**Last Tested:** November 20, 2025
+
+### Performance Benchmarking Results
+
+The two NASA APIs have **significantly different performance characteristics**:
+
+| API Endpoint | Rover | Typical Response Time | Performance Rating |
+|--------------|-------|----------------------|-------------------|
+| `/rss/api/` | Perseverance | **20-23 seconds/sol** | ⚠️ Slow |
+| `/api/v1/raw_image_items/` | Curiosity | **0.4-0.7 seconds/sol** | ✅ Fast |
+
+**Performance Ratio:** The Perseverance RSS API is approximately **50x slower** than the Curiosity raw_image_items API.
+
+### Real-World Test Results
+
+```bash
+# Perseverance RSS API (sol 1646, 250 images)
+Response time: 20.6 seconds
+
+# Perseverance RSS API (sol 1645, ~250 images)
+Response time: 23.4 seconds
+
+# Curiosity raw_image_items API (sol 4683, 239 images)
+Response time: 0.7 seconds
+
+# Curiosity raw_image_items API (sol 4682, ~200 images)
+Response time: 0.4 seconds
+```
+
+### Why the Performance Difference?
+
+**RSS API is slower because:**
+- Dynamically generates RSS feed responses on each request
+- Likely queries multiple backend systems to aggregate data
+- Limited or ineffective CDN caching
+- Designed for RSS feed readers, not bulk scraping
+
+**raw_image_items API is faster because:**
+- Direct database queries with proper indexing
+- Well-optimized for pagination (up to 1000 items/page)
+- Effective CloudFront CDN caching (60-120 second TTL)
+- Purpose-built for programmatic access
+
+### Implications for Scraping
+
+**Perseverance (Slow API):**
+- Full historical scrape: ~9-10 hours for 1,646 sols
+- Incremental daily update: ~3 minutes for 7-sol lookback
+- **Solution:** Accept slowness, use appropriate timeouts (30+ seconds)
+
+**Curiosity (Fast API):**
+- Full historical scrape: ~40 minutes for 4,683 sols
+- Incremental daily update: ~10-15 seconds for 7-sol lookback
+- **Optimization:** Can use larger page sizes (up to 1000 items)
+
+**Note:** The performance difference is inherent to NASA's infrastructure and cannot be optimized on our end.
+
+### Endpoint Compatibility
+
+⚠️ **Important:** These endpoints are **mission-specific and non-interchangeable**.
+
+**Testing confirms:**
+- ❌ Perseverance data is NOT available via `/api/v1/raw_image_items/`
+- ❌ Curiosity data is NOT available via `/rss/api/`
+- Each rover MUST use its designated endpoint
+
+```bash
+# Attempting to access Perseverance via raw_image_items
+curl "https://mars.nasa.gov/api/v1/raw_image_items/?condition_1=mars2020:mission"
+# Result: {"items":[],"total":0}  ❌
+
+# Must use RSS API for Perseverance
+curl "https://mars.nasa.gov/rss/api/?feed=raw_images&category=mars2020&feedtype=json&sol=1"
+# Result: 250+ images  ✅
+```
+
+For detailed analysis of why different endpoints are required, see: [Decision 021: NASA API Endpoint Selection Per Rover](decisions/DECISION-021-nasa-api-endpoint-selection.md)
+
 ## Important Notes About These APIs
 
 ### 1. These Are NOT Official Public APIs
