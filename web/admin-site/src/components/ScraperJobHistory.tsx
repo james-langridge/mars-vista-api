@@ -243,14 +243,34 @@ export default function ScraperJobHistory() {
                                     </span>
                                   </div>
                                 </div>
-                                {rover.errorMessage && (
-                                  <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">
-                                    {rover.errorMessage}
+                                {rover.failedSols.length > 0 && (
+                                  <div className="mt-3 p-3 bg-amber-50 border-l-4 border-amber-400 rounded">
+                                    <div className="flex items-start">
+                                      <span className="text-amber-600 font-semibold text-sm mr-2">⚠</span>
+                                      <div className="flex-1">
+                                        <p className="text-sm font-medium text-amber-800 mb-1">
+                                          Failed to scrape {rover.failedSols.length} sol{rover.failedSols.length > 1 ? 's' : ''}: {rover.failedSols.join(', ')}
+                                        </p>
+                                        {rover.errorMessage && (
+                                          <p className="text-xs text-amber-700 mt-2 leading-relaxed">
+                                            <span className="font-semibold">Error:</span> {rover.errorMessage}
+                                          </p>
+                                        )}
+                                      </div>
+                                    </div>
                                   </div>
                                 )}
-                                {rover.failedSols.length > 0 && (
-                                  <div className="mt-2 text-xs text-slate-600">
-                                    Failed sols: {rover.failedSols.join(', ')}
+                                {rover.errorMessage && rover.failedSols.length === 0 && (
+                                  <div className="mt-3 p-3 bg-red-50 border-l-4 border-red-400 rounded">
+                                    <div className="flex items-start">
+                                      <span className="text-red-600 font-semibold text-sm mr-2">✗</span>
+                                      <div className="flex-1">
+                                        <p className="text-sm font-medium text-red-800 mb-1">Scraper Error</p>
+                                        <p className="text-xs text-red-700 leading-relaxed">
+                                          {rover.errorMessage}
+                                        </p>
+                                      </div>
+                                    </div>
                                   </div>
                                 )}
                               </div>
