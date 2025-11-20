@@ -41,7 +41,7 @@ export default function ApiKeyModal({ apiKey, isOpen, onClose, isRegenerate = fa
     <dialog
       ref={dialogRef}
       onClick={handleBackdropClick}
-      className="backdrop:bg-black/80 bg-gray-800 rounded-lg p-0 max-w-2xl w-full border border-gray-700"
+      className="backdrop:bg-black/80 bg-gray-800 rounded-lg p-0 max-w-2xl w-full border border-gray-700 fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0"
     >
       <div className="p-6">
         {/* Header */}
