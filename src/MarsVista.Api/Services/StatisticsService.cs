@@ -38,32 +38,35 @@ public class StatisticsService : IStatisticsService
                 .Select(p => p.EarthDate)
                 .FirstOrDefaultAsync(cancellationToken);
 
-            // Get photos added in the most recent scraper job
+            // Get photos added in the last 7 days from scraper jobs
+            var sevenDaysAgo = DateTime.UtcNow.AddDays(-7);
+
+            var recentJobs = await _context.ScraperJobHistories
+                .Where(j => j.JobStartedAt >= sevenDaysAgo)
+                .Select(j => j.Id)
+                .ToListAsync(cancellationToken);
+
+            long photosAddedLast7Days = 0;
+            if (recentJobs.Any())
+            {
+                photosAddedLast7Days = await _context.ScraperJobRoverDetails
+                    .Where(d => recentJobs.Contains(d.JobHistoryId))
+                    .SumAsync(d => (long)d.PhotosAdded, cancellationToken);
+            }
+
+            // Get most recent scraper job timestamp
             var mostRecentJob = await _context.ScraperJobHistories
                 .OrderByDescending(j => j.JobStartedAt)
                 .FirstOrDefaultAsync(cancellationToken);
 
-            long photosAddedToday = 0;
-            DateTime? lastScrapeAt = null;
-
-            if (mostRecentJob != null)
-            {
-                lastScrapeAt = mostRecentJob.JobStartedAt;
-
-                // Sum photos added across all rovers in this job
-                photosAddedToday = await _context.ScraperJobRoverDetails
-                    .Where(d => d.JobHistoryId == mostRecentJob.Id)
-                    .SumAsync(d => (long)d.PhotosAdded, cancellationToken);
-            }
-
             return new DatabaseStatisticsDto
             {
                 TotalPhotos = totalPhotos,
-                PhotosAddedToday = photosAddedToday,
+                PhotosAddedLast7Days = photosAddedLast7Days,
                 RoverCount = roverCount,
                 EarliestPhotoDate = earliestDate?.ToString("yyyy-MM-dd"),
                 LatestPhotoDate = latestDate?.ToString("yyyy-MM-dd"),
-                LastScrapeAt = lastScrapeAt
+                LastScrapeAt = mostRecentJob?.JobStartedAt
             };
         }
         catch (Exception ex)
