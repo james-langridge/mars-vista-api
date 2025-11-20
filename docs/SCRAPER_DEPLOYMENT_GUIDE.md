@@ -31,8 +31,10 @@ The scraper service is completely decoupled from the API:
 
 1. In the scraper service settings, click "Connect to GitHub"
 2. Select your `mars-vista-api` repository
-3. Set the **Root Directory** to: `src/MarsVista.Scraper`
-4. Set the **Dockerfile Path** to: `Dockerfile`
+3. **IMPORTANT**: Leave the **Root Directory** blank (or set to `/` for repository root)
+4. Set the **Dockerfile Path** to: `src/MarsVista.Scraper/Dockerfile`
+
+**Note**: The Dockerfile requires access to both `src/MarsVista.Api` and `src/MarsVista.Scraper` directories, so the build context must be the repository root.
 
 ### 3. Configure Environment Variables
 
