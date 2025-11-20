@@ -19,14 +19,6 @@ export default async function Header() {
             <Link href="/pricing" className="hover:text-gray-300 transition-colors">
               Pricing
             </Link>
-            <a
-              href="https://status.marsvista.dev"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-gray-300 transition-colors"
-            >
-              Status
-            </a>
             {session ? (
               <Link
                 href="/dashboard"

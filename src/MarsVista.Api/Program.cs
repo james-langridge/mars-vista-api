@@ -102,6 +102,7 @@ builder.Services.AddHttpClient("NASA", client =>
 // Query services (calculation layer - pure business logic)
 builder.Services.AddScoped<IRoverQueryService, RoverQueryService>();
 builder.Services.AddScoped<IPhotoQueryService, PhotoQueryService>();
+builder.Services.AddScoped<IStatisticsService, StatisticsService>();
 
 // API key and rate limiting services
 builder.Services.AddMemoryCache(); // Required for in-memory rate limiting
