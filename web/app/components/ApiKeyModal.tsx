@@ -46,7 +46,7 @@ export default function ApiKeyModal({ apiKey, isOpen, onClose, isRegenerate = fa
       <div className="p-6">
         {/* Header */}
         <div className="mb-6">
-          <h2 className="text-2xl font-bold mb-2">
+          <h2 className="text-2xl font-bold mb-2 text-white">
             {isRegenerate ? 'API Key Regenerated!' : 'API Key Generated!'}
           </h2>
           <p className="text-gray-400">
@@ -78,7 +78,7 @@ export default function ApiKeyModal({ apiKey, isOpen, onClose, isRegenerate = fa
             Your API Key
           </label>
           <div className="flex gap-2">
-            <code className="flex-1 bg-gray-900 p-4 rounded-lg font-mono text-sm break-all border border-gray-700">
+            <code className="flex-1 bg-gray-900 p-4 rounded-lg font-mono text-sm break-all border border-gray-700 text-white">
               {apiKey}
             </code>
             <CopyButton text={apiKey} label="Copy" />
@@ -100,7 +100,7 @@ export default function ApiKeyModal({ apiKey, isOpen, onClose, isRegenerate = fa
         <div className="flex justify-end">
           <button
             onClick={handleClose}
-            className="px-6 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-medium transition-colors"
+            className="px-6 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-medium transition-colors text-white"
           >
             I've Saved My Key
           </button>
