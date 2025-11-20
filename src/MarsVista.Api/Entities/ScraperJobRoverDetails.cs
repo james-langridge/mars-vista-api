@@ -15,6 +15,7 @@ public class ScraperJobRoverDetails
     public string Status { get; set; } = "success"; // 'success', 'failed', 'partial'
     public string? ErrorMessage { get; set; }
     public string? FailedSols { get; set; } // JSON array of failed sol numbers
+    public string? PhotosAddedDetails { get; set; } // JSON array of added photo info: [{sol, nasaId}]
     public DateTime CreatedAt { get; set; }
 
     // Navigation property

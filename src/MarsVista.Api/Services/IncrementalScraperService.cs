@@ -26,6 +26,12 @@ public interface IIncrementalScraperService
     Task ResetStateAsync(string roverName, int sol);
 }
 
+public class AddedPhotoInfo
+{
+    public int Sol { get; set; }
+    public string NasaId { get; set; } = string.Empty;
+}
+
 public class IncrementalScrapeResult
 {
     public string RoverName { get; set; } = string.Empty;
@@ -37,6 +43,7 @@ public class IncrementalScrapeResult
     public int SkippedSols { get; set; }
     public List<int> FailedSols { get; set; } = new();
     public Dictionary<int, string> FailedSolErrors { get; set; } = new(); // Sol -> Error message
+    public List<AddedPhotoInfo> AddedPhotos { get; set; } = new(); // Details of photos added
     public TimeSpan Duration { get; set; }
     public bool Success { get; set; }
     public string? ErrorMessage { get; set; }
@@ -175,6 +182,19 @@ public class IncrementalScraperService : IIncrementalScraperService
                         _logger.LogInformation(
                             "{RoverName} sol {Sol}: {Count} photos added",
                             roverName, sol, count);
+
+                        // Get the NASA IDs of photos just added for this sol
+                        var addedPhotoIds = await _context.Photos
+                            .Where(p => p.Sol == sol && p.Rover!.Name.ToLower() == roverName.ToLower())
+                            .OrderByDescending(p => p.CreatedAt)
+                            .Take(count)
+                            .Select(p => p.NasaId)
+                            .ToListAsync(cancellationToken);
+
+                        foreach (var nasaId in addedPhotoIds)
+                        {
+                            result.AddedPhotos.Add(new AddedPhotoInfo { Sol = sol, NasaId = nasaId });
+                        }
                     }
                     else
                     {
@@ -223,6 +243,9 @@ public class IncrementalScraperService : IIncrementalScraperService
                 roverDetails.ErrorMessage = state.ErrorMessage;
                 roverDetails.FailedSols = result.FailedSols.Count > 0
                     ? System.Text.Json.JsonSerializer.Serialize(result.FailedSols)
+                    : null;
+                roverDetails.PhotosAddedDetails = result.AddedPhotos.Count > 0
+                    ? System.Text.Json.JsonSerializer.Serialize(result.AddedPhotos)
                     : null;
             }
 
@@ -388,6 +411,19 @@ public class IncrementalScraperService : IIncrementalScraperService
                         _logger.LogInformation(
                             "{RoverName} sol {Sol}: {Count} photos added",
                             roverName, sol, count);
+
+                        // Get the NASA IDs of photos just added for this sol
+                        var addedPhotoIds = await _context.Photos
+                            .Where(p => p.Sol == sol && p.Rover!.Name.ToLower() == roverName.ToLower())
+                            .OrderByDescending(p => p.CreatedAt)
+                            .Take(count)
+                            .Select(p => p.NasaId)
+                            .ToListAsync(cancellationToken);
+
+                        foreach (var nasaId in addedPhotoIds)
+                        {
+                            result.AddedPhotos.Add(new AddedPhotoInfo { Sol = sol, NasaId = nasaId });
+                        }
                     }
                     else
                     {
@@ -436,6 +472,9 @@ public class IncrementalScraperService : IIncrementalScraperService
                 roverDetails.ErrorMessage = state.ErrorMessage;
                 roverDetails.FailedSols = result.FailedSols.Count > 0
                     ? System.Text.Json.JsonSerializer.Serialize(result.FailedSols)
+                    : null;
+                roverDetails.PhotosAddedDetails = result.AddedPhotos.Count > 0
+                    ? System.Text.Json.JsonSerializer.Serialize(result.AddedPhotos)
                     : null;
                 await _context.SaveChangesAsync(cancellationToken);
             }
