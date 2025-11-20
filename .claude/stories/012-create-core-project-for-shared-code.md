@@ -191,6 +191,17 @@ MarsVista.Scraper (Console App)
   COPY src/MarsVista.Core/ MarsVista.Core/
   COPY src/MarsVista.Scraper/ MarsVista.Scraper/
   ```
+- [ ] **IMPORTANT**: Change runtime base image back to smaller image:
+  ```dockerfile
+  # Before (current workaround due to ASP.NET Core dependency):
+  FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
+
+  # After (proper fix with Core refactoring):
+  FROM mcr.microsoft.com/dotnet/runtime:9.0 AS runtime
+  ```
+  This saves ~18MB and removes unnecessary ASP.NET Core dependencies since
+  Scraper will now reference MarsVista.Core (class library) instead of
+  MarsVista.Api (ASP.NET Core project).
 - [ ] Test Docker build locally
 
 ### Step 10: Testing
