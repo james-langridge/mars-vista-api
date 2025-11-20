@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 
 interface DatabaseStatistics {
   total_photos: number;
-  photos_added_today: number;
+  photos_added_last_7_days: number;
   rover_count: number;
   earliest_photo_date: string;
   latest_photo_date: string;
@@ -58,6 +58,18 @@ export default function Statistics() {
     return num.toLocaleString('en-US');
   };
 
+  const formatDateRange = (startDate: string, endDate: string) => {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    const startMonth = start.toLocaleDateString('en-US', { month: 'short' });
+    const startYear = start.getFullYear();
+    const endMonth = end.toLocaleDateString('en-US', { month: 'short' });
+    const endYear = end.getFullYear();
+
+    return `${startMonth} ${startYear} - ${endMonth} ${endYear}`;
+  };
+
   const statistics = [
     {
       title: 'Total Photos',
@@ -65,18 +77,18 @@ export default function Statistics() {
       description: 'Complete archive spanning 4 Mars rovers across 20+ years of exploration',
     },
     {
-      title: 'Photos Added Today',
-      value: formatNumber(stats.photos_added_today),
+      title: 'New Photos This Week',
+      value: formatNumber(stats.photos_added_last_7_days),
       description: 'Fresh images automatically scraped daily from NASA\'s latest rover transmissions',
     },
     {
-      title: 'Active Rovers',
+      title: 'Rovers',
       value: stats.rover_count.toString(),
       description: 'Curiosity, Perseverance, Opportunity, and Spirit missions fully supported',
     },
     {
       title: 'Archive Timeline',
-      value: `${stats.earliest_photo_date} to ${stats.latest_photo_date}`,
+      value: formatDateRange(stats.earliest_photo_date, stats.latest_photo_date),
       description: 'From Spirit\'s first landing to today\'s latest photos from the red planet',
     },
   ];

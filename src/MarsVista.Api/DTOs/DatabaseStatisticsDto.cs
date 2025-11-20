@@ -7,8 +7,8 @@ public record DatabaseStatisticsDto
     [JsonPropertyName("total_photos")]
     public long TotalPhotos { get; init; }
 
-    [JsonPropertyName("photos_added_today")]
-    public long PhotosAddedToday { get; init; }
+    [JsonPropertyName("photos_added_last_7_days")]
+    public long PhotosAddedLast7Days { get; init; }
 
     [JsonPropertyName("rover_count")]
     public int RoverCount { get; init; }
