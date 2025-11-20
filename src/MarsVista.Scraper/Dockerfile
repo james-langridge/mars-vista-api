@@ -18,7 +18,7 @@ WORKDIR "/src/MarsVista.Scraper"
 RUN dotnet publish "MarsVista.Scraper.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
 # Runtime stage
-FROM mcr.microsoft.com/dotnet/runtime:9.0 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
 WORKDIR /app
 
 # Copy published app from build stage
