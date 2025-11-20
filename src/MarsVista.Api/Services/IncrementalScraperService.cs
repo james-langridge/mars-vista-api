@@ -36,6 +36,7 @@ public class IncrementalScrapeResult
     public int SuccessfulSols { get; set; }
     public int SkippedSols { get; set; }
     public List<int> FailedSols { get; set; } = new();
+    public Dictionary<int, string> FailedSolErrors { get; set; } = new(); // Sol -> Error message
     public TimeSpan Duration { get; set; }
     public bool Success { get; set; }
     public string? ErrorMessage { get; set; }
@@ -189,6 +190,7 @@ public class IncrementalScraperService : IIncrementalScraperService
                 catch (Exception ex)
                 {
                     result.FailedSols.Add(sol);
+                    result.FailedSolErrors[sol] = ex.Message;
                     _logger.LogError(ex, "Failed to scrape {RoverName} sol {Sol}", roverName, sol);
                     // Continue with next sol instead of stopping
                 }
@@ -204,7 +206,8 @@ public class IncrementalScraperService : IIncrementalScraperService
             state.LastScrapeStatus = result.Success ? "success" : "failed";
             state.PhotosAddedLastRun = totalPhotos;
             state.ErrorMessage = result.FailedSols.Count > 0
-                ? $"Failed to scrape {result.FailedSols.Count} sols: {string.Join(", ", result.FailedSols)}"
+                ? $"Failed to scrape {result.FailedSols.Count} sols: {string.Join(", ", result.FailedSols)}. " +
+                  $"Example error: {result.FailedSolErrors.First().Value}"
                 : null;
 
             await _stateRepository.UpdateAsync(state);
@@ -400,6 +403,7 @@ public class IncrementalScraperService : IIncrementalScraperService
                 catch (Exception ex)
                 {
                     result.FailedSols.Add(sol);
+                    result.FailedSolErrors[sol] = ex.Message;
                     _logger.LogError(ex, "Failed to scrape {RoverName} sol {Sol}", roverName, sol);
                     // Continue with next sol instead of stopping
                 }
@@ -415,7 +419,8 @@ public class IncrementalScraperService : IIncrementalScraperService
             state.LastScrapeStatus = result.Success ? "success" : "failed";
             state.PhotosAddedLastRun = totalPhotos;
             state.ErrorMessage = result.FailedSols.Count > 0
-                ? $"Failed to scrape {result.FailedSols.Count} sols: {string.Join(", ", result.FailedSols)}"
+                ? $"Failed to scrape {result.FailedSols.Count} sols: {string.Join(", ", result.FailedSols)}. " +
+                  $"Example error: {result.FailedSolErrors.First().Value}"
                 : null;
 
             await _stateRepository.UpdateAsync(state);
