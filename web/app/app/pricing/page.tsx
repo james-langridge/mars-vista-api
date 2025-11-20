@@ -41,7 +41,7 @@ export default function Pricing() {
         'Usage analytics dashboard',
       ],
       cta: 'Contact Sales',
-      href: 'mailto:hello@marsvista.dev',
+      href: 'mailto:marsvista@langridge.dev',
       highlighted: true,
       badge: '10x NASA\'s limit',
     },
@@ -119,40 +119,6 @@ export default function Pricing() {
             </Link>
           </div>
         ))}
-      </div>
-
-      <div className="bg-gray-800 rounded-lg p-8 border border-gray-700">
-        <h2 className="text-2xl font-bold mb-4">Frequently Asked Questions</h2>
-        <div className="space-y-4">
-          <div>
-            <h3 className="font-semibold mb-2">How do I get started?</h3>
-            <p className="text-gray-300">
-              Sign in with your email to access the dashboard. From there, you can generate your API key
-              and start making requests immediately. No credit card required for the free tier.
-            </p>
-          </div>
-          <div>
-            <h3 className="font-semibold mb-2">Can I upgrade or downgrade my plan?</h3>
-            <p className="text-gray-300">
-              Yes, you can change your plan at any time. Changes take effect immediately, and we'll
-              prorate any charges or credits.
-            </p>
-          </div>
-          <div>
-            <h3 className="font-semibold mb-2">What happens if I exceed my rate limit?</h3>
-            <p className="text-gray-300">
-              Requests beyond your rate limit will return a 429 status code. You can upgrade to a
-              higher tier for increased limits.
-            </p>
-          </div>
-          <div>
-            <h3 className="font-semibold mb-2">Do you offer educational or non-profit discounts?</h3>
-            <p className="text-gray-300">
-              Yes! Please contact us at hello@marsvista.dev with details about your project for
-              special pricing.
-            </p>
-          </div>
-        </div>
       </div>
     </main>
   );
