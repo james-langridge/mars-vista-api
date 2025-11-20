@@ -12,7 +12,7 @@ Recreating the NASA Mars Rover API from scratch in C#/.NET (reference: /home/jam
 
 ### Current Implementation Status
 
-**Completed Stories (1-10):**
+**Completed Stories (1-11):**
 - Story 001: Project scaffolding and PostgreSQL setup
 - Story 002: Database schema with EF Core migrations
 - Story 003: Rover and camera seed data
@@ -23,6 +23,7 @@ Recreating the NASA Mars Rover API from scratch in C#/.NET (reference: /home/jam
 - Story 008: Curiosity rover scraper with camera name mapping
 - Story 009: Unified Next.js frontend application with Auth.js authentication
 - Story 010: API key authentication and user management with rate limiting
+- Story 011: Incremental photo scraper and daily update automation
 
 **System Capabilities:**
 
@@ -45,6 +46,15 @@ Recreating the NASA Mars Rover API from scratch in C#/.NET (reference: /home/jam
   - Enterprise tier: 100,000+ req/hour, unlimited daily, 100 concurrent
   - In-memory tracking (sufficient for single-instance deployment)
   - Rate limit headers on all responses (X-RateLimit-*)
+- **Incremental Scraper (MarsVista.Scraper):**
+  - Standalone .NET console app for automated daily updates
+  - Queries NASA API for current mission sol (not database max)
+  - 7-sol lookback window handles delayed photo transmissions
+  - Scraper state tracking per rover in database
+  - Idempotent: one run captures all new photos, subsequent runs find zero
+  - Deployed as Railway cron job (daily at 2 AM UTC)
+  - Exit codes for monitoring (0=success, 1=failure)
+  - Structured JSON logging with Serilog
 - Bulk scraper: POST /api/scraper/{rover}/bulk?startSol=X&endSol=Y
 - Progress monitoring: GET /api/scraper/{rover}/progress
 - CLI tools:
@@ -55,7 +65,7 @@ Recreating the NASA Mars Rover API from scratch in C#/.NET (reference: /home/jam
   - ./db-restore-to-railway.sh - Restore backup to remote database
   - ./db-sync-to-railway.sh - Sync/upsert local data to remote database
 - Query API: GET /api/v1/rovers/{name}/photos with filtering (requires API key)
-- Performance: 500+ photos in ~20 seconds, full rover scrape ~9-10 hours
+- Performance: 500+ photos in ~20 seconds, full rover scrape ~9-10 hours, incremental scrape ~5-60 seconds
 
 **Frontend (Next.js Web App):**
 - Location: `web/app/`
@@ -226,6 +236,7 @@ curl -X POST "http://localhost:5127/api/scraper/curiosity/bulk?startSol=1&endSol
 - `docs/AUTHENTICATION_GUIDE.md` - Comprehensive guide to API keys, rate limits, code examples, and troubleshooting
 - `docs/DATABASE_ACCESS.md` - Database credentials, queries, and management
 - `docs/CURIOSITY_SCRAPER_GUIDE.md` - Curiosity-specific scraper guide and implementation details
+- `docs/SCRAPER_DEPLOYMENT_GUIDE.md` - Railway cron deployment guide for incremental scraper with NASA API integration
 
 **Implementation Guides (.claude/):**
 - `.claude/ADVANCED_FEATURES_POSSIBILITIES.md` - Advanced features (panoramas, stereo pairs, location search, analytics) possible with enhanced NASA data storage
