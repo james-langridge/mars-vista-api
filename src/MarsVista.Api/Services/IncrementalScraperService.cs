@@ -230,93 +230,82 @@ public class IncrementalScraperService : IIncrementalScraperService
     {
         var roverLower = roverName.ToLower();
 
-        // For inactive rovers, use hardcoded values
+        // For inactive rovers (missions complete), use hardcoded final sol values
         if (roverLower != "curiosity" && roverLower != "perseverance")
         {
-            return GetExpectedMaxSol(roverName);
+            return GetInactiveRoverMaxSol(roverName);
         }
 
-        try
+        // For active rovers, query NASA API - fail if unavailable
+        var httpClient = _httpClientFactory.CreateClient("NASA");
+        string url;
+
+        if (roverLower == "perseverance")
         {
-            var httpClient = _httpClientFactory.CreateClient("NASA");
-            string url;
-            int sol;
+            // Perseverance uses /rss/api/ endpoint with latest=true
+            url = "https://mars.nasa.gov/rss/api/?feed=raw_images&category=mars2020&feedtype=json&latest=true";
 
-            if (roverLower == "perseverance")
+            _logger.LogDebug("Querying NASA API for current mission sol: {Url}", url);
+
+            var response = await httpClient.GetAsync(url, cancellationToken);
+            response.EnsureSuccessStatusCode();
+
+            var content = await response.Content.ReadAsStringAsync(cancellationToken);
+            var jsonDoc = JsonDocument.Parse(content);
+
+            if (jsonDoc.RootElement.TryGetProperty("latest_sol", out var latestSolElement))
             {
-                // Perseverance uses /rss/api/ endpoint with latest=true
-                url = "https://mars.nasa.gov/rss/api/?feed=raw_images&category=mars2020&feedtype=json&latest=true";
+                var sol = latestSolElement.GetInt32();
+                _logger.LogInformation(
+                    "Successfully retrieved current mission sol for {RoverName} from NASA: {Sol}",
+                    roverName, sol);
+                return sol;
+            }
 
-                _logger.LogDebug("Querying NASA API for current mission sol: {Url}", url);
+            throw new InvalidOperationException(
+                $"NASA API response missing 'latest_sol' property for {roverName}");
+        }
+        else // Curiosity
+        {
+            // Curiosity uses /api/v1/raw_image_items/ endpoint
+            url = "https://mars.nasa.gov/api/v1/raw_image_items/?order=sol%20desc&per_page=1&condition_1=msl:mission";
 
-                var response = await httpClient.GetAsync(url, cancellationToken);
-                response.EnsureSuccessStatusCode();
+            _logger.LogDebug("Querying NASA API for current mission sol: {Url}", url);
 
-                var content = await response.Content.ReadAsStringAsync(cancellationToken);
-                var jsonDoc = JsonDocument.Parse(content);
+            var response = await httpClient.GetAsync(url, cancellationToken);
+            response.EnsureSuccessStatusCode();
 
-                if (jsonDoc.RootElement.TryGetProperty("latest_sol", out var latestSolElement))
+            var content = await response.Content.ReadAsStringAsync(cancellationToken);
+            var jsonDoc = JsonDocument.Parse(content);
+
+            if (jsonDoc.RootElement.TryGetProperty("items", out var items) &&
+                items.GetArrayLength() > 0)
+            {
+                var firstItem = items[0];
+                if (firstItem.TryGetProperty("sol", out var solElement))
                 {
-                    sol = latestSolElement.GetInt32();
+                    var sol = solElement.GetInt32();
                     _logger.LogInformation(
                         "Successfully retrieved current mission sol for {RoverName} from NASA: {Sol}",
                         roverName, sol);
                     return sol;
                 }
             }
-            else // Curiosity
-            {
-                // Curiosity uses /api/v1/raw_image_items/ endpoint
-                url = "https://mars.nasa.gov/api/v1/raw_image_items/?order=sol%20desc&per_page=1&condition_1=msl:mission";
 
-                _logger.LogDebug("Querying NASA API for current mission sol: {Url}", url);
-
-                var response = await httpClient.GetAsync(url, cancellationToken);
-                response.EnsureSuccessStatusCode();
-
-                var content = await response.Content.ReadAsStringAsync(cancellationToken);
-                var jsonDoc = JsonDocument.Parse(content);
-
-                if (jsonDoc.RootElement.TryGetProperty("items", out var items) &&
-                    items.GetArrayLength() > 0)
-                {
-                    var firstItem = items[0];
-                    if (firstItem.TryGetProperty("sol", out var solElement))
-                    {
-                        sol = solElement.GetInt32();
-                        _logger.LogInformation(
-                            "Successfully retrieved current mission sol for {RoverName} from NASA: {Sol}",
-                            roverName, sol);
-                        return sol;
-                    }
-                }
-            }
-
-            // Fallback to hardcoded value if parsing fails
-            _logger.LogWarning(
-                "Failed to parse current mission sol from NASA API for {RoverName}, using hardcoded value",
-                roverName);
-            return GetExpectedMaxSol(roverName);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex,
-                "Error querying NASA API for current mission sol for {RoverName}, using hardcoded value",
-                roverName);
-            return GetExpectedMaxSol(roverName);
+            throw new InvalidOperationException(
+                $"NASA API response missing expected 'items' or 'sol' property for {roverName}");
         }
     }
 
-    private int GetExpectedMaxSol(string roverName)
+    private int GetInactiveRoverMaxSol(string roverName)
     {
-        // Same logic as ScraperController
+        // Final sol values for inactive rovers (missions complete)
+        // For active rovers (Curiosity, Perseverance), query NASA API instead
         return roverName.ToLower() switch
         {
-            "perseverance" => 1682,
-            "curiosity" => 4683,
-            "opportunity" => 5111,
-            "spirit" => 2208,
-            _ => 1000
+            "opportunity" => 5111,  // Mission ended sol 5111
+            "spirit" => 2208,       // Mission ended sol 2208
+            _ => throw new ArgumentException($"Unknown inactive rover: {roverName}")
         };
     }
 }
