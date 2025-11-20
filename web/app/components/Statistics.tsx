@@ -61,13 +61,35 @@ export default function Statistics() {
   const formatDateRange = (startDate: string, endDate: string) => {
     const start = new Date(startDate);
     const end = new Date(endDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
 
-    const startMonth = start.toLocaleDateString('en-US', { month: 'short' });
-    const startYear = start.getFullYear();
-    const endMonth = end.toLocaleDateString('en-US', { month: 'short' });
-    const endYear = end.getFullYear();
+    const startFormatted = start.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
 
-    return `${startMonth} ${startYear} - ${endMonth} ${endYear}`;
+    // Check if end date is today or yesterday
+    const endDateOnly = new Date(end);
+    endDateOnly.setHours(0, 0, 0, 0);
+
+    let endFormatted;
+    if (endDateOnly.getTime() === today.getTime()) {
+      endFormatted = 'today';
+    } else if (endDateOnly.getTime() === yesterday.getTime()) {
+      endFormatted = 'yesterday';
+    } else {
+      endFormatted = end.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      });
+    }
+
+    return `${startFormatted} - ${endFormatted}`;
   };
 
   const statistics = [
@@ -75,21 +97,25 @@ export default function Statistics() {
       title: 'Total Photos',
       value: formatNumber(stats.total_photos),
       description: 'Complete archive spanning 4 Mars rovers across 20+ years of exploration',
+      fontSize: 'text-4xl',
     },
     {
       title: 'New Photos This Week',
       value: formatNumber(stats.photos_added_last_7_days),
       description: 'Fresh images automatically scraped daily from NASA\'s latest rover transmissions',
+      fontSize: 'text-4xl',
     },
     {
       title: 'Rovers',
       value: stats.rover_count.toString(),
       description: 'Curiosity, Perseverance, Opportunity, and Spirit missions fully supported',
+      fontSize: 'text-4xl',
     },
     {
       title: 'Archive Timeline',
       value: formatDateRange(stats.earliest_photo_date, stats.latest_photo_date),
       description: 'From Spirit\'s first landing to today\'s latest photos from the red planet',
+      fontSize: 'text-2xl',
     },
   ];
 
@@ -102,7 +128,7 @@ export default function Statistics() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
         {statistics.map((stat, index) => (
           <div key={index} className="bg-gray-800 rounded-lg p-6 border border-gray-700 text-center">
-            <div className="text-4xl font-bold text-red-500 mb-2">{stat.value}</div>
+            <div className={`${stat.fontSize} font-bold text-red-500 mb-2`}>{stat.value}</div>
             <h3 className="text-xl font-semibold mb-3">{stat.title}</h3>
             <p className="text-gray-300 text-sm">{stat.description}</p>
           </div>
