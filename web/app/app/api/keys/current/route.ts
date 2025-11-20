@@ -52,8 +52,14 @@ export async function GET() {
       return NextResponse.json(data, { status: response.status });
     }
 
-    // Success - return masked key info
-    return NextResponse.json(data, { status: 200 });
+    // Success - map C# API fields to frontend format
+    return NextResponse.json({
+      maskedKey: data.keyPreview,
+      tier: data.tier,
+      createdAt: data.createdAt,
+      lastUsedAt: data.lastUsedAt,
+      isActive: data.isActive,
+    }, { status: 200 });
   } catch (error) {
     console.error('Failed to fetch API key info:', error);
     return NextResponse.json(

@@ -51,8 +51,12 @@ export async function POST() {
       return NextResponse.json(data, { status: response.status });
     }
 
-    // Success - return API key
-    return NextResponse.json(data, { status: 200 });
+    // Success - return plaintext API key (only time it's visible)
+    return NextResponse.json({
+      apiKey: data.apiKey,
+      tier: data.tier,
+      createdAt: data.createdAt,
+    }, { status: 200 });
   } catch (error) {
     console.error('Failed to generate API key:', error);
     return NextResponse.json(
