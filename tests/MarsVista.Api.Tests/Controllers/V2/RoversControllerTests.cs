@@ -45,23 +45,29 @@ public class RoversControllerTests
             new RoverResource
             {
                 Id = "curiosity",
-                Name = "Curiosity",
-                LandingDate = "2012-08-06",
-                LaunchDate = "2011-11-26",
-                Status = "active"
+                Attributes = new RoverAttributes
+                {
+                    Name = "Curiosity",
+                    LandingDate = "2012-08-06",
+                    LaunchDate = "2011-11-26",
+                    Status = "active"
+                }
             },
             new RoverResource
             {
                 Id = "perseverance",
-                Name = "Perseverance",
-                LandingDate = "2021-02-18",
-                LaunchDate = "2020-07-30",
-                Status = "active"
+                Attributes = new RoverAttributes
+                {
+                    Name = "Perseverance",
+                    LandingDate = "2021-02-18",
+                    LaunchDate = "2020-07-30",
+                    Status = "active"
+                }
             }
         };
 
         _mockRoverQueryService
-            .Setup(s => s.GetAllRoversAsync(It.IsAny<CancellationToken>()))
+            .Setup(s => s.GetAllRoversAsync(default))
             .ReturnsAsync(expectedRovers);
 
         _mockCachingService
@@ -73,7 +79,7 @@ public class RoversControllerTests
             .Returns(false);
 
         // Act
-        var result = await _controller.GetRovers(CancellationToken.None);
+        var result = await _controller.GetRovers(default);
 
         // Assert
         result.Should().BeOfType<OkObjectResult>();
@@ -91,7 +97,7 @@ public class RoversControllerTests
         var expectedRovers = new List<RoverResource>();
 
         _mockRoverQueryService
-            .Setup(s => s.GetAllRoversAsync(It.IsAny<CancellationToken>()))
+            .Setup(s => s.GetAllRoversAsync(default))
             .ReturnsAsync(expectedRovers);
 
         _mockCachingService
@@ -105,7 +111,7 @@ public class RoversControllerTests
         _controller.HttpContext.Request.Headers["If-None-Match"] = "\"etag-12345\"";
 
         // Act
-        var result = await _controller.GetRovers(CancellationToken.None);
+        var result = await _controller.GetRovers(default);
 
         // Assert
         result.Should().BeOfType<StatusCodeResult>();
@@ -121,28 +127,31 @@ public class RoversControllerTests
         var expectedRover = new RoverResource
         {
             Id = slug,
-            Name = "Curiosity",
-            LandingDate = "2012-08-06",
-            LaunchDate = "2011-11-26",
-            Status = "active",
-            MaxSol = 4102,
-            MaxDate = "2024-11-20",
-            TotalPhotos = 710000
+            Attributes = new RoverAttributes
+            {
+                Name = "Curiosity",
+                LandingDate = "2012-08-06",
+                LaunchDate = "2011-11-26",
+                Status = "active",
+                MaxSol = 4102,
+                MaxDate = "2024-11-20",
+                TotalPhotos = 710000
+            }
         };
 
         _mockRoverQueryService
-            .Setup(s => s.GetRoverBySlugAsync(slug, It.IsAny<CancellationToken>()))
+            .Setup(s => s.GetRoverBySlugAsync(slug, default))
             .ReturnsAsync(expectedRover);
 
         // Act
-        var result = await _controller.GetRover(slug, CancellationToken.None);
+        var result = await _controller.GetRover(slug, default);
 
         // Assert
         result.Should().BeOfType<OkObjectResult>();
         var okResult = result as OkObjectResult;
         var response = okResult!.Value as ApiResponse<RoverResource>;
         response!.Data.Id.Should().Be(slug);
-        response.Data.Name.Should().Be("Curiosity");
+        response.Data.Attributes.Name.Should().Be("Curiosity");
         response.Links!.Self.Should().Contain($"/api/v2/rovers/{slug}");
     }
 
@@ -153,11 +162,11 @@ public class RoversControllerTests
         var slug = "invalid_rover";
 
         _mockRoverQueryService
-            .Setup(s => s.GetRoverBySlugAsync(slug, It.IsAny<CancellationToken>()))
+            .Setup(s => s.GetRoverBySlugAsync(slug, default))
             .ReturnsAsync((RoverResource?)null);
 
         // Act
-        var result = await _controller.GetRover(slug, CancellationToken.None);
+        var result = await _controller.GetRover(slug, default);
 
         // Assert
         result.Should().BeOfType<NotFoundObjectResult>();
@@ -175,37 +184,42 @@ public class RoversControllerTests
         var slug = "curiosity";
         var expectedManifest = new RoverManifest
         {
-            Name = "Curiosity",
-            LandingDate = "2012-08-06",
-            LaunchDate = "2011-11-26",
-            Status = "active",
-            MaxSol = 4102,
-            MaxDate = "2024-11-20",
-            TotalPhotos = 710000,
-            Photos = new List<ManifestPhoto>
+            Id = slug,
+            Attributes = new ManifestAttributes
             {
-                new ManifestPhoto
+                Name = "Curiosity",
+                LandingDate = "2012-08-06",
+                LaunchDate = "2011-11-26",
+                Status = "active",
+                MaxSol = 4102,
+                MaxDate = "2024-11-20",
+                TotalPhotos = 710000,
+                Photos = new List<PhotosBySol>
                 {
-                    Sol = 0,
-                    TotalPhotos = 100,
-                    Cameras = new List<string> { "FHAZ", "RHAZ", "NAVCAM" }
+                    new PhotosBySol
+                    {
+                        Sol = 0,
+                        EarthDate = "2012-08-06",
+                        TotalPhotos = 100,
+                        Cameras = new List<string> { "FHAZ", "RHAZ", "NAVCAM" }
+                    }
                 }
             }
         };
 
         _mockRoverQueryService
-            .Setup(s => s.GetRoverManifestAsync(slug, It.IsAny<CancellationToken>()))
+            .Setup(s => s.GetRoverManifestAsync(slug, default))
             .ReturnsAsync(expectedManifest);
 
         // Act
-        var result = await _controller.GetManifest(slug, CancellationToken.None);
+        var result = await _controller.GetManifest(slug, default);
 
         // Assert
         result.Should().BeOfType<OkObjectResult>();
         var okResult = result as OkObjectResult;
         var response = okResult!.Value as ApiResponse<RoverManifest>;
-        response!.Data.Name.Should().Be("Curiosity");
-        response.Data.Photos.Should().NotBeEmpty();
+        response!.Data.Attributes.Name.Should().Be("Curiosity");
+        response.Data.Attributes.Photos.Should().NotBeEmpty();
         response.Links!.Self.Should().Contain($"/api/v2/rovers/{slug}/manifest");
     }
 
@@ -216,11 +230,11 @@ public class RoversControllerTests
         var slug = "invalid_rover";
 
         _mockRoverQueryService
-            .Setup(s => s.GetRoverManifestAsync(slug, It.IsAny<CancellationToken>()))
+            .Setup(s => s.GetRoverManifestAsync(slug, default))
             .ReturnsAsync((RoverManifest?)null);
 
         // Act
-        var result = await _controller.GetManifest(slug, CancellationToken.None);
+        var result = await _controller.GetManifest(slug, default);
 
         // Assert
         result.Should().BeOfType<NotFoundObjectResult>();
@@ -240,25 +254,29 @@ public class RoversControllerTests
             new CameraResource
             {
                 Id = "fhaz",
-                Name = "FHAZ",
-                FullName = "Front Hazard Avoidance Camera",
-                RoverId = slug
+                Attributes = new CameraResourceAttributes
+                {
+                    Name = "FHAZ",
+                    FullName = "Front Hazard Avoidance Camera"
+                }
             },
             new CameraResource
             {
                 Id = "mast",
-                Name = "MAST",
-                FullName = "Mast Camera",
-                RoverId = slug
+                Attributes = new CameraResourceAttributes
+                {
+                    Name = "MAST",
+                    FullName = "Mast Camera"
+                }
             }
         };
 
         _mockRoverQueryService
-            .Setup(s => s.GetRoverCamerasAsync(slug, It.IsAny<CancellationToken>()))
+            .Setup(s => s.GetRoverCamerasAsync(slug, default))
             .ReturnsAsync(expectedCameras);
 
         // Act
-        var result = await _controller.GetCameras(slug, CancellationToken.None);
+        var result = await _controller.GetCameras(slug, default);
 
         // Assert
         result.Should().BeOfType<OkObjectResult>();
@@ -276,15 +294,15 @@ public class RoversControllerTests
         var slug = "invalid_rover";
 
         _mockRoverQueryService
-            .Setup(s => s.GetRoverCamerasAsync(slug, It.IsAny<CancellationToken>()))
+            .Setup(s => s.GetRoverCamerasAsync(slug, default))
             .ReturnsAsync(new List<CameraResource>());
 
         _mockRoverQueryService
-            .Setup(s => s.GetRoverBySlugAsync(slug, It.IsAny<CancellationToken>()))
+            .Setup(s => s.GetRoverBySlugAsync(slug, default))
             .ReturnsAsync((RoverResource?)null);
 
         // Act
-        var result = await _controller.GetCameras(slug, CancellationToken.None);
+        var result = await _controller.GetCameras(slug, default);
 
         // Assert
         result.Should().BeOfType<NotFoundObjectResult>();
@@ -301,7 +319,7 @@ public class RoversControllerTests
         var expectedRovers = new List<RoverResource>();
 
         _mockRoverQueryService
-            .Setup(s => s.GetAllRoversAsync(It.IsAny<CancellationToken>()))
+            .Setup(s => s.GetAllRoversAsync(default))
             .ReturnsAsync(expectedRovers);
 
         _mockCachingService
@@ -313,7 +331,7 @@ public class RoversControllerTests
             .Returns(false);
 
         // Act
-        var result = await _controller.GetRovers(CancellationToken.None);
+        var result = await _controller.GetRovers(default);
 
         // Assert
         _controller.Response.Headers.Should().ContainKey("Cache-Control");
@@ -332,16 +350,19 @@ public class RoversControllerTests
         var expectedRover = new RoverResource
         {
             Id = slug,
-            Name = slug.First().ToString().ToUpper() + slug.Substring(1),
-            Status = slug == "curiosity" || slug == "perseverance" ? "active" : "complete"
+            Attributes = new RoverAttributes
+            {
+                Name = slug.First().ToString().ToUpper() + slug.Substring(1),
+                Status = slug == "curiosity" || slug == "perseverance" ? "active" : "complete"
+            }
         };
 
         _mockRoverQueryService
-            .Setup(s => s.GetRoverBySlugAsync(slug, It.IsAny<CancellationToken>()))
+            .Setup(s => s.GetRoverBySlugAsync(slug, default))
             .ReturnsAsync(expectedRover);
 
         // Act
-        var result = await _controller.GetRover(slug, CancellationToken.None);
+        var result = await _controller.GetRover(slug, default);
 
         // Assert
         result.Should().BeOfType<OkObjectResult>();

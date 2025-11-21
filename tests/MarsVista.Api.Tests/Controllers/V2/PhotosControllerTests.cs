@@ -45,8 +45,8 @@ public class PhotosControllerTests
         var parameters = new PhotoQueryParameters
         {
             Rovers = "curiosity",
-            PageNumber = 1,
-            PageSize = 25
+            Page = 1,
+            PerPage = 25
         };
 
         var expectedPhotos = new List<PhotoResource>
@@ -69,8 +69,7 @@ public class PhotosControllerTests
             {
                 Page = 1,
                 PerPage = 25,
-                TotalPages = 1,
-                TotalCount = 1
+                TotalPages = 1
             },
             Meta = new ResponseMeta
             {
@@ -80,7 +79,7 @@ public class PhotosControllerTests
         };
 
         _mockPhotoQueryService
-            .Setup(s => s.QueryPhotosAsync(It.IsAny<PhotoQueryParameters>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.QueryPhotosAsync(It.IsAny<PhotoQueryParameters>(), default))
             .ReturnsAsync(expectedResponse);
 
         _mockCachingService
@@ -92,11 +91,11 @@ public class PhotosControllerTests
             .Returns(false);
 
         _mockCachingService
-            .Setup(s => s.GetCacheControlHeader(It.IsAny<bool>()))
+            .Setup(s => s.GetCacheControlHeader(It.IsAny<bool>(), null))
             .Returns("public, max-age=3600");
 
         // Act
-        var result = await _controller.QueryPhotos(parameters, CancellationToken.None);
+        var result = await _controller.QueryPhotos(parameters, default);
 
         // Assert
         result.Should().BeOfType<OkObjectResult>();
@@ -116,12 +115,12 @@ public class PhotosControllerTests
         var parameters = new PhotoQueryParameters
         {
             Rovers = "invalid_rover",
-            PageNumber = 1,
-            PageSize = 25
+            Page = 1,
+            PerPage = 25
         };
 
         // Act
-        var result = await _controller.QueryPhotos(parameters, CancellationToken.None);
+        var result = await _controller.QueryPhotos(parameters, default);
 
         // Assert
         result.Should().BeOfType<BadRequestObjectResult>();
@@ -140,8 +139,8 @@ public class PhotosControllerTests
         var parameters = new PhotoQueryParameters
         {
             Rovers = "curiosity",
-            PageNumber = 1,
-            PageSize = 25
+            Page = 1,
+            PerPage = 25
         };
 
         var expectedResponse = new ApiResponse<List<PhotoResource>>(new List<PhotoResource>())
@@ -150,7 +149,7 @@ public class PhotosControllerTests
         };
 
         _mockPhotoQueryService
-            .Setup(s => s.QueryPhotosAsync(It.IsAny<PhotoQueryParameters>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.QueryPhotosAsync(It.IsAny<PhotoQueryParameters>(), default))
             .ReturnsAsync(expectedResponse);
 
         _mockCachingService
@@ -164,7 +163,7 @@ public class PhotosControllerTests
         _controller.HttpContext.Request.Headers["If-None-Match"] = "\"etag-12345\"";
 
         // Act
-        var result = await _controller.QueryPhotos(parameters, CancellationToken.None);
+        var result = await _controller.QueryPhotos(parameters, default);
 
         // Assert
         result.Should().BeOfType<StatusCodeResult>();
@@ -179,8 +178,8 @@ public class PhotosControllerTests
         var parameters = new PhotoQueryParameters
         {
             Rovers = "curiosity,perseverance",
-            PageNumber = 1,
-            PageSize = 25
+            Page = 1,
+            PerPage = 25
         };
 
         var expectedPhotos = new List<PhotoResource>
@@ -190,7 +189,7 @@ public class PhotosControllerTests
                 Id = 1,
                 Relationships = new PhotoRelationships
                 {
-                    Rover = new RoverRelationship { Id = "curiosity" }
+                    Rover = new ResourceReference { Id = "curiosity", Type = "rover" }
                 }
             },
             new PhotoResource
@@ -198,18 +197,19 @@ public class PhotosControllerTests
                 Id = 2,
                 Relationships = new PhotoRelationships
                 {
-                    Rover = new RoverRelationship { Id = "perseverance" }
+                    Rover = new ResourceReference { Id = "perseverance", Type = "rover" }
                 }
             }
         };
 
         var expectedResponse = new ApiResponse<List<PhotoResource>>(expectedPhotos)
         {
-            Pagination = new PaginationInfo { Page = 1, PerPage = 25, TotalCount = 2 }
+            Pagination = new PaginationInfo { Page = 1, PerPage = 25 },
+            Meta = new ResponseMeta { TotalCount = 2, ReturnedCount = 2 }
         };
 
         _mockPhotoQueryService
-            .Setup(s => s.QueryPhotosAsync(It.IsAny<PhotoQueryParameters>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.QueryPhotosAsync(It.IsAny<PhotoQueryParameters>(), default))
             .ReturnsAsync(expectedResponse);
 
         _mockCachingService
@@ -221,11 +221,11 @@ public class PhotosControllerTests
             .Returns(false);
 
         _mockCachingService
-            .Setup(s => s.GetCacheControlHeader(It.IsAny<bool>()))
+            .Setup(s => s.GetCacheControlHeader(It.IsAny<bool>(), null))
             .Returns("public, max-age=3600");
 
         // Act
-        var result = await _controller.QueryPhotos(parameters, CancellationToken.None);
+        var result = await _controller.QueryPhotos(parameters, default);
 
         // Assert
         result.Should().BeOfType<OkObjectResult>();
@@ -253,7 +253,7 @@ public class PhotosControllerTests
         };
 
         _mockPhotoQueryService
-            .Setup(s => s.GetPhotoByIdAsync(photoId, It.IsAny<PhotoQueryParameters>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.GetPhotoByIdAsync(photoId, It.IsAny<PhotoQueryParameters>(), default))
             .ReturnsAsync(expectedPhoto);
 
         _mockCachingService
@@ -265,11 +265,11 @@ public class PhotosControllerTests
             .Returns(false);
 
         _mockCachingService
-            .Setup(s => s.GetCacheControlHeader(It.IsAny<bool>()))
+            .Setup(s => s.GetCacheControlHeader(It.IsAny<bool>(), null))
             .Returns("public, max-age=3600");
 
         // Act
-        var result = await _controller.GetPhoto(photoId, new PhotoQueryParameters(), CancellationToken.None);
+        var result = await _controller.GetPhoto(photoId, new PhotoQueryParameters(), default);
 
         // Assert
         result.Should().BeOfType<OkObjectResult>();
@@ -286,11 +286,11 @@ public class PhotosControllerTests
         var photoId = 999999;
 
         _mockPhotoQueryService
-            .Setup(s => s.GetPhotoByIdAsync(photoId, It.IsAny<PhotoQueryParameters>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.GetPhotoByIdAsync(photoId, It.IsAny<PhotoQueryParameters>(), default))
             .ReturnsAsync((PhotoResource?)null);
 
         // Act
-        var result = await _controller.GetPhoto(photoId, new PhotoQueryParameters(), CancellationToken.None);
+        var result = await _controller.GetPhoto(photoId, new PhotoQueryParameters(), default);
 
         // Assert
         result.Should().BeOfType<NotFoundObjectResult>();
@@ -316,14 +316,13 @@ public class PhotosControllerTests
                 {
                     Camera = "MAST",
                     Count = 500,
-                    Percentage = 50.0,
-                    AvgPerSol = 10.5
+                    Percentage = 50.0
                 }
             }
         };
 
         _mockPhotoQueryService
-            .Setup(s => s.GetStatisticsAsync(It.IsAny<PhotoQueryParameters>(), groupBy, It.IsAny<CancellationToken>()))
+            .Setup(s => s.GetStatisticsAsync(It.IsAny<PhotoQueryParameters>(), groupBy, default))
             .ReturnsAsync(expectedStats);
 
         _mockCachingService
@@ -335,11 +334,11 @@ public class PhotosControllerTests
             .Returns(false);
 
         _mockCachingService
-            .Setup(s => s.GetCacheControlHeader(It.IsAny<bool>()))
+            .Setup(s => s.GetCacheControlHeader(It.IsAny<bool>(), null))
             .Returns("public, max-age=3600");
 
         // Act
-        var result = await _controller.GetStatistics(parameters, groupBy, CancellationToken.None);
+        var result = await _controller.GetStatistics(parameters, groupBy, default);
 
         // Assert
         result.Should().BeOfType<OkObjectResult>();
@@ -357,7 +356,7 @@ public class PhotosControllerTests
         var groupBy = "invalid_field";
 
         // Act
-        var result = await _controller.GetStatistics(parameters, groupBy, CancellationToken.None);
+        var result = await _controller.GetStatistics(parameters, groupBy, default);
 
         // Assert
         result.Should().BeOfType<BadRequestObjectResult>();
@@ -384,7 +383,7 @@ public class PhotosControllerTests
         };
 
         _mockPhotoQueryService
-            .Setup(s => s.GetPhotosByIdsAsync(request.Ids, It.IsAny<PhotoQueryParameters>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.GetPhotosByIdsAsync(request.Ids, It.IsAny<PhotoQueryParameters>(), default))
             .ReturnsAsync(expectedPhotos);
 
         _mockCachingService
@@ -396,7 +395,7 @@ public class PhotosControllerTests
             .Returns(false);
 
         // Act
-        var result = await _controller.BatchGetPhotos(request, new PhotoQueryParameters(), CancellationToken.None);
+        var result = await _controller.BatchGetPhotos(request, new PhotoQueryParameters(), default);
 
         // Assert
         result.Should().BeOfType<OkObjectResult>();
@@ -417,7 +416,7 @@ public class PhotosControllerTests
         };
 
         // Act
-        var result = await _controller.BatchGetPhotos(request, new PhotoQueryParameters(), CancellationToken.None);
+        var result = await _controller.BatchGetPhotos(request, new PhotoQueryParameters(), default);
 
         // Assert
         result.Should().BeOfType<BadRequestObjectResult>();
@@ -436,7 +435,7 @@ public class PhotosControllerTests
         };
 
         // Act
-        var result = await _controller.BatchGetPhotos(request, new PhotoQueryParameters(), CancellationToken.None);
+        var result = await _controller.BatchGetPhotos(request, new PhotoQueryParameters(), default);
 
         // Assert
         result.Should().BeOfType<BadRequestObjectResult>();
@@ -454,8 +453,8 @@ public class PhotosControllerTests
             Rovers = "curiosity",
             SolMin = 100,
             SolMax = 200,
-            PageNumber = 1,
-            PageSize = 25
+            Page = 1,
+            PerPage = 25
         };
 
         var expectedResponse = new ApiResponse<List<PhotoResource>>(new List<PhotoResource>())
@@ -473,7 +472,7 @@ public class PhotosControllerTests
 
         _mockPhotoQueryService
             .Setup(s => s.QueryPhotosAsync(It.Is<PhotoQueryParameters>(p =>
-                p.SolMin == 100 && p.SolMax == 200), It.IsAny<CancellationToken>()))
+                p.SolMin == 100 && p.SolMax == 200), default))
             .ReturnsAsync(expectedResponse);
 
         _mockCachingService
@@ -485,16 +484,16 @@ public class PhotosControllerTests
             .Returns(false);
 
         _mockCachingService
-            .Setup(s => s.GetCacheControlHeader(It.IsAny<bool>()))
+            .Setup(s => s.GetCacheControlHeader(It.IsAny<bool>(), null))
             .Returns("public, max-age=3600");
 
         // Act
-        var result = await _controller.QueryPhotos(parameters, CancellationToken.None);
+        var result = await _controller.QueryPhotos(parameters, default);
 
         // Assert
         result.Should().BeOfType<OkObjectResult>();
         _mockPhotoQueryService.Verify(s => s.QueryPhotosAsync(
             It.Is<PhotoQueryParameters>(p => p.SolMin == 100 && p.SolMax == 200),
-            It.IsAny<CancellationToken>()), Times.Once);
+            default), Times.Once);
     }
 }
