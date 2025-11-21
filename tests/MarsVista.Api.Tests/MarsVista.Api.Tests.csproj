@@ -25,4 +25,10 @@
     <ProjectReference Include="..\..\src\MarsVista.Api\MarsVista.Api.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="appsettings.Test.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
