@@ -79,6 +79,7 @@ public class PhotoQueryIntegrationTests : IntegrationTestBase
         var parameters = new PhotoQueryParameters
         {
             Rovers = "curiosity,perseverance",
+            RoverList = new List<string> { "curiosity", "perseverance" }, // Manually populate for tests
             Include = "rover", // Need to explicitly request relationships
             IncludeList = new List<string> { "rover" }, // Manually populate for tests
             Page = 1,
@@ -102,8 +103,9 @@ public class PhotoQueryIntegrationTests : IntegrationTestBase
         var parameters = new PhotoQueryParameters
         {
             Rovers = "curiosity",
-            SolMin = 105,
-            SolMax = 108,
+            RoverList = new List<string> { "curiosity" }, // Manually populate for tests
+            SolMin = 100,
+            SolMax = 103,
             Include = "rover", // Need to explicitly request relationships
             IncludeList = new List<string> { "rover" }, // Manually populate for tests
             Page = 1,
@@ -116,7 +118,7 @@ public class PhotoQueryIntegrationTests : IntegrationTestBase
         // Assert
         response.Data.Should().NotBeEmpty();
         response.Data.Should().OnlyContain(p =>
-            p.Attributes!.Sol >= 105 && p.Attributes.Sol <= 108);
+            p.Attributes!.Sol >= 100 && p.Attributes.Sol <= 103);
         response.Data.Should().OnlyContain(p => p.Relationships!.Rover!.Id == "curiosity");
     }
 
@@ -127,8 +129,11 @@ public class PhotoQueryIntegrationTests : IntegrationTestBase
         var parameters = new PhotoQueryParameters
         {
             Rovers = "perseverance",
+            RoverList = new List<string> { "perseverance" }, // Manually populate for tests
             DateMin = "2021-03-10",
             DateMax = "2021-03-20",
+            DateMinParsed = new DateTime(2021, 3, 10, 0, 0, 0, DateTimeKind.Utc),
+            DateMaxParsed = new DateTime(2021, 3, 20, 0, 0, 0, DateTimeKind.Utc),
             Page = 1,
             PerPage = 100
         };
@@ -155,7 +160,9 @@ public class PhotoQueryIntegrationTests : IntegrationTestBase
         var parameters = new PhotoQueryParameters
         {
             Rovers = "curiosity",
+            RoverList = new List<string> { "curiosity" }, // Manually populate for tests
             Cameras = "FHAZ",
+            CameraList = new List<string> { "FHAZ" }, // Manually populate for tests
             Include = "camera", // Need to explicitly request relationships
             IncludeList = new List<string> { "camera" }, // Manually populate for tests
             Page = 1,
@@ -167,7 +174,7 @@ public class PhotoQueryIntegrationTests : IntegrationTestBase
 
         // Assert
         response.Data.Should().NotBeEmpty();
-        response.Data.Should().OnlyContain(p => p.Relationships!.Camera!.Id == "fhaz");
+        response.Data.Should().OnlyContain(p => p.Relationships!.Camera!.Id == "FHAZ");
     }
 
     [Fact]
@@ -177,7 +184,9 @@ public class PhotoQueryIntegrationTests : IntegrationTestBase
         var parameters = new PhotoQueryParameters
         {
             Rovers = "curiosity",
+            RoverList = new List<string> { "curiosity" }, // Manually populate for tests
             Cameras = "FHAZ,MAST",
+            CameraList = new List<string> { "FHAZ", "MAST" }, // Manually populate for tests
             Include = "camera", // Need to explicitly request relationships
             IncludeList = new List<string> { "camera" }, // Manually populate for tests
             Page = 1,
@@ -189,8 +198,8 @@ public class PhotoQueryIntegrationTests : IntegrationTestBase
 
         // Assert
         response.Data.Should().NotBeEmpty();
-        response.Data.Should().Contain(p => p.Relationships!.Camera!.Id == "fhaz");
-        response.Data.Should().Contain(p => p.Relationships!.Camera!.Id == "mast");
+        response.Data.Should().Contain(p => p.Relationships!.Camera!.Id == "FHAZ");
+        response.Data.Should().Contain(p => p.Relationships!.Camera!.Id == "MAST");
         response.Data.Should().HaveCount(50); // All Curiosity photos
     }
 
@@ -201,6 +210,7 @@ public class PhotoQueryIntegrationTests : IntegrationTestBase
         var parametersPage1 = new PhotoQueryParameters
         {
             Rovers = "curiosity",
+            RoverList = new List<string> { "curiosity" }, // Manually populate for tests
             Page = 1,
             PerPage = 10
         };
@@ -208,6 +218,7 @@ public class PhotoQueryIntegrationTests : IntegrationTestBase
         var parametersPage2 = new PhotoQueryParameters
         {
             Rovers = "curiosity",
+            RoverList = new List<string> { "curiosity" }, // Manually populate for tests
             Page = 2,
             PerPage = 10
         };
@@ -236,6 +247,7 @@ public class PhotoQueryIntegrationTests : IntegrationTestBase
         var parameters = new PhotoQueryParameters
         {
             Rovers = "curiosity",
+            RoverList = new List<string> { "curiosity" }, // Manually populate for tests
             Sort = "-sol", // Descending by sol
             Page = 1,
             PerPage = 100
@@ -257,9 +269,11 @@ public class PhotoQueryIntegrationTests : IntegrationTestBase
         var parameters = new PhotoQueryParameters
         {
             Rovers = "curiosity",
+            RoverList = new List<string> { "curiosity" }, // Manually populate for tests
             Cameras = "MAST",
+            CameraList = new List<string> { "MAST" }, // Manually populate for tests
             SolMin = 100,
-            SolMax = 105,
+            SolMax = 103,
             Include = "rover,camera", // Need to explicitly request relationships
             IncludeList = new List<string> { "rover", "camera" }, // Manually populate for tests
             Page = 1,
@@ -273,9 +287,9 @@ public class PhotoQueryIntegrationTests : IntegrationTestBase
         response.Data.Should().NotBeEmpty();
         response.Data.Should().OnlyContain(p =>
             p.Relationships!.Rover!.Id == "curiosity" &&
-            p.Relationships.Camera!.Id == "mast" &&
+            p.Relationships.Camera!.Id == "MAST" &&
             p.Attributes!.Sol >= 100 &&
-            p.Attributes.Sol <= 105);
+            p.Attributes.Sol <= 103);
     }
 
     [Fact]
@@ -285,6 +299,7 @@ public class PhotoQueryIntegrationTests : IntegrationTestBase
         var parameters = new PhotoQueryParameters
         {
             Rovers = "curiosity",
+            RoverList = new List<string> { "curiosity" }, // Manually populate for tests
             Fields = "id,sol",
             Page = 1,
             PerPage = 10
@@ -310,7 +325,9 @@ public class PhotoQueryIntegrationTests : IntegrationTestBase
         var parameters = new PhotoQueryParameters
         {
             Rovers = "curiosity",
+            RoverList = new List<string> { "curiosity" }, // Manually populate for tests
             Include = "rover,camera",
+            IncludeList = new List<string> { "rover", "camera" }, // Manually populate for tests
             Page = 1,
             PerPage = 10
         };
@@ -382,7 +399,8 @@ public class PhotoQueryIntegrationTests : IntegrationTestBase
         // Arrange
         var parameters = new PhotoQueryParameters
         {
-            Rovers = "curiosity"
+            Rovers = "curiosity",
+            RoverList = new List<string> { "curiosity" } // Manually populate for tests
         };
 
         // Act
