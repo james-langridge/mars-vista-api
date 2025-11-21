@@ -18,7 +18,7 @@ export default function Docs() {
           </p>
           <div className="flex gap-4">
             <a
-              href="/swagger"
+              href="https://api.marsvista.dev/swagger"
               target="_blank"
               rel="noopener noreferrer"
               className="px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-semibold transition"
@@ -92,74 +92,51 @@ export default function Docs() {
             </div>
           </div>
 
-          {/* Migration Guide */}
+          {/* v1 API Notice */}
           <div className="mb-8">
-            <h3 className="text-2xl font-semibold mb-4 text-slate-900">Migration from v1 to v2</h3>
-            <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
-              <div className="grid md:grid-cols-2">
-                <div className="p-6 border-r border-slate-200">
-                  <h4 className="font-semibold text-slate-700 mb-3">v1 (Legacy)</h4>
-                  <pre className="bg-slate-900 text-slate-100 p-4 rounded text-sm overflow-x-auto">
-{`GET /api/v1/rovers/curiosity/photos?sol=1000
-
-{
-  "photos": [{
-    "id": 123,
-    "img_src": "...",
-    "sol": 1000,
-    "camera": { "name": "FHAZ" }
-  }]
-}`}
-                  </pre>
-                </div>
-                <div className="p-6">
-                  <h4 className="font-semibold text-slate-700 mb-3">v2 (Recommended)</h4>
-                  <pre className="bg-slate-900 text-slate-100 p-4 rounded text-sm overflow-x-auto">
-{`GET /api/v2/photos?rovers=curiosity&sol=1000
-
-{
-  "data": [{
-    "id": 123,
-    "type": "photo",
-    "attributes": {
-      "img_src": "...",
-      "sol": 1000
-    },
-    "relationships": {
-      "camera": { "id": "fhaz" }
-    }
-  }],
-  "meta": { "total_count": 1 }
-}`}
-                  </pre>
-                </div>
-              </div>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+              <h3 className="text-xl font-semibold mb-3 text-slate-900">Looking for v1 API?</h3>
+              <p className="text-slate-700 mb-3">
+                We maintain API v1 for backward compatibility with NASA's original Mars Photo API format.
+              </p>
+              <p className="text-slate-700">
+                For v1 documentation, see the{' '}
+                <a
+                  href="https://github.com/corincerami/mars-photo-api"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:text-blue-700 font-medium underline"
+                >
+                  original NASA Mars Photo API repository
+                </a>
+                . Our v1 endpoints are fully compatible with the documented format.
+              </p>
             </div>
           </div>
 
           {/* Code Examples */}
           <div className="mb-8">
-            <h3 className="text-2xl font-semibold mb-4 text-slate-900">v2 Examples</h3>
+            <h3 className="text-2xl font-semibold mb-4 text-slate-900">Quick Start Examples</h3>
             <div className="space-y-4">
               <div>
                 <h4 className="font-semibold text-slate-800 mb-2">Query multiple rovers</h4>
                 <pre className="bg-slate-900 text-slate-100 p-4 rounded text-sm overflow-x-auto">
 {`curl -H "X-API-Key: your_key" \\
-  "https://api.marsvista.io/api/v2/photos?rovers=curiosity,perseverance&per_page=10"`}
+  "https://api.marsvista.dev/api/v2/photos?rovers=curiosity,perseverance&per_page=10"`}
                 </pre>
               </div>
               <div>
                 <h4 className="font-semibold text-slate-800 mb-2">Filter by date range and camera</h4>
                 <pre className="bg-slate-900 text-slate-100 p-4 rounded text-sm overflow-x-auto">
 {`curl -H "X-API-Key: your_key" \\
-  "https://api.marsvista.io/api/v2/photos?cameras=NAVCAM,FHAZ&date_min=2024-01-01&date_max=2024-12-31"`}
+  "https://api.marsvista.dev/api/v2/photos?cameras=NAVCAM,FHAZ&date_min=2024-01-01&date_max=2024-12-31"`}
                 </pre>
               </div>
               <div>
                 <h4 className="font-semibold text-slate-800 mb-2">Request specific fields only</h4>
                 <pre className="bg-slate-900 text-slate-100 p-4 rounded text-sm overflow-x-auto">
 {`curl -H "X-API-Key: your_key" \\
-  "https://api.marsvista.io/api/v2/photos?fields=id,img_src,sol&include=rover"`}
+  "https://api.marsvista.dev/api/v2/photos?fields=id,img_src,sol&include=rover"`}
                 </pre>
               </div>
               <div>
@@ -167,7 +144,7 @@ export default function Docs() {
                 <pre className="bg-slate-900 text-slate-100 p-4 rounded text-sm overflow-x-auto">
 {`curl -H "X-API-Key: your_key" \\
      -H "If-None-Match: \\"etag-value\\"" \\
-  "https://api.marsvista.io/api/v2/photos?sol=1000"
+  "https://api.marsvista.dev/api/v2/photos?sol=1000"
 # Returns 304 Not Modified if unchanged`}
                 </pre>
               </div>
@@ -179,7 +156,7 @@ export default function Docs() {
             <h3 className="text-xl font-semibold mb-3 text-slate-900">Additional Resources</h3>
             <ul className="space-y-2 text-slate-700">
               <li>
-                <a href="/swagger" target="_blank" rel="noopener noreferrer" className="text-orange-600 hover:text-orange-700 font-medium">
+                <a href="https://api.marsvista.dev/swagger" target="_blank" rel="noopener noreferrer" className="text-orange-600 hover:text-orange-700 font-medium">
                   Interactive Swagger UI →
                 </a>
                 <span className="text-slate-600"> - Try API endpoints directly in your browser</span>
