@@ -59,6 +59,8 @@ Complete API documentation available in [API_ENDPOINTS.md](docs/API_ENDPOINTS.md
 
 ## Features
 
+- **Modern API v2**: Redesigned REST API with JSON:API format, multi-rover queries, field selection, and HTTP caching (ETags)
+- **Interactive Documentation**: Swagger UI with OpenAPI specification for easy API exploration
 - **API Key Authentication**: Secure per-user API keys with tier-based rate limiting (free and pro tiers)
 - **Multi-Rover Support**: All four major Mars rovers (Perseverance, Curiosity, Opportunity, Spirit) with automatic data source adaptation
 - **Complete Data Preservation**: Stores all 30-55 metadata fields using hybrid PostgreSQL storage (indexed columns + JSONB)
@@ -106,17 +108,61 @@ The API will be available at `http://localhost:5127`
 
 ## API Endpoints
 
-### Query Endpoints (Public API)
+### API v2 (Recommended)
+
+**Interactive Documentation**: Access Swagger UI at `/swagger` for complete v2 API documentation
+
+**Query photos (multi-rover support):**
+```bash
+GET /api/v2/photos?rovers=curiosity,perseverance&sol_min=1000&cameras=NAVCAM,FHAZ&per_page=25
+```
+
+Key v2 features:
+- **Multi-rover queries**: Query multiple rovers in a single request (`rovers=curiosity,perseverance`)
+- **Advanced filtering**: Sol ranges (`sol_min`, `sol_max`), date ranges (`date_min`, `date_max`), multiple cameras
+- **Field selection**: Request only needed fields (`fields=id,img_src,sol`)
+- **Relationships**: Include related resources (`include=rover,camera`)
+- **HTTP caching**: ETags and Cache-Control for optimal performance
+- **JSON:API format**: Standardized response structure with `data`, `meta`, `pagination`, and `links`
+
+Example v2 requests:
+```bash
+# Query multiple rovers with date range
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.marsvista.dev/api/v2/photos?rovers=curiosity,perseverance&date_min=2024-01-01&per_page=10"
+
+# Get specific fields only
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.marsvista.dev/api/v2/photos?fields=id,img_src,sol&include=rover"
+
+# HTTP caching with ETags
+curl -H "X-API-Key: YOUR_API_KEY" -H "If-None-Match: \"etag-value\"" \
+  "https://api.marsvista.dev/api/v2/photos?sol=1000"
+```
 
 **List all rovers:**
 ```bash
-GET /api/v1/rovers
+GET /api/v2/rovers
 ```
 
 **Get specific rover:**
 ```bash
-GET /api/v1/rovers/{name}
+GET /api/v2/rovers/{slug}
 ```
+
+**Get rover manifest:**
+```bash
+GET /api/v2/rovers/{slug}/manifest
+```
+
+**Get photo statistics:**
+```bash
+GET /api/v2/statistics?rovers=curiosity&group_by=camera
+```
+
+Complete v2 documentation: [API_ENDPOINTS.md](docs/API_ENDPOINTS.md) (lines 932-1648)
+
+### API v1 (Legacy)
 
 **Query photos with filters:**
 ```bash
@@ -133,7 +179,7 @@ Query parameters:
 Example:
 ```bash
 curl -H "X-API-Key: YOUR_API_KEY" \
-  "http://localhost:5127/api/v1/rovers/perseverance/photos?sol=1000&per_page=10"
+  "https://api.marsvista.dev/api/v1/rovers/perseverance/photos?sol=1000&per_page=10"
 ```
 
 Note: For local development, you can skip authentication by not configuring API key middleware, or use a test API key.
@@ -401,6 +447,9 @@ Comprehensive guides available in the `docs/` directory:
 ## Development Status
 
 Currently implemented:
+- ✅ **API v2 with modern features**: Multi-rover queries, field selection, HTTP caching, JSON:API format
+- ✅ **Interactive Swagger UI**: OpenAPI documentation with try-it-now interface
+- ✅ **Comprehensive testing**: 40 unit and integration tests for v2 API
 - ✅ API key authentication with per-user rate limiting
 - ✅ Next.js dashboard for API key management
 - ✅ Auth.js magic link authentication (passwordless)
