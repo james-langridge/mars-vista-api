@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import RedocWrapper from '@/components/RedocWrapper';
 
 export const metadata: Metadata = {
   title: 'API Documentation - Mars Vista API',
@@ -176,11 +175,6 @@ export default function Docs() {
             </ul>
           </div>
         </section>
-      </div>
-
-      {/* Redoc Documentation */}
-      <div className="border-t border-slate-200">
-        <RedocWrapper />
       </div>
     </div>
   );
