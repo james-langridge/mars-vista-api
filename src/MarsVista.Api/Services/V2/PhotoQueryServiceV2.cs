@@ -357,28 +357,93 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
         // Helper to check if a field should be included
         bool ShouldInclude(string field) => !hasFieldSelection || parameters.FieldList.Contains(field);
 
+        // Helper to check if any field in a group should be included
+        bool ShouldIncludeAny(params string[] fields) => !hasFieldSelection || fields.Any(f => parameters.FieldList.Contains(f));
+
+        // Build images object (nested structure)
+        PhotoImages? images = null;
+        if (ShouldIncludeAny("images", "img_src_small", "img_src_medium", "img_src_large", "img_src_full"))
+        {
+            images = new PhotoImages
+            {
+                Small = !string.IsNullOrEmpty(photo.ImgSrcSmall) ? photo.ImgSrcSmall : null,
+                Medium = !string.IsNullOrEmpty(photo.ImgSrcMedium) ? photo.ImgSrcMedium : null,
+                Large = !string.IsNullOrEmpty(photo.ImgSrcLarge) ? photo.ImgSrcLarge : null,
+                Full = !string.IsNullOrEmpty(photo.ImgSrcFull) ? photo.ImgSrcFull : null
+            };
+        }
+
+        // Build dimensions object
+        PhotoDimensions? dimensions = null;
+        if (ShouldIncludeAny("dimensions", "width", "height") && photo.Width.HasValue && photo.Height.HasValue)
+        {
+            dimensions = new PhotoDimensions
+            {
+                Width = photo.Width.Value,
+                Height = photo.Height.Value
+            };
+        }
+
+        // Build location object with coordinates
+        PhotoLocation? location = null;
+        if (ShouldIncludeAny("location", "site", "drive", "xyz"))
+        {
+            PhotoCoordinates? coordinates = null;
+            if (!string.IsNullOrEmpty(photo.Xyz))
+            {
+                // Parse XYZ string "(35.4362,22.5714,-9.46445)" to coordinates
+                if (MarsVista.Api.Helpers.MarsTimeHelper.TryParseXYZ(photo.Xyz, out var parsed))
+                {
+                    coordinates = new PhotoCoordinates
+                    {
+                        X = parsed.X,
+                        Y = parsed.Y,
+                        Z = parsed.Z
+                    };
+                }
+            }
+
+            location = new PhotoLocation
+            {
+                Site = photo.Site,
+                Drive = photo.Drive,
+                Coordinates = coordinates
+            };
+        }
+
+        // Build telemetry object
+        PhotoTelemetry? telemetry = null;
+        if (ShouldIncludeAny("telemetry", "mast_az", "mast_el", "mast_azimuth", "mast_elevation", "spacecraft_clock"))
+        {
+            if (photo.MastAz.HasValue || photo.MastEl.HasValue || photo.SpacecraftClock.HasValue)
+            {
+                telemetry = new PhotoTelemetry
+                {
+                    MastAzimuth = photo.MastAz,
+                    MastElevation = photo.MastEl,
+                    SpacecraftClock = photo.SpacecraftClock
+                };
+            }
+        }
+
         var attributes = new PhotoAttributes
         {
-            ImgSrc = ShouldInclude("img_src") ? photo.ImgSrcLarge : null,
+            NasaId = ShouldInclude("nasa_id") ? photo.NasaId : null,
             Sol = ShouldInclude("sol") ? photo.Sol : null,
             EarthDate = ShouldInclude("earth_date") ? photo.EarthDate?.ToString("yyyy-MM-dd") : null,
             DateTakenUtc = ShouldInclude("date_taken_utc") ? photo.DateTakenUtc : null,
             DateTakenMars = ShouldInclude("date_taken_mars") ? photo.DateTakenMars : null,
-            Width = ShouldInclude("width") ? photo.Width : null,
-            Height = ShouldInclude("height") ? photo.Height : null,
+            Images = images,
+            Dimensions = dimensions,
             SampleType = ShouldInclude("sample_type") ? photo.SampleType : null,
-            ImgSrcSmall = ShouldInclude("img_src_small") ? photo.ImgSrcSmall : null,
-            ImgSrcMedium = ShouldInclude("img_src_medium") ? photo.ImgSrcMedium : null,
-            ImgSrcLarge = ShouldInclude("img_src_large") ? photo.ImgSrcLarge : null,
-            ImgSrcFull = ShouldInclude("img_src_full") ? photo.ImgSrcFull : null,
-            Site = ShouldInclude("site") ? photo.Site : null,
-            Drive = ShouldInclude("drive") ? photo.Drive : null,
-            Xyz = ShouldInclude("xyz") ? photo.Xyz : null,
-            MastAz = ShouldInclude("mast_az") ? photo.MastAz : null,
-            MastEl = ShouldInclude("mast_el") ? photo.MastEl : null,
+            Location = location,
+            Telemetry = telemetry,
             Title = ShouldInclude("title") ? photo.Title : null,
             Caption = ShouldInclude("caption") ? photo.Caption : null,
-            CreatedAt = ShouldInclude("created_at") ? photo.CreatedAt : null
+            Credit = ShouldInclude("credit") ? photo.Credit : null,
+            CreatedAt = ShouldInclude("created_at") ? photo.CreatedAt : null,
+            // Legacy field for backwards compatibility
+            ImgSrc = ShouldInclude("img_src") ? photo.ImgSrcLarge : null
         };
 
         PhotoRelationships? relationships = null;
