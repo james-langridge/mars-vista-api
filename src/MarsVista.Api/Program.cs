@@ -111,6 +111,12 @@ builder.Services.AddScoped<MarsVista.Api.Services.V2.IPhotoQueryServiceV2, MarsV
 builder.Services.AddScoped<MarsVista.Api.Services.V2.IRoverQueryServiceV2, MarsVista.Api.Services.V2.RoverQueryServiceV2>();
 builder.Services.AddSingleton<MarsVista.Api.Services.V2.ICachingServiceV2, MarsVista.Api.Services.V2.CachingServiceV2>();
 
+// v2 Phase 2 advanced features services
+builder.Services.AddScoped<MarsVista.Api.Services.V2.IPanoramaService, MarsVista.Api.Services.V2.PanoramaService>();
+builder.Services.AddScoped<MarsVista.Api.Services.V2.ILocationService, MarsVista.Api.Services.V2.LocationService>();
+builder.Services.AddScoped<MarsVista.Api.Services.V2.IJourneyService, MarsVista.Api.Services.V2.JourneyService>();
+builder.Services.AddScoped<MarsVista.Api.Services.V2.ITimeMachineService, MarsVista.Api.Services.V2.TimeMachineService>();
+
 // API key and rate limiting services
 builder.Services.AddMemoryCache(); // Required for in-memory rate limiting
 builder.Services.AddSingleton<IApiKeyService, ApiKeyService>();
