@@ -92,12 +92,163 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
         return photo == null ? null : MapToPhotoResource(photo, parameters);
     }
 
+    public async Task<List<PhotoResource>> GetPhotosByIdsAsync(
+        List<int> ids,
+        PhotoQueryParameters parameters,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _context.Photos.Where(p => ids.Contains(p.Id));
+
+        // Eager load if requested
+        if (parameters.IncludeList.Contains("rover") || parameters.IncludeList.Contains("camera"))
+        {
+            query = query.Include(p => p.Rover).Include(p => p.Camera);
+        }
+
+        // Maintain the order of the requested IDs
+        var photos = await query.ToListAsync(cancellationToken);
+
+        // Create a dictionary for quick lookup
+        var photoDict = photos.ToDictionary(p => p.Id);
+
+        // Return photos in the order they were requested (skip missing ones)
+        return ids
+            .Where(id => photoDict.ContainsKey(id))
+            .Select(id => MapToPhotoResource(photoDict[id], parameters))
+            .ToList();
+    }
+
     public async Task<int> GetPhotoCountAsync(
         PhotoQueryParameters parameters,
         CancellationToken cancellationToken = default)
     {
         var query = BuildQuery(parameters);
         return await query.CountAsync(cancellationToken);
+    }
+
+    public async Task<PhotoStatisticsResponse> GetStatisticsAsync(
+        PhotoQueryParameters parameters,
+        string groupBy,
+        CancellationToken cancellationToken = default)
+    {
+        var query = BuildQuery(parameters);
+
+        // Get total count
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        // Get date range
+        var minDate = await query.MinAsync(p => (DateTime?)p.EarthDate, cancellationToken);
+        var maxDate = await query.MaxAsync(p => (DateTime?)p.EarthDate, cancellationToken);
+
+        var response = new PhotoStatisticsResponse
+        {
+            TotalPhotos = totalCount,
+            Period = new PeriodInfo
+            {
+                From = minDate?.ToString("yyyy-MM-dd"),
+                To = maxDate?.ToString("yyyy-MM-dd")
+            }
+        };
+
+        // Group by the requested dimension
+        switch (groupBy.ToLower())
+        {
+            case "camera":
+                response.ByCamera = await GetCameraStatistics(query, totalCount, cancellationToken);
+                break;
+
+            case "rover":
+                response.ByRover = await GetRoverStatistics(query, totalCount, cancellationToken);
+                break;
+
+            case "sol":
+                response.BySol = await GetSolStatistics(query, cancellationToken);
+                break;
+        }
+
+        return response;
+    }
+
+    /// <summary>
+    /// Get statistics grouped by camera
+    /// </summary>
+    private async Task<List<CameraStatistics>> GetCameraStatistics(
+        IQueryable<Photo> query,
+        int totalCount,
+        CancellationToken cancellationToken)
+    {
+        var stats = await query
+            .GroupBy(p => p.Camera.Name)
+            .Select(g => new
+            {
+                Camera = g.Key,
+                Count = g.Count()
+            })
+            .OrderByDescending(x => x.Count)
+            .ToListAsync(cancellationToken);
+
+        return stats.Select(s => new CameraStatistics
+        {
+            Camera = s.Camera,
+            Count = s.Count,
+            Percentage = totalCount > 0 ? Math.Round((s.Count / (double)totalCount) * 100, 1) : 0
+        }).ToList();
+    }
+
+    /// <summary>
+    /// Get statistics grouped by rover
+    /// </summary>
+    private async Task<List<RoverStatistics>> GetRoverStatistics(
+        IQueryable<Photo> query,
+        int totalCount,
+        CancellationToken cancellationToken)
+    {
+        var stats = await query
+            .GroupBy(p => p.Rover.Name)
+            .Select(g => new
+            {
+                Rover = g.Key,
+                Count = g.Count(),
+                MinSol = g.Min(p => p.Sol),
+                MaxSol = g.Max(p => p.Sol)
+            })
+            .OrderByDescending(x => x.Count)
+            .ToListAsync(cancellationToken);
+
+        return stats.Select(s => new RoverStatistics
+        {
+            Rover = s.Rover,
+            Count = s.Count,
+            Percentage = totalCount > 0 ? Math.Round((s.Count / (double)totalCount) * 100, 1) : 0,
+            AvgPerSol = s.MaxSol > s.MinSol ? Math.Round(s.Count / (double)(s.MaxSol - s.MinSol + 1), 1) : 0
+        }).ToList();
+    }
+
+    /// <summary>
+    /// Get statistics grouped by sol (limited to top 100 sols)
+    /// </summary>
+    private async Task<List<SolStatistics>> GetSolStatistics(
+        IQueryable<Photo> query,
+        CancellationToken cancellationToken)
+    {
+        var stats = await query
+            .GroupBy(p => new { p.Sol, p.EarthDate })
+            .Select(g => new
+            {
+                Sol = g.Key.Sol,
+                EarthDate = g.Key.EarthDate,
+                Count = g.Count()
+            })
+            .OrderByDescending(x => x.Count)
+            .Take(100) // Limit to top 100 sols to avoid huge responses
+            .ToListAsync(cancellationToken);
+
+        return stats.Select(s => new SolStatistics
+        {
+            Sol = s.Sol,
+            Count = s.Count,
+            EarthDate = s.EarthDate?.ToString("yyyy-MM-dd")
+        }).ToList();
     }
 
     /// <summary>

@@ -23,7 +23,20 @@ public interface IPhotoQueryServiceV2
     Task<PhotoResource?> GetPhotoByIdAsync(int id, PhotoQueryParameters parameters, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Get multiple photos by IDs (batch retrieval)
+    /// </summary>
+    Task<List<PhotoResource>> GetPhotosByIdsAsync(List<int> ids, PhotoQueryParameters parameters, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Get total count of photos matching the query (for pagination metadata)
     /// </summary>
     Task<int> GetPhotoCountAsync(PhotoQueryParameters parameters, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Get photo statistics grouped by the specified dimension
+    /// </summary>
+    Task<PhotoStatisticsResponse> GetStatisticsAsync(
+        PhotoQueryParameters parameters,
+        string groupBy,
+        CancellationToken cancellationToken = default);
 }
