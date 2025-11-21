@@ -1,92 +1,27 @@
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using MarsVista.Api.Data;
 using MarsVista.Api.Entities;
 using MarsVista.Api.Models.V2;
 using MarsVista.Api.Services.V2;
 
 namespace MarsVista.Api.Tests.Integration.V2;
 
-public class PhotoQueryIntegrationTests : IDisposable
+public class PhotoQueryIntegrationTests : IntegrationTestBase
 {
-    private readonly ServiceProvider _serviceProvider;
-    private readonly MarsVistaDbContext _dbContext;
-    private readonly IPhotoQueryServiceV2 _photoQueryService;
+    private IPhotoQueryServiceV2 _photoQueryService = null!;
 
-    public PhotoQueryIntegrationTests()
+    protected override void ConfigureServices(IServiceCollection services)
     {
-        // Set up in-memory database
-        var services = new ServiceCollection();
-
-        services.AddDbContext<MarsVistaDbContext>((serviceProvider, options) =>
-        {
-            options.UseInMemoryDatabase($"MarsVistaTest_{Guid.NewGuid()}")
-                .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.InMemoryEventId.TransactionIgnoredWarning))
-                .ReplaceService<Microsoft.EntityFrameworkCore.Infrastructure.IModelCustomizer, InMemoryModelCustomizer>();
-        });
-
-        services.AddLogging(builder => builder.AddConsole());
         services.AddScoped<IPhotoQueryServiceV2, PhotoQueryServiceV2>();
-
-        _serviceProvider = services.BuildServiceProvider();
-        _dbContext = _serviceProvider.GetRequiredService<MarsVistaDbContext>();
-        _photoQueryService = _serviceProvider.GetRequiredService<IPhotoQueryServiceV2>();
-
-        // Seed test data
-        SeedTestData();
     }
 
-    private void SeedTestData()
+    protected override async Task SeedAdditionalDataAsync()
     {
-        // Add rovers
-        var curiosity = new Rover
-        {
-            Id = 1,
-            Name = "Curiosity",
-            LandingDate = new DateTime(2012, 8, 6),
-            LaunchDate = new DateTime(2011, 11, 26),
-            Status = "active"
-        };
+        // Get the service after base initialization
+        _photoQueryService = ServiceProvider.GetRequiredService<IPhotoQueryServiceV2>();
 
-        var perseverance = new Rover
-        {
-            Id = 2,
-            Name = "Perseverance",
-            LandingDate = new DateTime(2021, 2, 18),
-            LaunchDate = new DateTime(2020, 7, 30),
-            Status = "active"
-        };
-
-        _dbContext.Rovers.AddRange(curiosity, perseverance);
-
-        // Add cameras
-        var fhaz = new Camera
-        {
-            Id = 1,
-            Name = "FHAZ",
-            FullName = "Front Hazard Avoidance Camera",
-            RoverId = 1
-        };
-
-        var mast = new Camera
-        {
-            Id = 2,
-            Name = "MAST",
-            FullName = "Mast Camera",
-            RoverId = 1
-        };
-
-        var navcam = new Camera
-        {
-            Id = 3,
-            Name = "NAVCAM",
-            FullName = "Navigation Camera",
-            RoverId = 2
-        };
-
-        _dbContext.Cameras.AddRange(fhaz, mast, navcam);
+        var now = DateTime.UtcNow;
 
         // Add photos for different scenarios
         var photos = new List<Photo>();
@@ -102,11 +37,13 @@ public class PhotoQueryIntegrationTests : IDisposable
                 ImgSrcMedium = $"https://mars.nasa.gov/msl/photo{i}.jpg",
                 ImgSrcSmall = $"https://mars.nasa.gov/msl/photo{i}.jpg",
                 Sol = 100 + (i / 10),
-                EarthDate = new DateTime(2013, 1, 1).AddDays(i),
-                DateTakenUtc = new DateTime(2013, 1, 1).AddDays(i),
+                EarthDate = new DateTime(2013, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddDays(i),
+                DateTakenUtc = new DateTime(2013, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddDays(i),
                 DateTakenMars = $"Sol-{100 + (i / 10)}M12:00:00.000",
                 RoverId = 1,
-                CameraId = i % 2 == 0 ? 1 : 2 // Alternate between FHAZ and MAST
+                CameraId = i % 2 == 0 ? 1 : 2, // Alternate between FHAZ and MAST
+                CreatedAt = now,
+                UpdatedAt = now
             });
         }
 
@@ -121,16 +58,18 @@ public class PhotoQueryIntegrationTests : IDisposable
                 ImgSrcMedium = $"https://mars.nasa.gov/m2020/photo{i}.jpg",
                 ImgSrcSmall = $"https://mars.nasa.gov/m2020/photo{i}.jpg",
                 Sol = 500 + (i / 5),
-                EarthDate = new DateTime(2021, 3, 1).AddDays(i),
-                DateTakenUtc = new DateTime(2021, 3, 1).AddDays(i),
+                EarthDate = new DateTime(2021, 3, 1, 0, 0, 0, DateTimeKind.Utc).AddDays(i),
+                DateTakenUtc = new DateTime(2021, 3, 1, 0, 0, 0, DateTimeKind.Utc).AddDays(i),
                 DateTakenMars = $"Sol-{500 + (i / 5)}M12:00:00.000",
                 RoverId = 2,
-                CameraId = 3 // NAVCAM
+                CameraId = 3, // NAVCAM
+                CreatedAt = now,
+                UpdatedAt = now
             });
         }
 
-        _dbContext.Photos.AddRange(photos);
-        _dbContext.SaveChanges();
+        DbContext.Photos.AddRange(photos);
+        await DbContext.SaveChangesAsync();
     }
 
     [Fact]
@@ -140,6 +79,8 @@ public class PhotoQueryIntegrationTests : IDisposable
         var parameters = new PhotoQueryParameters
         {
             Rovers = "curiosity,perseverance",
+            Include = "rover", // Need to explicitly request relationships
+            IncludeList = new List<string> { "rover" }, // Manually populate for tests
             Page = 1,
             PerPage = 100
         };
@@ -163,6 +104,8 @@ public class PhotoQueryIntegrationTests : IDisposable
             Rovers = "curiosity",
             SolMin = 105,
             SolMax = 108,
+            Include = "rover", // Need to explicitly request relationships
+            IncludeList = new List<string> { "rover" }, // Manually populate for tests
             Page = 1,
             PerPage = 100
         };
@@ -213,6 +156,8 @@ public class PhotoQueryIntegrationTests : IDisposable
         {
             Rovers = "curiosity",
             Cameras = "FHAZ",
+            Include = "camera", // Need to explicitly request relationships
+            IncludeList = new List<string> { "camera" }, // Manually populate for tests
             Page = 1,
             PerPage = 100
         };
@@ -233,6 +178,8 @@ public class PhotoQueryIntegrationTests : IDisposable
         {
             Rovers = "curiosity",
             Cameras = "FHAZ,MAST",
+            Include = "camera", // Need to explicitly request relationships
+            IncludeList = new List<string> { "camera" }, // Manually populate for tests
             Page = 1,
             PerPage = 100
         };
@@ -313,6 +260,8 @@ public class PhotoQueryIntegrationTests : IDisposable
             Cameras = "MAST",
             SolMin = 100,
             SolMax = 105,
+            Include = "rover,camera", // Need to explicitly request relationships
+            IncludeList = new List<string> { "rover", "camera" }, // Manually populate for tests
             Page = 1,
             PerPage = 100
         };
@@ -383,7 +332,7 @@ public class PhotoQueryIntegrationTests : IDisposable
     public async Task GetPhotoById_WithValidId_ReturnsPhoto()
     {
         // Arrange
-        var photo = await _dbContext.Photos.FirstAsync();
+        var photo = await DbContext.Photos.FirstAsync();
         var parameters = new PhotoQueryParameters();
 
         // Act
@@ -413,7 +362,7 @@ public class PhotoQueryIntegrationTests : IDisposable
     public async Task GetPhotosByIds_WithValidIds_ReturnsAllPhotos()
     {
         // Arrange
-        var photoIds = await _dbContext.Photos
+        var photoIds = await DbContext.Photos
             .Take(5)
             .Select(p => p.Id)
             .ToListAsync();
@@ -451,30 +400,5 @@ public class PhotoQueryIntegrationTests : IDisposable
         var mastStats = result.ByCamera.First(c => c.Camera == "MAST");
         fhazStats.Count.Should().Be(25);
         mastStats.Count.Should().Be(25);
-    }
-
-    public void Dispose()
-    {
-        _dbContext?.Dispose();
-        _serviceProvider?.Dispose();
-    }
-}
-
-/// <summary>
-/// Custom model customizer that ignores JsonDocument properties for in-memory database
-/// </summary>
-public class InMemoryModelCustomizer : Microsoft.EntityFrameworkCore.Infrastructure.ModelCustomizer
-{
-    public InMemoryModelCustomizer(Microsoft.EntityFrameworkCore.Infrastructure.ModelCustomizerDependencies dependencies)
-        : base(dependencies)
-    {
-    }
-
-    public override void Customize(Microsoft.EntityFrameworkCore.ModelBuilder modelBuilder, Microsoft.EntityFrameworkCore.DbContext context)
-    {
-        base.Customize(modelBuilder, context);
-
-        // Ignore RawData property for in-memory database since JsonDocument is not supported
-        modelBuilder.Entity<Photo>().Ignore(e => e.RawData);
     }
 }
