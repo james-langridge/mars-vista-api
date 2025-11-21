@@ -34,7 +34,7 @@ export default async function Home() {
   return (
     <main>
       <Hero />
-      <Statistics initialStats={stats} />
+      {stats && <Statistics stats={stats} />}
     </main>
   );
 }
