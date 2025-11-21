@@ -32,6 +32,61 @@ public record PhotoResource
     [JsonPropertyName("relationships")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public PhotoRelationships? Relationships { get; init; }
+
+    /// <summary>
+    /// Photo-specific computed metadata
+    /// </summary>
+    [JsonPropertyName("meta")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public PhotoMeta? Meta { get; init; }
+}
+
+/// <summary>
+/// Photo-specific computed metadata
+/// </summary>
+public record PhotoMeta
+{
+    /// <summary>
+    /// Whether this photo is part of a panorama sequence
+    /// </summary>
+    [JsonPropertyName("is_panorama_part")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? IsPanoramaPart { get; init; }
+
+    /// <summary>
+    /// Panorama sequence identifier if part of a panorama
+    /// </summary>
+    [JsonPropertyName("panorama_sequence_id")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? PanoramaSequenceId { get; init; }
+
+    /// <summary>
+    /// Whether this photo has a stereo pair
+    /// </summary>
+    [JsonPropertyName("has_stereo_pair")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? HasStereoPair { get; init; }
+
+    /// <summary>
+    /// Stereo pair photo ID if available
+    /// </summary>
+    [JsonPropertyName("stereo_pair_id")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? StereoPairId { get; init; }
+
+    /// <summary>
+    /// Lighting conditions (e.g., "golden_hour", "midday", "evening")
+    /// </summary>
+    [JsonPropertyName("lighting_conditions")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? LightingConditions { get; init; }
+
+    /// <summary>
+    /// Number of times rover visited this location
+    /// </summary>
+    [JsonPropertyName("location_visits")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? LocationVisits { get; init; }
 }
 
 /// <summary>
@@ -39,12 +94,13 @@ public record PhotoResource
 /// </summary>
 public record PhotoAttributes
 {
+    // Basic fields
     /// <summary>
-    /// URL to the photo image
+    /// NASA's unique identifier for this photo
     /// </summary>
-    [JsonPropertyName("img_src")]
+    [JsonPropertyName("nasa_id")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? ImgSrc { get; init; }
+    public string? NasaId { get; init; }
 
     /// <summary>
     /// Mars sol (day) when photo was taken
@@ -68,85 +124,71 @@ public record PhotoAttributes
     public DateTime? DateTakenUtc { get; init; }
 
     /// <summary>
-    /// Mars local time when photo was taken
+    /// Mars local time when photo was taken (e.g., "Sol-1000M14:23:45")
     /// </summary>
     [JsonPropertyName("date_taken_mars")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? DateTakenMars { get; init; }
 
+    // Multiple image sizes (NEW - nested structure)
+    /// <summary>
+    /// Multiple image URLs for different sizes
+    /// </summary>
+    [JsonPropertyName("images")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public PhotoImages? Images { get; init; }
+
     /// <summary>
     /// Image dimensions
     /// </summary>
-    [JsonPropertyName("width")]
+    [JsonPropertyName("dimensions")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public int? Width { get; init; }
-
-    [JsonPropertyName("height")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public int? Height { get; init; }
+    public PhotoDimensions? Dimensions { get; init; }
 
     /// <summary>
-    /// Sample type (e.g., "Full", "Thumbnail")
+    /// Sample type (e.g., "Full", "Thumbnail", "Subframe")
     /// </summary>
     [JsonPropertyName("sample_type")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? SampleType { get; init; }
 
+    // Location data (NEW - nested structure)
     /// <summary>
-    /// Multiple image sizes when available
+    /// Location where photo was taken
     /// </summary>
-    [JsonPropertyName("img_src_small")]
+    [JsonPropertyName("location")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? ImgSrcSmall { get; init; }
+    public PhotoLocation? Location { get; init; }
 
-    [JsonPropertyName("img_src_medium")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? ImgSrcMedium { get; init; }
-
-    [JsonPropertyName("img_src_large")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? ImgSrcLarge { get; init; }
-
-    [JsonPropertyName("img_src_full")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? ImgSrcFull { get; init; }
-
+    // Camera telemetry (NEW - nested structure)
     /// <summary>
-    /// Location data
+    /// Camera telemetry data for panorama detection and stitching
     /// </summary>
-    [JsonPropertyName("site")]
+    [JsonPropertyName("telemetry")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public int? Site { get; init; }
+    public PhotoTelemetry? Telemetry { get; init; }
 
-    [JsonPropertyName("drive")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public int? Drive { get; init; }
-
-    [JsonPropertyName("xyz")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? Xyz { get; init; }
-
+    // Metadata
     /// <summary>
-    /// Camera telemetry
-    /// </summary>
-    [JsonPropertyName("mast_az")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public float? MastAz { get; init; }
-
-    [JsonPropertyName("mast_el")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public float? MastEl { get; init; }
-
-    /// <summary>
-    /// Photo metadata
+    /// Photo title
     /// </summary>
     [JsonPropertyName("title")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Title { get; init; }
 
+    /// <summary>
+    /// Photo caption/description
+    /// </summary>
     [JsonPropertyName("caption")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Caption { get; init; }
+
+    /// <summary>
+    /// Photo credit (e.g., "NASA/JPL-Caltech")
+    /// </summary>
+    [JsonPropertyName("credit")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Credit { get; init; }
 
     /// <summary>
     /// When this photo was added to our database
@@ -154,6 +196,144 @@ public record PhotoAttributes
     [JsonPropertyName("created_at")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public DateTime? CreatedAt { get; init; }
+
+    // Legacy field for backwards compatibility
+    /// <summary>
+    /// URL to the photo image (legacy field, use images.medium instead)
+    /// </summary>
+    [JsonPropertyName("img_src")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ImgSrc { get; init; }
+}
+
+/// <summary>
+/// Multiple image URLs for different sizes
+/// </summary>
+public record PhotoImages
+{
+    /// <summary>
+    /// Small size (320px wide) - for thumbnails
+    /// </summary>
+    [JsonPropertyName("small")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Small { get; init; }
+
+    /// <summary>
+    /// Medium size (800px wide) - for galleries
+    /// </summary>
+    [JsonPropertyName("medium")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Medium { get; init; }
+
+    /// <summary>
+    /// Large size (1200px wide) - for detailed viewing
+    /// </summary>
+    [JsonPropertyName("large")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Large { get; init; }
+
+    /// <summary>
+    /// Full resolution - for download and analysis
+    /// </summary>
+    [JsonPropertyName("full")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Full { get; init; }
+}
+
+/// <summary>
+/// Image dimensions
+/// </summary>
+public record PhotoDimensions
+{
+    /// <summary>
+    /// Image width in pixels
+    /// </summary>
+    [JsonPropertyName("width")]
+    public int Width { get; init; }
+
+    /// <summary>
+    /// Image height in pixels
+    /// </summary>
+    [JsonPropertyName("height")]
+    public int Height { get; init; }
+}
+
+/// <summary>
+/// Location where photo was taken
+/// </summary>
+public record PhotoLocation
+{
+    /// <summary>
+    /// Site number (geological location marker)
+    /// </summary>
+    [JsonPropertyName("site")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? Site { get; init; }
+
+    /// <summary>
+    /// Drive number (rover's drive sequence)
+    /// </summary>
+    [JsonPropertyName("drive")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? Drive { get; init; }
+
+    /// <summary>
+    /// 3D coordinates of rover position
+    /// </summary>
+    [JsonPropertyName("coordinates")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public PhotoCoordinates? Coordinates { get; init; }
+}
+
+/// <summary>
+/// 3D coordinates
+/// </summary>
+public record PhotoCoordinates
+{
+    /// <summary>
+    /// X coordinate
+    /// </summary>
+    [JsonPropertyName("x")]
+    public float X { get; init; }
+
+    /// <summary>
+    /// Y coordinate
+    /// </summary>
+    [JsonPropertyName("y")]
+    public float Y { get; init; }
+
+    /// <summary>
+    /// Z coordinate
+    /// </summary>
+    [JsonPropertyName("z")]
+    public float Z { get; init; }
+}
+
+/// <summary>
+/// Camera telemetry data
+/// </summary>
+public record PhotoTelemetry
+{
+    /// <summary>
+    /// Mast azimuth angle (horizontal rotation in degrees)
+    /// </summary>
+    [JsonPropertyName("mast_azimuth")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public float? MastAzimuth { get; init; }
+
+    /// <summary>
+    /// Mast elevation angle (vertical tilt in degrees)
+    /// </summary>
+    [JsonPropertyName("mast_elevation")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public float? MastElevation { get; init; }
+
+    /// <summary>
+    /// Spacecraft clock at time of capture
+    /// </summary>
+    [JsonPropertyName("spacecraft_clock")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public float? SpacecraftClock { get; init; }
 }
 
 /// <summary>
