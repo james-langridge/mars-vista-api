@@ -232,9 +232,11 @@ builder.Services.AddSwaggerGen(options =>
     {
         if (docName == "v1")
         {
-            // Include v1 endpoints and exclude internal/admin endpoints from public docs
+            // Include v1 endpoints and exclude internal/admin/statistics endpoints from public docs
             return apiDesc.RelativePath?.StartsWith("api/v1/") == true &&
-                   !apiDesc.RelativePath.Contains("/internal/");
+                   !apiDesc.RelativePath.Contains("/internal/") &&
+                   !apiDesc.RelativePath.Contains("/admin/") &&
+                   !apiDesc.RelativePath.Contains("/statistics");
         }
         else if (docName == "v2")
         {
