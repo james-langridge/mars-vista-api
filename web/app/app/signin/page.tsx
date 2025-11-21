@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import { auth } from '@/server/auth-export';
+import { redirect } from 'next/navigation';
 import SignInForm from '@/components/SignInForm';
 
 export const metadata: Metadata = {
@@ -6,7 +8,14 @@ export const metadata: Metadata = {
   description: 'Sign in to your Mars Vista API dashboard',
 };
 
-export default function SignIn() {
+export default async function SignIn() {
+  const session = await auth();
+
+  // Redirect to dashboard if already authenticated
+  if (session) {
+    redirect('/dashboard');
+  }
+
   return (
     <main className="min-h-[calc(100vh-theme(spacing.16))] flex items-center justify-center px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full">
