@@ -211,7 +211,7 @@ builder.Services.AddSwaggerGen(options =>
         Contact = new OpenApiContact
         {
             Name = "Mars Vista API",
-            Url = new Uri("https://github.com/marsvistaapi/mars-vista-api")
+            Url = new Uri("https://marsvista.dev")
         }
     });
 
@@ -223,7 +223,7 @@ builder.Services.AddSwaggerGen(options =>
         Contact = new OpenApiContact
         {
             Name = "Mars Vista API",
-            Url = new Uri("https://github.com/marsvistaapi/mars-vista-api")
+            Url = new Uri("https://marsvista.dev")
         }
     });
 
