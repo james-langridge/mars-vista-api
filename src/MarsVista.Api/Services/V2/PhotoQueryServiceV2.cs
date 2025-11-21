@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using MarsVista.Api.Data;
 using MarsVista.Api.DTOs.V2;
 using MarsVista.Api.Entities;
+using MarsVista.Api.Helpers;
 using MarsVista.Api.Models.V2;
 
 namespace MarsVista.Api.Services.V2;
@@ -290,6 +291,136 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
         if (parameters.DateMaxParsed.HasValue)
         {
             query = query.Where(p => p.EarthDate <= parameters.DateMaxParsed.Value);
+        }
+
+        // Filter by Mars time (requires parsing DateTakenMars field)
+        if (parameters.MarsTimeMinParsed.HasValue || parameters.MarsTimeMaxParsed.HasValue ||
+            parameters.MarsTimeGoldenHour == true)
+        {
+            query = query.Where(p => !string.IsNullOrEmpty(p.DateTakenMars));
+
+            if (parameters.MarsTimeGoldenHour == true)
+            {
+                // Filter for golden hour times
+                query = query.AsEnumerable()
+                    .Where(p => MarsTimeHelper.IsGoldenHour(p.DateTakenMars))
+                    .AsQueryable();
+            }
+            else
+            {
+                // Filter by time range
+                if (parameters.MarsTimeMinParsed.HasValue || parameters.MarsTimeMaxParsed.HasValue)
+                {
+                    query = query.AsEnumerable()
+                        .Where(p =>
+                        {
+                            if (!MarsTimeHelper.TryExtractTimeFromTimestamp(p.DateTakenMars, out var marsTime))
+                                return false;
+
+                            if (parameters.MarsTimeMinParsed.HasValue && marsTime < parameters.MarsTimeMinParsed.Value)
+                                return false;
+
+                            if (parameters.MarsTimeMaxParsed.HasValue && marsTime > parameters.MarsTimeMaxParsed.Value)
+                                return false;
+
+                            return true;
+                        })
+                        .AsQueryable();
+                }
+            }
+        }
+
+        // Filter by location - site/drive ranges
+        if (parameters.SiteMin.HasValue)
+        {
+            query = query.Where(p => p.Site.HasValue && p.Site.Value >= parameters.SiteMin.Value);
+        }
+
+        if (parameters.SiteMax.HasValue)
+        {
+            query = query.Where(p => p.Site.HasValue && p.Site.Value <= parameters.SiteMax.Value);
+        }
+
+        if (parameters.DriveMin.HasValue)
+        {
+            query = query.Where(p => p.Drive.HasValue && p.Drive.Value >= parameters.DriveMin.Value);
+        }
+
+        if (parameters.DriveMax.HasValue)
+        {
+            query = query.Where(p => p.Drive.HasValue && p.Drive.Value <= parameters.DriveMax.Value);
+        }
+
+        // Location proximity search (requires site, drive, and radius)
+        if (parameters.Site.HasValue && parameters.Drive.HasValue && parameters.LocationRadius.HasValue)
+        {
+            var targetSite = parameters.Site.Value;
+            var targetDrive = parameters.Drive.Value;
+            var radius = parameters.LocationRadius.Value;
+
+            query = query.Where(p =>
+                p.Site.HasValue && p.Drive.HasValue &&
+                p.Site.Value == targetSite &&
+                p.Drive.Value >= targetDrive - radius &&
+                p.Drive.Value <= targetDrive + radius);
+        }
+
+        // Filter by image dimensions
+        if (parameters.MinWidth.HasValue)
+        {
+            query = query.Where(p => p.Width.HasValue && p.Width.Value >= parameters.MinWidth.Value);
+        }
+
+        if (parameters.MaxWidth.HasValue)
+        {
+            query = query.Where(p => p.Width.HasValue && p.Width.Value <= parameters.MaxWidth.Value);
+        }
+
+        if (parameters.MinHeight.HasValue)
+        {
+            query = query.Where(p => p.Height.HasValue && p.Height.Value >= parameters.MinHeight.Value);
+        }
+
+        if (parameters.MaxHeight.HasValue)
+        {
+            query = query.Where(p => p.Height.HasValue && p.Height.Value <= parameters.MaxHeight.Value);
+        }
+
+        // Filter by sample type
+        if (parameters.SampleTypeList.Count > 0)
+        {
+            query = query.Where(p => parameters.SampleTypeList.Contains(p.SampleType));
+        }
+
+        // Filter by aspect ratio
+        if (parameters.AspectRatioParsed.HasValue)
+        {
+            var aspectRatio = parameters.AspectRatioParsed.Value;
+            query = query.AsEnumerable()
+                .Where(p => p.Width.HasValue && p.Height.HasValue &&
+                           MarsTimeHelper.MatchesAspectRatio(p.Width.Value, p.Height.Value, aspectRatio))
+                .AsQueryable();
+        }
+
+        // Filter by camera angles
+        if (parameters.MastElevationMin.HasValue)
+        {
+            query = query.Where(p => p.MastEl.HasValue && p.MastEl.Value >= parameters.MastElevationMin.Value);
+        }
+
+        if (parameters.MastElevationMax.HasValue)
+        {
+            query = query.Where(p => p.MastEl.HasValue && p.MastEl.Value <= parameters.MastElevationMax.Value);
+        }
+
+        if (parameters.MastAzimuthMin.HasValue)
+        {
+            query = query.Where(p => p.MastAz.HasValue && p.MastAz.Value >= parameters.MastAzimuthMin.Value);
+        }
+
+        if (parameters.MastAzimuthMax.HasValue)
+        {
+            query = query.Where(p => p.MastAz.HasValue && p.MastAz.Value <= parameters.MastAzimuthMax.Value);
         }
 
         return query;
