@@ -59,7 +59,7 @@ Complete API documentation available in [API_ENDPOINTS.md](docs/API_ENDPOINTS.md
 
 ## Features
 
-- **Modern API v2**: Redesigned REST API with JSON:API format, multi-rover queries, field selection, and HTTP caching (ETags)
+- **Modern API v2 with Phase 1 Enhancements**: Enhanced REST API with nested resources, Mars time filtering, location-based queries, image quality filters, camera angle searches, and field set control
 - **Interactive Documentation**: Swagger UI with OpenAPI specification for easy API exploration
 - **API Key Authentication**: Secure per-user API keys with tier-based rate limiting (free and pro tiers)
 - **Multi-Rover Support**: All four major Mars rovers (Perseverance, Curiosity, Opportunity, Spirit) with automatic data source adaptation
@@ -125,6 +125,18 @@ Key v2 features:
 - **HTTP caching**: ETags and Cache-Control for optimal performance
 - **JSON:API format**: Standardized response structure with `data`, `meta`, `pagination`, and `links`
 
+**Phase 1 Enhanced Capabilities** (NEW):
+- **Nested resource structure**: Rich response format with organized `images`, `dimensions`, `location`, `telemetry`, and `meta` objects
+- **Mars time filtering**: Query by local solar time (`mars_time_min`, `mars_time_max`) and find golden hour photos (`mars_time_golden_hour=true`)
+- **Location-based queries**: Search by site/drive coordinates with proximity radius (`site=79&drive=1204&location_radius=5`)
+- **Image quality filters**: Filter by dimensions (`min_width`, `max_width`), aspect ratio (`aspect_ratio=16:9`), and sample type
+- **Camera angle queries**: Find photos by mast elevation/azimuth angles for directional searches
+- **Field set presets**: Control response verbosity with presets (`field_set=minimal|standard|extended|scientific|complete`)
+- **Multiple image sizes**: Access 4 image URLs (small/medium/large/full) for progressive loading
+- **Complete NASA metadata**: Access 100% of NASA's metadata fields vs original API's 5%
+
+See [V2_PHASE_1_ENHANCEMENTS.md](docs/V2_PHASE_1_ENHANCEMENTS.md) for complete documentation with examples.
+
 Example v2 requests:
 ```bash
 # Query multiple rovers with date range
@@ -138,6 +150,24 @@ curl -H "X-API-Key: YOUR_API_KEY" \
 # HTTP caching with ETags
 curl -H "X-API-Key: YOUR_API_KEY" -H "If-None-Match: \"etag-value\"" \
   "https://api.marsvista.dev/api/v2/photos?sol=1000"
+
+# Phase 1 Enhanced Examples:
+
+# Find golden hour photos (sunrise/sunset lighting on Mars)
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.marsvista.dev/api/v2/photos?mars_time_golden_hour=true&rovers=curiosity&per_page=10"
+
+# Location-based search with proximity radius
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.marsvista.dev/api/v2/photos?site=79&drive=1204&location_radius=5&rovers=curiosity"
+
+# Filter by image quality and aspect ratio
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.marsvista.dev/api/v2/photos?min_width=1024&aspect_ratio=16:9&sample_type=Full&rovers=perseverance"
+
+# Use field set presets for minimal response
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.marsvista.dev/api/v2/photos?field_set=minimal&rovers=curiosity&sol=1000"
 ```
 
 **List all rovers:**
@@ -447,6 +477,7 @@ Comprehensive guides available in the `docs/` directory:
 ## Development Status
 
 Currently implemented:
+- ✅ **API v2 Phase 1 Enhancements**: Nested resources, Mars time filtering, location queries, image quality filters, camera angles, field sets
 - ✅ **API v2 with modern features**: Multi-rover queries, field selection, HTTP caching, JSON:API format
 - ✅ **Interactive Swagger UI**: OpenAPI documentation with try-it-now interface
 - ✅ **Comprehensive testing**: 40 unit and integration tests for v2 API
