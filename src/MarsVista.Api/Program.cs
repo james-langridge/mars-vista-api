@@ -100,9 +100,14 @@ builder.Services.AddHttpClient("NASA", client =>
 .AddPolicyHandler(GetCircuitBreakerPolicy());
 
 // Query services (calculation layer - pure business logic)
+// v1 services
 builder.Services.AddScoped<IRoverQueryService, RoverQueryService>();
 builder.Services.AddScoped<IPhotoQueryService, PhotoQueryService>();
 builder.Services.AddScoped<IStatisticsService, StatisticsService>();
+
+// v2 services
+builder.Services.AddScoped<MarsVista.Api.Services.V2.IPhotoQueryServiceV2, MarsVista.Api.Services.V2.PhotoQueryServiceV2>();
+builder.Services.AddScoped<MarsVista.Api.Services.V2.IRoverQueryServiceV2, MarsVista.Api.Services.V2.RoverQueryServiceV2>();
 
 // API key and rate limiting services
 builder.Services.AddMemoryCache(); // Required for in-memory rate limiting
