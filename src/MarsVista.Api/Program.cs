@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.OpenApi.Models;
 using Polly;
 using Polly.Extensions.Http;
 using Serilog;
@@ -198,37 +199,81 @@ builder.Services.AddRateLimiter(options =>
     };
 });
 
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-// Configure OpenAPI to only include public API endpoints (exclude internal/admin endpoints)
-builder.Services.AddOpenApi(options =>
+// Configure Swashbuckle for enhanced OpenAPI documentation
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(options =>
 {
-    options.AddDocumentTransformer((document, context, cancellationToken) =>
+    options.SwaggerDoc("v1", new OpenApiInfo
     {
-        // Remove Health and Scraper endpoints from public documentation
-        var pathsToRemove = document.Paths
-            .Where(p => p.Key.StartsWith("/api/Health") || p.Key.StartsWith("/api/Scraper"))
-            .Select(p => p.Key)
-            .ToList();
-
-        foreach (var path in pathsToRemove)
+        Title = "Mars Vista API v1",
+        Version = "v1.0.0",
+        Description = "NASA-compatible Mars Rover Photo API. Drop-in replacement for NASA's Mars Rover Photos API with enhanced reliability and performance.",
+        Contact = new OpenApiContact
         {
-            document.Paths.Remove(path);
+            Name = "Mars Vista API",
+            Url = new Uri("https://github.com/marsvistaapi/mars-vista-api")
         }
+    });
 
-        // Also remove Health and Scraper tag definitions so they don't appear in sidebar
-        if (document.Tags != null)
+    options.SwaggerDoc("v2", new OpenApiInfo
+    {
+        Title = "Mars Vista API v2",
+        Version = "v2.0.0",
+        Description = "Modern REST API for Mars Rover Photos with powerful filtering, field selection, HTTP caching, and comprehensive error handling.",
+        Contact = new OpenApiContact
         {
-            var tagsToRemove = document.Tags
-                .Where(t => t.Name == "Health" || t.Name == "Scraper")
-                .ToList();
+            Name = "Mars Vista API",
+            Url = new Uri("https://github.com/marsvistaapi/mars-vista-api")
+        }
+    });
 
-            foreach (var tag in tagsToRemove)
+    // Group by API version tags
+    options.DocInclusionPredicate((docName, apiDesc) =>
+    {
+        if (docName == "v1")
+        {
+            // Include v1 endpoints and exclude internal/admin endpoints from public docs
+            return apiDesc.RelativePath?.StartsWith("api/v1/") == true &&
+                   !apiDesc.RelativePath.Contains("/internal/");
+        }
+        else if (docName == "v2")
+        {
+            // Include v2 endpoints
+            return apiDesc.RelativePath?.StartsWith("api/v2/") == true;
+        }
+        return false;
+    });
+
+    // Add XML comments if available
+    var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = System.IO.Path.Combine(AppContext.BaseDirectory, xmlFile);
+    if (System.IO.File.Exists(xmlPath))
+    {
+        options.IncludeXmlComments(xmlPath);
+    }
+
+    // Add API key authentication scheme
+    options.AddSecurityDefinition("ApiKey", new OpenApiSecurityScheme
+    {
+        Type = SecuritySchemeType.ApiKey,
+        In = ParameterLocation.Header,
+        Name = "X-API-Key",
+        Description = "API key authentication. Get your key from the dashboard after signing in."
+    });
+
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
             {
-                document.Tags.Remove(tag);
-            }
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "ApiKey"
+                }
+            },
+            Array.Empty<string>()
         }
-
-        return Task.CompletedTask;
     });
 });
 
@@ -260,10 +305,17 @@ if (app.Environment.IsDevelopment())
 }
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+// Enable Swagger in both development and production for API documentation
+app.UseSwagger();
+app.UseSwaggerUI(options =>
 {
-    app.MapOpenApi();
-}
+    options.SwaggerEndpoint("/swagger/v2/swagger.json", "Mars Vista API v2");
+    options.SwaggerEndpoint("/swagger/v1/swagger.json", "Mars Vista API v1 (NASA-compatible)");
+    options.RoutePrefix = "swagger"; // Swagger UI at /swagger
+    options.DocumentTitle = "Mars Vista API Documentation";
+    options.DisplayRequestDuration();
+    options.EnableTryItOutByDefault();
+});
 
 app.UseHttpsRedirection();
 
