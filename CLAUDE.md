@@ -12,7 +12,7 @@ Recreating the NASA Mars Rover API from scratch in C#/.NET (reference: /home/jam
 
 ### Current Implementation Status
 
-**Completed Stories (1-11):**
+**Completed Stories (1-12):**
 - Story 001: Project scaffolding and PostgreSQL setup
 - Story 002: Database schema with EF Core migrations
 - Story 003: Rover and camera seed data
@@ -24,6 +24,7 @@ Recreating the NASA Mars Rover API from scratch in C#/.NET (reference: /home/jam
 - Story 009: Unified Next.js frontend application with Auth.js authentication
 - Story 010: API key authentication and user management with rate limiting
 - Story 011: Incremental photo scraper and daily update automation
+- Story 012 Phase 1: API v2 enhanced resources and query parameters
 
 **System Capabilities:**
 
@@ -57,6 +58,15 @@ Recreating the NASA Mars Rover API from scratch in C#/.NET (reference: /home/jam
   - Structured JSON logging with Serilog
 - Bulk scraper: POST /api/scraper/{rover}/bulk?startSol=X&endSol=Y
 - Progress monitoring: GET /api/scraper/{rover}/progress
+- **API v2 Enhanced Query Capabilities (Phase 1):**
+  - Nested resource structure: images, dimensions, location, telemetry, meta
+  - Mars time filtering: query by local solar time, golden hour detection
+  - Location-based queries: site/drive ranges, proximity search (radius)
+  - Image quality filters: dimensions, aspect ratio, sample type
+  - Camera angle queries: mast elevation/azimuth filtering
+  - Field set control: minimal/standard/extended/scientific/complete presets
+  - Multiple image sizes: small/medium/large/full URLs for progressive loading
+  - Complete NASA metadata: 100% of fields accessible vs original API's 5%
 - CLI tools:
   - ./scrape-monitor.sh {rover} - Real-time visual progress monitoring
   - ./scrape-retry-failed.sh - Retry failed sols from bulk scrape
