@@ -1,7 +1,3 @@
-'use client';
-
-import { useEffect, useState } from 'react';
-
 interface DatabaseStatistics {
   total_photos: number;
   photos_added_last_7_days: number;
@@ -11,48 +7,21 @@ interface DatabaseStatistics {
   last_scrape_at: string;
 }
 
-export default function Statistics() {
-  const [stats, setStats] = useState<DatabaseStatistics | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+interface StatisticsProps {
+  initialStats: DatabaseStatistics | null;
+}
 
-  useEffect(() => {
-    async function fetchStatistics() {
-      try {
-        const response = await fetch('https://api.marsvista.dev/api/v1/statistics');
-        if (!response.ok) {
-          throw new Error('Failed to fetch statistics');
-        }
-        const data = await response.json();
-        setStats(data);
-      } catch (err) {
-        console.error('Error fetching statistics:', err);
-        setError('Unable to load statistics');
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchStatistics();
-  }, []);
-
-  if (loading) {
+export default function Statistics({ initialStats }: StatisticsProps) {
+  if (!initialStats) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <h2 className="text-3xl sm:text-4xl font-bold text-center mb-12">Mars Vista by the Numbers</h2>
-        <div className="text-center text-gray-400">Loading statistics...</div>
+        <div className="text-center text-gray-400">Statistics temporarily unavailable</div>
       </div>
     );
   }
 
-  if (error || !stats) {
-    return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <h2 className="text-3xl sm:text-4xl font-bold text-center mb-12">Mars Vista by the Numbers</h2>
-        <div className="text-center text-gray-400">{error || 'No statistics available'}</div>
-      </div>
-    );
-  }
+  const stats = initialStats;
 
   const formatNumber = (num: number) => {
     return num.toLocaleString('en-US');
