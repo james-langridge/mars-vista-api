@@ -120,7 +120,7 @@ public class QueryParameterValidator
 
         if (!string.IsNullOrWhiteSpace(parameters.DateMin))
         {
-            if (!DateTime.TryParseExact(parameters.DateMin, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
+            if (!DateTime.TryParseExact(parameters.DateMin, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var date))
             {
                 errors.Add(new ValidationError
                 {
@@ -138,7 +138,7 @@ public class QueryParameterValidator
 
         if (!string.IsNullOrWhiteSpace(parameters.DateMax))
         {
-            if (!DateTime.TryParseExact(parameters.DateMax, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
+            if (!DateTime.TryParseExact(parameters.DateMax, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var date))
             {
                 errors.Add(new ValidationError
                 {

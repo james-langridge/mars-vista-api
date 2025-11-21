@@ -15,13 +15,23 @@ namespace MarsVista.Api.Controllers.V2;
 public class PhotosController : ControllerBase
 {
     private readonly IPhotoQueryServiceV2 _photoQueryService;
+    private readonly ICachingServiceV2 _cachingService;
     private readonly ILogger<PhotosController> _logger;
+
+    // Active rovers that are still transmitting photos
+    private static readonly HashSet<string> ActiveRovers = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "curiosity",
+        "perseverance"
+    };
 
     public PhotosController(
         IPhotoQueryServiceV2 photoQueryService,
+        ICachingServiceV2 cachingService,
         ILogger<PhotosController> logger)
     {
         _photoQueryService = photoQueryService;
+        _cachingService = cachingService;
         _logger = logger;
     }
 
@@ -42,6 +52,7 @@ public class PhotosController : ControllerBase
     [HttpGet]
     [ProducesResponseType(typeof(ApiResponse<List<PhotoResource>>), 200)]
     [ProducesResponseType(typeof(ApiError), 400)]
+    [ProducesResponseType(304)] // Not Modified
     public async Task<IActionResult> QueryPhotos(
         [FromQuery] PhotoQueryParameters parameters,
         CancellationToken cancellationToken)
@@ -62,6 +73,25 @@ public class PhotosController : ControllerBase
             Links = BuildNavigationLinks(parameters, response.Pagination!)
         };
 
+        // Generate ETag for response
+        var etag = _cachingService.GenerateETag(response);
+
+        // Check If-None-Match header for conditional request
+        var requestETag = Request.Headers["If-None-Match"].FirstOrDefault();
+        if (_cachingService.CheckETag(requestETag, etag))
+        {
+            // Client has the current version - return 304 Not Modified
+            Response.Headers["ETag"] = $"\"{etag}\"";
+            return StatusCode(304);
+        }
+
+        // Determine if querying active or inactive rovers
+        var isActiveRover = DetermineIfActiveRover(parameters);
+
+        // Set caching headers
+        Response.Headers["ETag"] = $"\"{etag}\"";
+        Response.Headers["Cache-Control"] = _cachingService.GetCacheControlHeader(isActiveRover);
+
         return Ok(response);
     }
 
@@ -73,6 +103,7 @@ public class PhotosController : ControllerBase
     [HttpGet("{id}")]
     [ProducesResponseType(typeof(ApiResponse<PhotoResource>), 200)]
     [ProducesResponseType(typeof(ApiError), 404)]
+    [ProducesResponseType(304)] // Not Modified
     public async Task<IActionResult> GetPhoto(
         int id,
         [FromQuery] PhotoQueryParameters parameters,
@@ -107,7 +138,227 @@ public class PhotosController : ControllerBase
             }
         };
 
+        // Generate ETag for response
+        var etag = _cachingService.GenerateETag(response);
+
+        // Check If-None-Match header for conditional request
+        var requestETag = Request.Headers["If-None-Match"].FirstOrDefault();
+        if (_cachingService.CheckETag(requestETag, etag))
+        {
+            Response.Headers["ETag"] = $"\"{etag}\"";
+            return StatusCode(304);
+        }
+
+        // Individual photos from inactive rovers can be cached aggressively
+        // Determine rover from the photo's relationships
+        var isActiveRover = photo.Relationships?.Rover?.Id != null &&
+                           ActiveRovers.Contains(photo.Relationships.Rover.Id);
+
+        // Set caching headers
+        Response.Headers["ETag"] = $"\"{etag}\"";
+        Response.Headers["Cache-Control"] = _cachingService.GetCacheControlHeader(isActiveRover);
+
         return Ok(response);
+    }
+
+    /// <summary>
+    /// Get photo statistics and analytics
+    /// </summary>
+    /// <remarks>
+    /// Returns aggregated statistics for photos matching the query.
+    /// Supports grouping by: camera, rover, sol
+    /// Example: /api/v2/photos/stats?rovers=curiosity&group_by=camera&date_min=2023-01-01
+    /// </remarks>
+    [HttpGet("stats")]
+    [ProducesResponseType(typeof(ApiResponse<PhotoStatisticsResponse>), 200)]
+    [ProducesResponseType(typeof(ApiError), 400)]
+    public async Task<IActionResult> GetStatistics(
+        [FromQuery] PhotoQueryParameters parameters,
+        [FromQuery] string? group_by,
+        CancellationToken cancellationToken)
+    {
+        // Validate group_by parameter
+        var validGroupBy = new[] { "camera", "rover", "sol" };
+        if (string.IsNullOrWhiteSpace(group_by) || !validGroupBy.Contains(group_by.ToLower()))
+        {
+            return BadRequest(new ApiError
+            {
+                Type = "/errors/validation-error",
+                Title = "Validation Error",
+                Status = 400,
+                Detail = "Invalid or missing group_by parameter",
+                Instance = Request.Path,
+                Errors = new List<ValidationError>
+                {
+                    new ValidationError
+                    {
+                        Field = "group_by",
+                        Value = group_by ?? "null",
+                        Message = "Must be one of: camera, rover, sol",
+                        Example = "camera"
+                    }
+                }
+            });
+        }
+
+        // Validate other query parameters
+        var validationError = QueryParameterValidator.ValidatePhotoQuery(parameters, Request.Path);
+        if (validationError != null)
+        {
+            return BadRequest(validationError);
+        }
+
+        // Get statistics
+        var stats = await _photoQueryService.GetStatisticsAsync(parameters, group_by, cancellationToken);
+
+        var response = new ApiResponse<PhotoStatisticsResponse>(stats)
+        {
+            Meta = new ResponseMeta
+            {
+                Query = new Dictionary<string, object>
+                {
+                    ["group_by"] = group_by.ToLower(),
+                    ["total_photos"] = stats.TotalPhotos
+                }
+            },
+            Links = new ResponseLinks
+            {
+                Self = $"{Request.Scheme}://{Request.Host}{Request.Path}?{Request.QueryString}"
+            }
+        };
+
+        // Generate ETag
+        var etag = _cachingService.GenerateETag(response);
+
+        // Check If-None-Match header
+        var requestETag = Request.Headers["If-None-Match"].FirstOrDefault();
+        if (_cachingService.CheckETag(requestETag, etag))
+        {
+            Response.Headers["ETag"] = $"\"{etag}\"";
+            return StatusCode(304);
+        }
+
+        // Determine if querying active or inactive rovers
+        var isActiveRover = DetermineIfActiveRover(parameters);
+
+        // Set caching headers
+        Response.Headers["ETag"] = $"\"{etag}\"";
+        Response.Headers["Cache-Control"] = _cachingService.GetCacheControlHeader(isActiveRover);
+
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// Batch retrieve photos by IDs
+    /// </summary>
+    /// <remarks>
+    /// Efficiently retrieve multiple photos in a single request.
+    /// Maximum 100 IDs per request.
+    /// </remarks>
+    [HttpPost("batch")]
+    [ProducesResponseType(typeof(ApiResponse<List<PhotoResource>>), 200)]
+    [ProducesResponseType(typeof(ApiError), 400)]
+    public async Task<IActionResult> BatchGetPhotos(
+        [FromBody] BatchPhotoRequest request,
+        [FromQuery] PhotoQueryParameters parameters,
+        CancellationToken cancellationToken)
+    {
+        // Validate request
+        if (request.Ids == null || request.Ids.Count == 0)
+        {
+            return BadRequest(new ApiError
+            {
+                Type = "/errors/validation-error",
+                Title = "Validation Error",
+                Status = 400,
+                Detail = "No photo IDs provided",
+                Instance = Request.Path,
+                Errors = new List<ValidationError>
+                {
+                    new ValidationError
+                    {
+                        Field = "ids",
+                        Value = "null or empty",
+                        Message = "At least one photo ID is required",
+                        Example = "[123456, 123457]"
+                    }
+                }
+            });
+        }
+
+        if (request.Ids.Count > 100)
+        {
+            return BadRequest(new ApiError
+            {
+                Type = "/errors/validation-error",
+                Title = "Validation Error",
+                Status = 400,
+                Detail = "Too many photo IDs requested",
+                Instance = Request.Path,
+                Errors = new List<ValidationError>
+                {
+                    new ValidationError
+                    {
+                        Field = "ids",
+                        Value = request.Ids.Count.ToString(),
+                        Message = "Maximum 100 IDs per batch request",
+                        Example = "100"
+                    }
+                }
+            });
+        }
+
+        // Retrieve photos
+        var photos = await _photoQueryService.GetPhotosByIdsAsync(request.Ids, parameters, cancellationToken);
+
+        var response = new ApiResponse<List<PhotoResource>>(photos)
+        {
+            Meta = new ResponseMeta
+            {
+                TotalCount = photos.Count,
+                ReturnedCount = photos.Count,
+                Query = new Dictionary<string, object>
+                {
+                    ["ids_requested"] = request.Ids.Count,
+                    ["ids_found"] = photos.Count
+                }
+            },
+            Links = new ResponseLinks
+            {
+                Self = $"{Request.Scheme}://{Request.Host}/api/v2/photos/batch"
+            }
+        };
+
+        // Generate ETag
+        var etag = _cachingService.GenerateETag(response);
+
+        // Check If-None-Match header
+        var requestETag = Request.Headers["If-None-Match"].FirstOrDefault();
+        if (_cachingService.CheckETag(requestETag, etag))
+        {
+            Response.Headers["ETag"] = $"\"{etag}\"";
+            return StatusCode(304);
+        }
+
+        // For batch requests, use moderate caching (1 hour)
+        Response.Headers["ETag"] = $"\"{etag}\"";
+        Response.Headers["Cache-Control"] = "public, max-age=3600, must-revalidate";
+
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// Determine if the query includes only active rovers
+    /// If any inactive rover is included, treat as inactive for more aggressive caching
+    /// </summary>
+    private bool DetermineIfActiveRover(PhotoQueryParameters parameters)
+    {
+        // If no rovers specified, could include inactive rovers - treat as active (conservative)
+        if (parameters.RoverList.Count == 0)
+            return true;
+
+        // Check if all specified rovers are active
+        return parameters.RoverList.All(r => ActiveRovers.Contains(r));
     }
 
     /// <summary>

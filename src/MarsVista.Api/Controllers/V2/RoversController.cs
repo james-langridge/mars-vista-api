@@ -13,13 +13,16 @@ namespace MarsVista.Api.Controllers.V2;
 public class RoversController : ControllerBase
 {
     private readonly IRoverQueryServiceV2 _roverQueryService;
+    private readonly ICachingServiceV2 _cachingService;
     private readonly ILogger<RoversController> _logger;
 
     public RoversController(
         IRoverQueryServiceV2 roverQueryService,
+        ICachingServiceV2 cachingService,
         ILogger<RoversController> logger)
     {
         _roverQueryService = roverQueryService;
+        _cachingService = cachingService;
         _logger = logger;
     }
 
@@ -28,6 +31,7 @@ public class RoversController : ControllerBase
     /// </summary>
     [HttpGet]
     [ProducesResponseType(typeof(ApiResponse<List<RoverResource>>), 200)]
+    [ProducesResponseType(304)] // Not Modified
     public async Task<IActionResult> GetRovers(CancellationToken cancellationToken)
     {
         var rovers = await _roverQueryService.GetAllRoversAsync(cancellationToken);
@@ -43,6 +47,21 @@ public class RoversController : ControllerBase
                 Self = $"{Request.Scheme}://{Request.Host}/api/v2/rovers"
             }
         };
+
+        // Generate ETag
+        var etag = _cachingService.GenerateETag(response);
+
+        // Check If-None-Match header
+        var requestETag = Request.Headers["If-None-Match"].FirstOrDefault();
+        if (_cachingService.CheckETag(requestETag, etag))
+        {
+            Response.Headers["ETag"] = $"\"{etag}\"";
+            return StatusCode(304);
+        }
+
+        // Set caching headers (rovers list is relatively static)
+        Response.Headers["ETag"] = $"\"{etag}\"";
+        Response.Headers["Cache-Control"] = "public, max-age=86400, must-revalidate"; // 1 day
 
         return Ok(response);
     }
