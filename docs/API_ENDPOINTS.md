@@ -929,10 +929,729 @@ curl -X POST "http://localhost:5127/api/scraper/curiosity/resume"
 
 ---
 
+## API v2 - Modern REST API
+
+**Version 2.0** provides a modern, resource-oriented API with powerful filtering, HTTP caching, field selection, and comprehensive error handling. It addresses all the limitations of v1 while maintaining NASA data compatibility.
+
+### Key Improvements Over v1
+
+**Why v2?**
+
+- ✅ **Unified Photos Endpoint** - Query across multiple rovers/cameras in a single request
+- ✅ **HTTP Caching** - ETags, conditional requests, different TTLs for active/inactive rovers
+- ✅ **Field Selection** - Return only the fields you need
+- ✅ **Always-On Pagination** - Never unbounded results, cursor support
+- ✅ **RFC 7807 Error Responses** - Structured, helpful error messages
+- ✅ **Comprehensive Validation** - Clear error messages with examples
+- ✅ **Sorting & Range Queries** - Flexible data retrieval
+- ✅ **Batch Operations** - Retrieve multiple photos by ID efficiently
+- ✅ **Statistics Endpoints** - Aggregate photo data for analytics
+- ✅ **Self-Documenting** - Discovery endpoints show available filters
+
+### Base Path
+
+All v2 endpoints are under `/api/v2/`:
+
+```
+https://api.marsvista.dev/api/v2/...
+http://localhost:5127/api/v2/...
+```
+
+### Authentication
+
+Same as v1 - include your API key in the `X-API-Key` header:
+
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.marsvista.dev/api/v2/photos?rovers=curiosity&sol_min=1000"
+```
+
+---
+
+### Response Format
+
+All v2 endpoints return a consistent envelope structure:
+
+```json
+{
+  "data": [...],           // The actual data
+  "meta": {                // Metadata about the request/response
+    "total_count": 15234,
+    "returned_count": 25,
+    "query": {             // Echo of query parameters
+      "rovers": ["curiosity"],
+      "sol_min": 1000
+    }
+  },
+  "pagination": {          // Pagination information
+    "page": 1,
+    "per_page": 25,
+    "total_pages": 610,
+    "cursor": {
+      "current": "eyJpZCI6MTIzNDU2fQ==",
+      "next": "eyJpZCI6MTIzNDgxfQ=="
+    }
+  },
+  "links": {               // Navigation links
+    "self": "https://api.marsvista.dev/api/v2/photos?page=1",
+    "next": "https://api.marsvista.dev/api/v2/photos?page=2",
+    "first": "https://api.marsvista.dev/api/v2/photos?page=1",
+    "last": "https://api.marsvista.dev/api/v2/photos?page=610"
+  }
+}
+```
+
+---
+
+### Photos Endpoint
+
+**Unified endpoint for all photo queries** - the core improvement of v2.
+
+```http
+GET /api/v2/photos
+```
+
+#### Basic Examples
+
+**Single rover:**
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.marsvista.dev/api/v2/photos?rovers=curiosity&per_page=10"
+```
+
+**Multiple rovers:**
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.marsvista.dev/api/v2/photos?rovers=curiosity,perseverance&per_page=10"
+```
+
+**Multiple cameras:**
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.marsvista.dev/api/v2/photos?rovers=curiosity&cameras=FHAZ,NAVCAM,MAST&per_page=10"
+```
+
+#### Advanced Filtering
+
+**Sol range:**
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.marsvista.dev/api/v2/photos?rovers=curiosity&sol_min=100&sol_max=200"
+```
+
+**Date range:**
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.marsvista.dev/api/v2/photos?rovers=perseverance&date_min=2023-01-01&date_max=2023-12-31"
+```
+
+**Combined filters:**
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.marsvista.dev/api/v2/photos?rovers=curiosity&cameras=MAST,CHEMCAM&sol_min=1000&sol_max=2000&sort=-earth_date"
+```
+
+#### Field Selection
+
+**Return only specific fields:**
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.marsvista.dev/api/v2/photos?rovers=curiosity&fields=id,img_src,sol,earth_date&per_page=5"
+```
+
+Response includes only requested fields:
+```json
+{
+  "data": [
+    {
+      "id": 123456,
+      "type": "photo",
+      "attributes": {
+        "img_src": "https://mars.nasa.gov/msl/123456.jpg",
+        "sol": 1000,
+        "earth_date": "2015-05-30"
+      }
+    }
+  ]
+}
+```
+
+#### Include Relationships
+
+**Include rover and camera details:**
+```bash
+curl -H "X-API-Key": YOUR_API_KEY" \
+  "https://api.marsvista.dev/api/v2/photos?rovers=curiosity&include=rover,camera&per_page=5"
+```
+
+Response includes relationship data:
+```json
+{
+  "data": [
+    {
+      "id": 123456,
+      "type": "photo",
+      "attributes": {
+        "img_src": "https://mars.nasa.gov/msl/123456.jpg",
+        "sol": 1000,
+        "earth_date": "2015-05-30"
+      },
+      "relationships": {
+        "rover": {
+          "id": "curiosity",
+          "type": "rover",
+          "attributes": {
+            "name": "Curiosity",
+            "status": "active"
+          }
+        },
+        "camera": {
+          "id": "mast",
+          "type": "camera",
+          "attributes": {
+            "full_name": "Mast Camera"
+          }
+        }
+      }
+    }
+  ]
+}
+```
+
+#### Sorting
+
+**Sort by field (ascending):**
+```
+?sort=earth_date
+```
+
+**Sort descending (- prefix):**
+```
+?sort=-earth_date
+```
+
+**Multiple sort fields:**
+```
+?sort=-earth_date,camera
+```
+
+#### Pagination
+
+**Page-based pagination (default):**
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.marsvista.dev/api/v2/photos?rovers=curiosity&page=2&per_page=50"
+```
+
+**Cursor-based pagination:**
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.marsvista.dev/api/v2/photos?rovers=curiosity&cursor=eyJpZCI6MTIzNDgxfQ=="
+```
+
+Limits:
+- Default: 25 results per page
+- Maximum: 100 results per page
+
+#### HTTP Caching
+
+v2 implements proper HTTP caching with ETags:
+
+**Initial request:**
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" -i \
+  "https://api.marsvista.dev/api/v2/photos?rovers=opportunity&per_page=10"
+```
+
+Response includes caching headers:
+```http
+HTTP/1.1 200 OK
+ETag: "abc123def456"
+Cache-Control: public, max-age=31536000, must-revalidate
+
+{
+  "data": [...]
+}
+```
+
+**Subsequent request with ETag:**
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" \
+     -H "If-None-Match: \"abc123def456\"" -i \
+  "https://api.marsvista.dev/api/v2/photos?rovers=opportunity&per_page=10"
+```
+
+If data hasn't changed:
+```http
+HTTP/1.1 304 Not Modified
+ETag: "abc123def456"
+```
+
+**Cache TTL by rover status:**
+- **Inactive rovers** (Opportunity, Spirit): 1 year (`max-age=31536000`)
+- **Active rovers** (Curiosity, Perseverance): 1 hour (`max-age=3600`)
+
+---
+
+### Get Photo by ID
+
+Retrieve a specific photo.
+
+```http
+GET /api/v2/photos/{id}
+```
+
+**Example:**
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.marsvista.dev/api/v2/photos/123456?include=rover,camera"
+```
+
+**Response:**
+```json
+{
+  "data": {
+    "id": 123456,
+    "type": "photo",
+    "attributes": {
+      "img_src": "https://mars.nasa.gov/msl/123456.jpg",
+      "sol": 1000,
+      "earth_date": "2015-05-30",
+      "created_at": "2015-05-30T20:12:34Z"
+    },
+    "relationships": {
+      "rover": {
+        "id": "curiosity",
+        "type": "rover"
+      },
+      "camera": {
+        "id": "mast",
+        "type": "camera",
+        "attributes": {
+          "full_name": "Mast Camera"
+        }
+      }
+    }
+  },
+  "links": {
+    "self": "https://api.marsvista.dev/api/v2/photos/123456"
+  }
+}
+```
+
+---
+
+### Batch Get Photos
+
+Retrieve multiple photos by ID in a single request.
+
+```http
+POST /api/v2/photos/batch
+```
+
+**Request body:**
+```json
+{
+  "ids": [123456, 123457, 123458, 123459, 123460]
+}
+```
+
+**Example:**
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" \
+     -H "Content-Type: application/json" \
+     -d '{"ids": [123456, 123457, 123458]}' \
+  "https://api.marsvista.dev/api/v2/photos/batch"
+```
+
+**Limits:**
+- Maximum 100 IDs per request
+
+**Response:**
+```json
+{
+  "data": [
+    {"id": 123456, ...},
+    {"id": 123457, ...},
+    {"id": 123458, ...}
+  ],
+  "meta": {
+    "total_count": 3,
+    "returned_count": 3,
+    "query": {
+      "ids_requested": 3,
+      "ids_found": 3
+    }
+  }
+}
+```
+
+---
+
+### Photo Statistics
+
+Get aggregated statistics about photos.
+
+```http
+GET /api/v2/photos/stats
+```
+
+**Parameters:**
+- `group_by` (required) - Grouping field: `camera`, `rover`, or `sol`
+- All photo filters apply (rovers, cameras, date ranges, etc.)
+
+**Group by camera:**
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.marsvista.dev/api/v2/photos/stats?rovers=curiosity&group_by=camera"
+```
+
+**Response:**
+```json
+{
+  "data": {
+    "total_photos": 710000,
+    "period": {
+      "from": "2012-08-06",
+      "to": "2024-11-20"
+    },
+    "by_camera": [
+      {
+        "camera": "MAST",
+        "count": 242800,
+        "percentage": 34.2,
+        "avg_per_sol": 58.7
+      },
+      {
+        "camera": "NAVCAM",
+        "count": 195300,
+        "percentage": 27.5,
+        "avg_per_sol": 47.2
+      }
+    ]
+  },
+  "meta": {
+    "query": {
+      "group_by": "camera",
+      "total_photos": 710000
+    }
+  }
+}
+```
+
+**With date filtering:**
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.marsvista.dev/api/v2/photos/stats?rovers=curiosity&group_by=camera&date_min=2023-01-01&date_max=2024-01-01"
+```
+
+---
+
+### Rovers Endpoint
+
+List all rovers with their details.
+
+```http
+GET /api/v2/rovers
+```
+
+**Example:**
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.marsvista.dev/api/v2/rovers"
+```
+
+**Response:**
+```json
+{
+  "data": [
+    {
+      "id": "curiosity",
+      "type": "rover",
+      "attributes": {
+        "name": "Curiosity",
+        "landing_date": "2012-08-06",
+        "launch_date": "2011-11-26",
+        "status": "active",
+        "max_sol": 4102,
+        "max_date": "2024-11-20",
+        "total_photos": 710000
+      }
+    },
+    {
+      "id": "perseverance",
+      "type": "rover",
+      "attributes": {
+        "name": "Perseverance",
+        "landing_date": "2021-02-18",
+        "launch_date": "2020-07-30",
+        "status": "active",
+        "max_sol": 1682,
+        "max_date": "2024-11-20",
+        "total_photos": 485000
+      }
+    }
+  ],
+  "meta": {
+    "returned_count": 4
+  },
+  "links": {
+    "self": "https://api.marsvista.dev/api/v2/rovers"
+  }
+}
+```
+
+---
+
+### Get Rover by Slug
+
+Get details for a specific rover.
+
+```http
+GET /api/v2/rovers/{slug}
+```
+
+**Parameters:**
+- `slug` (path) - Rover slug: `curiosity`, `perseverance`, `opportunity`, `spirit`
+
+**Example:**
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.marsvista.dev/api/v2/rovers/curiosity"
+```
+
+---
+
+### Rover Manifest
+
+Get photo history by sol for a specific rover.
+
+```http
+GET /api/v2/rovers/{slug}/manifest
+```
+
+**Example:**
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.marsvista.dev/api/v2/rovers/curiosity/manifest"
+```
+
+**Response:**
+```json
+{
+  "data": {
+    "name": "Curiosity",
+    "landing_date": "2012-08-06",
+    "launch_date": "2011-11-26",
+    "status": "active",
+    "max_sol": 4102,
+    "max_date": "2024-11-20",
+    "total_photos": 710000,
+    "photos": [
+      {
+        "sol": 0,
+        "earth_date": "2012-08-06",
+        "total_photos": 3702,
+        "cameras": ["MAHLI", "MARDI", "NAVCAM"]
+      },
+      {
+        "sol": 1,
+        "earth_date": "2012-08-07",
+        "total_photos": 16,
+        "cameras": ["NAVCAM"]
+      }
+    ]
+  }
+}
+```
+
+---
+
+### Rover Cameras
+
+Get all cameras for a specific rover with photo counts.
+
+```http
+GET /api/v2/rovers/{slug}/cameras
+```
+
+**Example:**
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.marsvista.dev/api/v2/rovers/curiosity/cameras"
+```
+
+**Response:**
+```json
+{
+  "data": [
+    {
+      "id": "mast",
+      "type": "camera",
+      "attributes": {
+        "name": "MAST",
+        "full_name": "Mast Camera",
+        "photo_count": 242800,
+        "first_photo_sol": 0,
+        "last_photo_sol": 4102
+      }
+    },
+    {
+      "id": "navcam",
+      "type": "camera",
+      "attributes": {
+        "name": "NAVCAM",
+        "full_name": "Navigation Camera",
+        "photo_count": 195300,
+        "first_photo_sol": 0,
+        "last_photo_sol": 4102
+      }
+    }
+  ],
+  "meta": {
+    "returned_count": 7
+  }
+}
+```
+
+---
+
+### API Discovery
+
+Get API capabilities and available filter values.
+
+```http
+GET /api/v2
+```
+
+**Example:**
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.marsvista.dev/api/v2"
+```
+
+**Response:**
+```json
+{
+  "version": "2.0.0",
+  "resources": {
+    "photos": {
+      "href": "/api/v2/photos",
+      "methods": ["GET"],
+      "filters": {
+        "rovers": {
+          "type": "array",
+          "values": ["curiosity", "perseverance", "opportunity", "spirit"]
+        },
+        "cameras": {
+          "type": "array",
+          "values": ["FHAZ", "RHAZ", "MAST", "CHEMCAM", "MAHLI", "MARDI", "NAVCAM", ...]
+        },
+        "sol_min": { "type": "integer", "min": 0 },
+        "sol_max": { "type": "integer", "min": 0 },
+        "date_min": { "type": "date", "format": "YYYY-MM-DD" },
+        "date_max": { "type": "date", "format": "YYYY-MM-DD" }
+      }
+    },
+    "rovers": {
+      "href": "/api/v2/rovers",
+      "methods": ["GET"]
+    }
+  }
+}
+```
+
+---
+
+### Error Handling
+
+v2 uses **RFC 7807 Problem Details** for consistent error responses.
+
+**Validation error example:**
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.marsvista.dev/api/v2/photos?rovers=invalid_rover"
+```
+
+**Response (400):**
+```json
+{
+  "type": "/errors/validation-error",
+  "title": "Validation Error",
+  "status": 400,
+  "detail": "The request contains invalid parameters",
+  "instance": "/api/v2/photos?rovers=invalid_rover",
+  "errors": [
+    {
+      "field": "rovers",
+      "value": "invalid_rover",
+      "message": "Unknown rover name. Must be one of: curiosity, perseverance, opportunity, spirit",
+      "example": "curiosity"
+    }
+  ]
+}
+```
+
+**Not found example:**
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.marsvista.dev/api/v2/photos/999999"
+```
+
+**Response (404):**
+```json
+{
+  "type": "/errors/not-found",
+  "title": "Not Found",
+  "status": 404,
+  "detail": "Photo with ID 999999 not found",
+  "instance": "/api/v2/photos/999999"
+}
+```
+
+---
+
+### Migration from v1
+
+**v1 remains NASA-compatible** and will not change. v2 is a complete redesign.
+
+**v1 query:**
+```
+GET /api/v1/rovers/curiosity/photos?sol=1000&camera=FHAZ
+```
+
+**Equivalent v2 query:**
+```
+GET /api/v2/photos?rovers=curiosity&sol_min=1000&sol_max=1000&cameras=FHAZ
+```
+
+**Enhanced v2 query (not possible in v1):**
+```
+GET /api/v2/photos?rovers=curiosity,perseverance&sol_min=1000&sol_max=1100&cameras=FHAZ,NAVCAM&fields=id,img_src,sol&sort=-sol
+```
+
+**Key Differences:**
+
+| Feature | v1 | v2 |
+|---------|----|----|
+| Multiple rovers | ❌ | ✅ |
+| Multiple cameras | ❌ | ✅ |
+| Field selection | ❌ | ✅ |
+| HTTP caching | ❌ | ✅ (ETags, conditional requests) |
+| Sorting | ❌ | ✅ |
+| Batch operations | ❌ | ✅ |
+| Statistics | Limited | ✅ Comprehensive |
+| Error format | Inconsistent | ✅ RFC 7807 |
+| Pagination | Sometimes optional | ✅ Always enforced |
+| Response format | NASA-compatible | ✅ Consistent envelope |
+
+---
+
 ## See Also
 
 - [Database Access Guide](DATABASE_ACCESS.md)
 - [Curiosity Scraper Guide](CURIOSITY_SCRAPER_GUIDE.md)
 - [Opportunity Scraper Guide](OPPORTUNITY_SCRAPER_GUIDE.md)
 - [Spirit Scraper Guide](SPIRIT_SCRAPER_GUIDE.md)
+- [Authentication Guide](AUTHENTICATION_GUIDE.md)
 - [Main README](../README.md)
