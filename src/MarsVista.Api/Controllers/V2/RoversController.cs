@@ -14,16 +14,19 @@ public class RoversController : ControllerBase
 {
     private readonly IRoverQueryServiceV2 _roverQueryService;
     private readonly ICachingServiceV2 _cachingService;
+    private readonly IJourneyService? _journeyService;
     private readonly ILogger<RoversController> _logger;
 
     public RoversController(
         IRoverQueryServiceV2 roverQueryService,
         ICachingServiceV2 cachingService,
-        ILogger<RoversController> logger)
+        ILogger<RoversController> logger,
+        IJourneyService? journeyService = null)
     {
         _roverQueryService = roverQueryService;
         _cachingService = cachingService;
         _logger = logger;
+        _journeyService = journeyService;
     }
 
     /// <summary>
@@ -183,6 +186,56 @@ public class RoversController : ControllerBase
                 Self = $"{Request.Scheme}://{Request.Host}/api/v2/rovers/{slug}/cameras"
             }
         };
+
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// Get journey tracking data for a rover
+    /// </summary>
+    /// <param name="slug">Rover slug</param>
+    /// <param name="sol_min">Minimum sol</param>
+    /// <param name="sol_max">Maximum sol</param>
+    [HttpGet("{slug}/journey")]
+    [ProducesResponseType(typeof(ApiResponse<JourneyResource>), 200)]
+    [ProducesResponseType(typeof(ApiError), 404)]
+    public async Task<IActionResult> GetJourney(
+        string slug,
+        [FromQuery] int? sol_min = null,
+        [FromQuery] int? sol_max = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (_journeyService == null)
+        {
+            return NotFound(new ApiError
+            {
+                Type = "/errors/not-implemented",
+                Title = "Not Implemented",
+                Status = 404,
+                Detail = "Journey tracking service is not available",
+                Instance = Request.Path
+            });
+        }
+
+        // Verify rover exists
+        var rover = await _roverQueryService.GetRoverBySlugAsync(slug, cancellationToken);
+        if (rover == null)
+        {
+            return NotFound(new ApiError
+            {
+                Type = "/errors/not-found",
+                Title = "Not Found",
+                Status = 404,
+                Detail = $"Rover '{slug}' not found",
+                Instance = Request.Path
+            });
+        }
+
+        var response = await _journeyService.GetJourneyAsync(
+            slug,
+            sol_min,
+            sol_max,
+            cancellationToken);
 
         return Ok(response);
     }
