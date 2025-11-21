@@ -186,6 +186,7 @@ public class UserApiKeyAuthenticationMiddleware
         var skippedPaths = new[]
         {
             "/health",
+            "/swagger",          // Public API documentation
             "/api/v1/internal",  // Internal API uses different auth (X-Internal-Secret)
             "/api/scraper",      // Scraper endpoints use simple API_KEY auth
             "/api/v1/statistics" // Public statistics for landing page
