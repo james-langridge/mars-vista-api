@@ -4,17 +4,19 @@ This document indexes all technical decisions made during the development of the
 
 ## Decision Log
 
-### 019. API v2 Design Architecture
+### 019. API v2 Design Architecture (Enhanced)
 **Date:** 2024-11-20
-**Status:** Approved
-**Summary:** Complete redesign of API as v2 while maintaining v1 for NASA compatibility. Implements unified photos endpoint, proper error handling, always-on pagination, field selection, and modern REST patterns.
+**Status:** Approved - Enhanced Version Available
+**Summary:** Complete redesign of API as v2 leveraging 100% of NASA data stored. Offers revolutionary features beyond original NASA API including Mars time queries, panorama detection, location tracking, and multiple image sizes.
 **Key Points:**
-- Dual API versions (v1 NASA-compatible, v2 modern design)
-- Unified `/api/v2/photos` endpoint with powerful filtering
-- RFC 7807 error format
-- Always paginate with metadata
-- HTTP caching with ETags
-**File:** [019-api-v2-design-decisions.md](.claude/decisions/019-api-v2-design-decisions.md)
+- Exposes rich data: 4 image sizes, Mars time, location, telemetry
+- Advanced queries: Mars sunrise/sunset, location proximity, journey tracking
+- Specialized endpoints: panoramas, stereo pairs, time machine
+- Progressive disclosure: field sets from minimal to complete
+- Materialized views for complex features
+**Files:**
+- Enhanced: [019-api-v2-design-decisions-enhanced.md](.claude/decisions/019-api-v2-design-decisions-enhanced.md)
+- Original: [019-api-v2-design-decisions.md](.claude/decisions/019-api-v2-design-decisions.md)
 
 ---
 
