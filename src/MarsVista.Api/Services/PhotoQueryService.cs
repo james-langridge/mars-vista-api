@@ -33,6 +33,7 @@ public class PhotoQueryService : IPhotoQueryService
         // Start with base query - NO Include()! Direct Select() projection is more efficient
         // EF Core will automatically join the related tables when referenced in Select()
         var query = _context.Photos
+            .AsNoTracking() // Don't track entities for read-only operations
             .Where(p => p.Rover.Name.ToLower() == roverName.ToLower());
 
         // Apply filters
@@ -44,9 +45,12 @@ public class PhotoQueryService : IPhotoQueryService
         if (earthDate.HasValue)
         {
             // PostgreSQL requires DateTime with Kind=UTC for timestamp with time zone columns
-            // Convert to UTC and get date portion
-            var date = DateTime.SpecifyKind(earthDate.Value.Date, DateTimeKind.Utc);
-            query = query.Where(p => p.EarthDate.HasValue && p.EarthDate.Value.Date == date);
+            // Use date range comparison for better index usage (avoid .Date property)
+            var startDate = DateTime.SpecifyKind(earthDate.Value.Date, DateTimeKind.Utc);
+            var endDate = startDate.AddDays(1);
+            query = query.Where(p => p.EarthDate.HasValue &&
+                                   p.EarthDate.Value >= startDate &&
+                                   p.EarthDate.Value < endDate);
         }
 
         if (!string.IsNullOrWhiteSpace(camera))
