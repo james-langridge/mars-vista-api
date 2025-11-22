@@ -26,29 +26,65 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
         PhotoQueryParameters parameters,
         CancellationToken cancellationToken = default)
     {
-        // Build the base query with filters
-        var query = BuildQuery(parameters);
+        // Check if Mars time filtering is used (requires client-side evaluation)
+        var usesMarsTimeFilter = parameters.MarsTimeMinParsed.HasValue ||
+                                 parameters.MarsTimeMaxParsed.HasValue ||
+                                 parameters.MarsTimeGoldenHour == true;
 
-        // Get total count for pagination metadata
-        var totalCount = await query.CountAsync(cancellationToken);
+        List<Photo> photos;
+        int totalCount;
 
-        // Apply sorting
-        query = ApplySorting(query, parameters);
-
-        // Apply pagination
-        var skip = (parameters.PageNumber - 1) * parameters.PageSize;
-        var paginatedQuery = query.Skip(skip).Take(parameters.PageSize);
-
-        // Eager load related entities if needed
-        if (parameters.IncludeList.Contains("rover") || parameters.IncludeList.Contains("camera"))
+        if (usesMarsTimeFilter)
         {
-            paginatedQuery = paginatedQuery
-                .Include(p => p.Rover)
-                .Include(p => p.Camera);
-        }
+            // Mars time filtering requires client-side evaluation
+            // Build query WITHOUT Mars time filters
+            var query = BuildQueryWithoutMarsTime(parameters);
 
-        // Execute query
-        var photos = await paginatedQuery.ToListAsync(cancellationToken);
+            // Eager load related entities
+            if (parameters.IncludeList.Contains("rover") || parameters.IncludeList.Contains("camera"))
+            {
+                query = query.Include(p => p.Rover).Include(p => p.Camera);
+            }
+
+            // Materialize to memory and apply Mars time filtering
+            var allPhotos = await query.ToListAsync(cancellationToken);
+            var filtered = ApplyMarsTimeFiltering(allPhotos, parameters);
+
+            totalCount = filtered.Count;
+
+            // Apply sorting in memory
+            filtered = ApplySortingInMemory(filtered, parameters);
+
+            // Apply pagination in memory
+            var skip = (parameters.PageNumber - 1) * parameters.PageSize;
+            photos = filtered.Skip(skip).Take(parameters.PageSize).ToList();
+        }
+        else
+        {
+            // Standard EF query path (no client-side evaluation needed)
+            var query = BuildQuery(parameters);
+
+            // Get total count for pagination metadata
+            totalCount = await query.CountAsync(cancellationToken);
+
+            // Apply sorting
+            query = ApplySorting(query, parameters);
+
+            // Apply pagination
+            var skip = (parameters.PageNumber - 1) * parameters.PageSize;
+            var paginatedQuery = query.Skip(skip).Take(parameters.PageSize);
+
+            // Eager load related entities if needed
+            if (parameters.IncludeList.Contains("rover") || parameters.IncludeList.Contains("camera"))
+            {
+                paginatedQuery = paginatedQuery
+                    .Include(p => p.Rover)
+                    .Include(p => p.Camera);
+            }
+
+            // Execute query
+            photos = await paginatedQuery.ToListAsync(cancellationToken);
+        }
 
         // Map to DTOs
         var photoDtos = photos.Select(p => MapToPhotoResource(p, parameters)).ToList();
@@ -293,42 +329,8 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
             query = query.Where(p => p.EarthDate <= parameters.DateMaxParsed.Value);
         }
 
-        // Filter by Mars time (requires parsing DateTakenMars field)
-        if (parameters.MarsTimeMinParsed.HasValue || parameters.MarsTimeMaxParsed.HasValue ||
-            parameters.MarsTimeGoldenHour == true)
-        {
-            query = query.Where(p => !string.IsNullOrEmpty(p.DateTakenMars));
-
-            if (parameters.MarsTimeGoldenHour == true)
-            {
-                // Filter for golden hour times
-                query = query.AsEnumerable()
-                    .Where(p => MarsTimeHelper.IsGoldenHour(p.DateTakenMars))
-                    .AsQueryable();
-            }
-            else
-            {
-                // Filter by time range
-                if (parameters.MarsTimeMinParsed.HasValue || parameters.MarsTimeMaxParsed.HasValue)
-                {
-                    query = query.AsEnumerable()
-                        .Where(p =>
-                        {
-                            if (!MarsTimeHelper.TryExtractTimeFromTimestamp(p.DateTakenMars, out var marsTime))
-                                return false;
-
-                            if (parameters.MarsTimeMinParsed.HasValue && marsTime < parameters.MarsTimeMinParsed.Value)
-                                return false;
-
-                            if (parameters.MarsTimeMaxParsed.HasValue && marsTime > parameters.MarsTimeMaxParsed.Value)
-                                return false;
-
-                            return true;
-                        })
-                        .AsQueryable();
-                }
-            }
-        }
+        // Note: Mars time filtering moved to ApplyMarsTimeFiltering() to avoid AsEnumerable/AsQueryable issues
+        // This is handled separately in QueryPhotosAsync() when usesMarsTimeFilter is true
 
         // Filter by location - site/drive ranges
         if (parameters.SiteMin.HasValue)
@@ -640,5 +642,219 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
             metadata["date_max"] = parameters.DateMax;
 
         return metadata;
+    }
+
+    /// <summary>
+    /// Build query without Mars time filters (for client-side evaluation path)
+    /// </summary>
+    private IQueryable<Photo> BuildQueryWithoutMarsTime(PhotoQueryParameters parameters)
+    {
+        var query = _context.Photos.AsQueryable();
+
+        // Filter by rovers
+        if (parameters.RoverList.Count > 0)
+        {
+            query = query.Where(p => parameters.RoverList.Contains(p.Rover.Name.ToLower()));
+        }
+
+        // Filter by cameras
+        if (parameters.CameraList.Count > 0)
+        {
+            query = query.Where(p => parameters.CameraList.Contains(p.Camera.Name.ToUpper()));
+        }
+
+        // Filter by sol range
+        if (parameters.SolMin.HasValue)
+        {
+            query = query.Where(p => p.Sol >= parameters.SolMin.Value);
+        }
+
+        if (parameters.SolMax.HasValue)
+        {
+            query = query.Where(p => p.Sol <= parameters.SolMax.Value);
+        }
+
+        // Filter by date range
+        if (parameters.DateMinParsed.HasValue)
+        {
+            query = query.Where(p => p.EarthDate >= parameters.DateMinParsed.Value);
+        }
+
+        if (parameters.DateMaxParsed.HasValue)
+        {
+            query = query.Where(p => p.EarthDate <= parameters.DateMaxParsed.Value);
+        }
+
+        // Mars time filters require non-empty DateTakenMars
+        if (parameters.MarsTimeMinParsed.HasValue || parameters.MarsTimeMaxParsed.HasValue ||
+            parameters.MarsTimeGoldenHour == true)
+        {
+            query = query.Where(p => !string.IsNullOrEmpty(p.DateTakenMars));
+        }
+
+        // All other filters remain the same (location, dimensions, sample type, etc.)
+        // Copy from BuildQuery method...
+
+        // Filter by location - site/drive ranges
+        if (parameters.SiteMin.HasValue)
+        {
+            query = query.Where(p => p.Site.HasValue && p.Site.Value >= parameters.SiteMin.Value);
+        }
+
+        if (parameters.SiteMax.HasValue)
+        {
+            query = query.Where(p => p.Site.HasValue && p.Site.Value <= parameters.SiteMax.Value);
+        }
+
+        if (parameters.DriveMin.HasValue)
+        {
+            query = query.Where(p => p.Drive.HasValue && p.Drive.Value >= parameters.DriveMin.Value);
+        }
+
+        if (parameters.DriveMax.HasValue)
+        {
+            query = query.Where(p => p.Drive.HasValue && p.Drive.Value <= parameters.DriveMax.Value);
+        }
+
+        // Location proximity search
+        if (parameters.Site.HasValue && parameters.Drive.HasValue && parameters.LocationRadius.HasValue)
+        {
+            var targetSite = parameters.Site.Value;
+            var targetDrive = parameters.Drive.Value;
+            var radius = parameters.LocationRadius.Value;
+
+            query = query.Where(p =>
+                p.Site.HasValue && p.Drive.HasValue &&
+                p.Site.Value == targetSite &&
+                p.Drive.Value >= targetDrive - radius &&
+                p.Drive.Value <= targetDrive + radius);
+        }
+
+        // Filter by image dimensions
+        if (parameters.MinWidth.HasValue)
+        {
+            query = query.Where(p => p.Width.HasValue && p.Width.Value >= parameters.MinWidth.Value);
+        }
+
+        if (parameters.MaxWidth.HasValue)
+        {
+            query = query.Where(p => p.Width.HasValue && p.Width.Value <= parameters.MaxWidth.Value);
+        }
+
+        if (parameters.MinHeight.HasValue)
+        {
+            query = query.Where(p => p.Height.HasValue && p.Height.Value >= parameters.MinHeight.Value);
+        }
+
+        if (parameters.MaxHeight.HasValue)
+        {
+            query = query.Where(p => p.Height.HasValue && p.Height.Value <= parameters.MaxHeight.Value);
+        }
+
+        // Filter by sample type
+        if (parameters.SampleTypeList.Count > 0)
+        {
+            query = query.Where(p => parameters.SampleTypeList.Contains(p.SampleType));
+        }
+
+        // Filter by camera angles
+        if (parameters.MastAzimuthMin.HasValue)
+        {
+            query = query.Where(p => p.MastAz.HasValue && p.MastAz.Value >= parameters.MastAzimuthMin.Value);
+        }
+
+        if (parameters.MastAzimuthMax.HasValue)
+        {
+            query = query.Where(p => p.MastAz.HasValue && p.MastAz.Value <= parameters.MastAzimuthMax.Value);
+        }
+
+        if (parameters.MastElevationMin.HasValue)
+        {
+            query = query.Where(p => p.MastEl.HasValue && p.MastEl.Value >= parameters.MastElevationMin.Value);
+        }
+
+        if (parameters.MastElevationMax.HasValue)
+        {
+            query = query.Where(p => p.MastEl.HasValue && p.MastEl.Value <= parameters.MastElevationMax.Value);
+        }
+
+        return query;
+    }
+
+    /// <summary>
+    /// Apply Mars time filtering in memory
+    /// </summary>
+    private List<Photo> ApplyMarsTimeFiltering(List<Photo> photos, PhotoQueryParameters parameters)
+    {
+        if (parameters.MarsTimeGoldenHour == true)
+        {
+            return photos.Where(p => MarsTimeHelper.IsGoldenHour(p.DateTakenMars)).ToList();
+        }
+
+        if (parameters.MarsTimeMinParsed.HasValue || parameters.MarsTimeMaxParsed.HasValue)
+        {
+            return photos.Where(p =>
+            {
+                if (!MarsTimeHelper.TryExtractTimeFromTimestamp(p.DateTakenMars, out var marsTime))
+                    return false;
+
+                if (parameters.MarsTimeMinParsed.HasValue && marsTime < parameters.MarsTimeMinParsed.Value)
+                    return false;
+
+                if (parameters.MarsTimeMaxParsed.HasValue && marsTime > parameters.MarsTimeMaxParsed.Value)
+                    return false;
+
+                return true;
+            }).ToList();
+        }
+
+        return photos;
+    }
+
+    /// <summary>
+    /// Apply sorting in memory
+    /// </summary>
+    private List<Photo> ApplySortingInMemory(List<Photo> photos, PhotoQueryParameters parameters)
+    {
+        if (parameters.SortFields.Count == 0)
+        {
+            return photos.OrderByDescending(p => p.DateTakenUtc).ToList();
+        }
+
+        IOrderedEnumerable<Photo>? orderedPhotos = null;
+
+        foreach (var sortField in parameters.SortFields)
+        {
+            var isDescending = sortField.Direction == SortDirection.Descending;
+
+            if (orderedPhotos == null)
+            {
+                orderedPhotos = sortField.Field switch
+                {
+                    "id" => isDescending ? photos.OrderByDescending(p => p.Id) : photos.OrderBy(p => p.Id),
+                    "sol" => isDescending ? photos.OrderByDescending(p => p.Sol) : photos.OrderBy(p => p.Sol),
+                    "earth_date" => isDescending ? photos.OrderByDescending(p => p.EarthDate) : photos.OrderBy(p => p.EarthDate),
+                    "date_taken_utc" => isDescending ? photos.OrderByDescending(p => p.DateTakenUtc) : photos.OrderBy(p => p.DateTakenUtc),
+                    "camera" => isDescending ? photos.OrderByDescending(p => p.Camera?.Name) : photos.OrderBy(p => p.Camera?.Name),
+                    "created_at" => isDescending ? photos.OrderByDescending(p => p.CreatedAt) : photos.OrderBy(p => p.CreatedAt),
+                    _ => photos.OrderByDescending(p => p.DateTakenUtc)
+                };
+            }
+            else
+            {
+                orderedPhotos = sortField.Field switch
+                {
+                    "id" => isDescending ? orderedPhotos.ThenByDescending(p => p.Id) : orderedPhotos.ThenBy(p => p.Id),
+                    "sol" => isDescending ? orderedPhotos.ThenByDescending(p => p.Sol) : orderedPhotos.ThenBy(p => p.Sol),
+                    "earth_date" => isDescending ? orderedPhotos.ThenByDescending(p => p.EarthDate) : orderedPhotos.ThenBy(p => p.EarthDate),
+                    "date_taken_utc" => isDescending ? orderedPhotos.ThenByDescending(p => p.DateTakenUtc) : orderedPhotos.ThenBy(p => p.DateTakenUtc),
+                    "camera" => isDescending ? orderedPhotos.ThenByDescending(p => p.Camera?.Name) : orderedPhotos.ThenBy(p => p.Camera?.Name),
+                    "created_at" => isDescending ? orderedPhotos.ThenByDescending(p => p.CreatedAt) : orderedPhotos.ThenBy(p => p.CreatedAt),
+                    _ => orderedPhotos
+                };
+            }
+        }
+
+        return orderedPhotos?.ToList() ?? photos.OrderByDescending(p => p.DateTakenUtc).ToList();
     }
 }
