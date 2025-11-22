@@ -22,27 +22,14 @@ export default function Performance() {
       {/* Main Content */}
       <div className="container mx-auto px-6 py-12 max-w-6xl">
 
-        {/* Current Statistics */}
+        {/* Overview */}
         <section className="mb-16">
-          <h2 className="text-3xl font-bold mb-6 text-slate-900">Current Performance Metrics</h2>
-          <div className="grid md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-orange-50 border border-orange-200 rounded-lg p-6">
-              <div className="text-3xl font-bold text-orange-600">1.99M</div>
-              <div className="text-sm text-slate-600 mt-1">Total Photos</div>
-            </div>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-              <div className="text-3xl font-bold text-blue-600">0.68s</div>
-              <div className="text-sm text-slate-600 mt-1">Avg Response Time</div>
-            </div>
-            <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-              <div className="text-3xl font-bold text-green-600">2.4s</div>
-              <div className="text-sm text-slate-600 mt-1">P95 Response Time</div>
-            </div>
-            <div className="bg-purple-50 border border-purple-200 rounded-lg p-6">
-              <div className="text-3xl font-bold text-purple-600">98%</div>
-              <div className="text-sm text-slate-600 mt-1">Pass Rate</div>
-            </div>
-          </div>
+          <h2 className="text-3xl font-bold mb-6 text-slate-900">Overview</h2>
+          <p className="text-slate-700 text-lg">
+            The Mars Vista API provides access to nearly 2 million Mars rover photos. We've optimized
+            performance extensively, but some queries naturally take longer due to dataset size and complexity.
+            This guide helps you understand what to expect and how to optimize your API usage.
+          </p>
         </section>
 
         {/* Response Times */}

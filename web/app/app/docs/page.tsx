@@ -438,24 +438,6 @@ curl -H "X-API-Key: your_key" \\
             The Mars Vista API queries a database of nearly 2 million Mars photos. While we've optimized for speed, some queries may take longer depending on complexity.
           </p>
 
-          <div className="bg-slate-50 rounded-lg p-6 mb-8">
-            <h3 className="text-xl font-semibold mb-4 text-slate-900">Current Performance Metrics</h3>
-            <div className="grid md:grid-cols-3 gap-4">
-              <div className="bg-white rounded p-4 border border-slate-200">
-                <div className="text-2xl font-bold text-orange-600">0.68s</div>
-                <div className="text-sm text-slate-600">Average Response Time</div>
-              </div>
-              <div className="bg-white rounded p-4 border border-slate-200">
-                <div className="text-2xl font-bold text-orange-600">2.4s</div>
-                <div className="text-sm text-slate-600">P95 Response Time</div>
-              </div>
-              <div className="bg-white rounded p-4 border border-slate-200">
-                <div className="text-2xl font-bold text-orange-600">1.99M</div>
-                <div className="text-sm text-slate-600">Photos in Database</div>
-              </div>
-            </div>
-          </div>
-
           {/* Response Time Table */}
           <div className="mb-8">
             <h3 className="text-xl font-semibold mb-4 text-slate-900">Expected Response Times</h3>
