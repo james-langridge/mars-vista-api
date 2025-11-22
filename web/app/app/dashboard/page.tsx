@@ -26,9 +26,9 @@ export default async function Dashboard() {
       </div>
 
       <div className="bg-gray-800 rounded-lg p-6 border border-gray-700 max-w-sm">
-        <h3 className="text-sm font-medium text-gray-400 mb-2">Current Plan</h3>
-        <p className="text-2xl font-bold">Free</p>
-        <p className="text-sm text-gray-400 mt-2">1,000 req/hour, 10,000 req/day</p>
+        <h3 className="text-sm font-medium text-gray-400 mb-2">Rate Limits</h3>
+        <p className="text-2xl font-bold">Free for All Users</p>
+        <p className="text-sm text-gray-400 mt-2">10,000 req/hour, 100,000 req/day</p>
       </div>
 
       <ApiKeyManager />
@@ -60,19 +60,6 @@ export default async function Dashboard() {
             </div>
           </div>
         </div>
-      </div>
-
-      <div className="bg-blue-900/20 border border-blue-700 rounded-lg p-6">
-        <h2 className="text-xl font-bold mb-2">Need Higher Limits?</h2>
-        <p className="text-gray-300 mb-4">
-          Upgrade to Pro for 10,000 requests per hour and 100,000 requests per day, plus priority support.
-        </p>
-        <a
-          href="/pricing"
-          className="inline-block px-6 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-medium transition-colors"
-        >
-          View Pricing
-        </a>
       </div>
     </div>
   );

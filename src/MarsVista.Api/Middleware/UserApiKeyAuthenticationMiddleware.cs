@@ -120,29 +120,25 @@ public class UserApiKeyAuthenticationMiddleware
         context.Response.Headers.Append("X-RateLimit-Limit-Day", dailyLimit == -1 ? "unlimited" : dailyLimit.ToString());
         context.Response.Headers.Append("X-RateLimit-Remaining-Day", dailyRemaining == int.MaxValue ? "unlimited" : dailyRemaining.ToString());
         context.Response.Headers.Append("X-RateLimit-Reset-Day", dailyResetAt.ToString());
-        context.Response.Headers.Append("X-RateLimit-Tier", apiKeyRecord.Tier);
 
         if (!allowed)
         {
             _logger.LogWarning(
-                "Rate limit exceeded for {Email} (tier: {Tier}) from {IP}",
+                "Rate limit exceeded for {Email} from {IP}",
                 apiKeyRecord.UserEmail,
-                apiKeyRecord.Tier,
                 context.Connection.RemoteIpAddress);
 
             context.Response.StatusCode = 429;
             await context.Response.WriteAsJsonAsync(new
             {
                 error = "Too Many Requests",
-                message = $"Rate limit exceeded. Free tier: {hourlyLimit} requests/hour, {dailyLimit} requests/day. Upgrade at https://marsvista.dev/pricing",
+                message = $"Rate limit exceeded. Limits: {hourlyLimit} requests/hour, {dailyLimit} requests/day.",
                 hourlyLimit,
                 hourlyRemaining,
                 dailyLimit = dailyLimit == -1 ? (object)"unlimited" : dailyLimit,
                 dailyRemaining = dailyRemaining == int.MaxValue ? (object)"unlimited" : dailyRemaining,
                 hourlyResetAt,
-                dailyResetAt,
-                tier = apiKeyRecord.Tier,
-                upgradeUrl = "https://marsvista.dev/pricing"
+                dailyResetAt
             });
             return;
         }

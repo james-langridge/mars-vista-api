@@ -42,9 +42,7 @@ Recreating the NASA Mars Rover API from scratch in C#/.NET (reference: /home/jam
   - Internal API endpoints (`/api/v1/internal/*`) for trusted Next.js proxy
   - Scraper endpoints use separate admin API key
 - **Rate Limiting:**
-  - Free tier: 60 req/hour, 500 req/day, 3 concurrent
-  - Pro tier: 5,000 req/hour, 100,000 req/day, 50 concurrent
-  - Enterprise tier: 100,000+ req/hour, unlimited daily, 100 concurrent
+  - Free for all users: 10,000 req/hour, 100,000 req/day, 50 concurrent
   - In-memory tracking (sufficient for single-instance deployment)
   - Rate limit headers on all responses (X-RateLimit-*)
 - **Incremental Scraper (MarsVista.Scraper):**
@@ -86,7 +84,6 @@ Recreating the NASA Mars Rover API from scratch in C#/.NET (reference: /home/jam
 - Pages implemented:
   - `/` - Landing page with hero, features, and quick start
   - `/docs` - API documentation with Redoc integration
-  - `/pricing` - Pricing tiers (Free, Pro, Enterprise)
   - `/signin` - Magic link email authentication
   - `/dashboard` - User dashboard with API key management (protected route)
 - **API Key Management:**

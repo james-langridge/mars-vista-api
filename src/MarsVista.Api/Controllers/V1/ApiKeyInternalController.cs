@@ -77,7 +77,7 @@ public class ApiKeyInternalController : ControllerBase
             Id = Guid.NewGuid(),
             UserEmail = request.UserEmail,
             ApiKeyHash = apiKeyHash,
-            Tier = "free", // Default to free tier
+            Tier = "pro", // All users get pro tier (generous rate limits)
             IsActive = true,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
