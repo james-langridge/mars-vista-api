@@ -1,0 +1,28 @@
+meta {
+  name: Query Photos - Sol Range
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/api/v2/photos?rovers=curiosity&sol_min=1000&sol_max=1100
+  body: none
+  auth: inherit
+}
+
+headers {
+  X-API-Key: {{apiKey}}
+}
+
+params:query {
+  rovers: curiosity
+  sol_min: 1000
+  sol_max: 1100
+}
+
+docs {
+  # Sol Range Query
+
+  Query photos within a specific sol range.
+  Useful for retrieving photos from a specific mission period.
+}

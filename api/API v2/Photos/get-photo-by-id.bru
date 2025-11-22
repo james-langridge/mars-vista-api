@@ -1,0 +1,29 @@
+meta {
+  name: Get Photo by ID
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{baseUrl}}/api/v2/photos/451603?include=rover,camera
+  body: none
+  auth: inherit
+}
+
+headers {
+  X-API-Key: {{apiKey}}
+}
+
+params:query {
+  include: rover,camera
+}
+
+docs {
+  # Get Photo by ID
+
+  Retrieve a specific photo by its ID.
+
+  Optional parameters:
+  - `include` - Include relationships: `rover,camera`
+  - `fields` - Field selection: `id,img_src,sol`
+}

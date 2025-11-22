@@ -1,0 +1,39 @@
+meta {
+  name: Get Recent Activity
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/v1/admin/activity?limit=50
+  body: none
+  auth: none
+}
+
+headers {
+  X-API-Key: {{adminApiKey}}
+}
+
+params:query {
+  limit: 50
+}
+
+docs {
+  # Get Recent Activity Log (Admin)
+
+  **Admin endpoint** - Get recent API activity.
+
+  ## Query Parameters:
+  - `limit` - Number of events to return (default: 50, max: 200)
+
+  ## Response includes:
+  For each event:
+  - Timestamp
+  - User email
+  - Endpoint
+  - Status code
+  - Response time
+  - Photos returned
+
+  **Note:** This endpoint requires an admin API key.
+}

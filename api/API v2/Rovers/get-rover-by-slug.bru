@@ -1,0 +1,27 @@
+meta {
+  name: Get Rover by Slug
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/v2/rovers/curiosity
+  body: none
+  auth: inherit
+}
+
+headers {
+  X-API-Key: {{apiKey}}
+}
+
+docs {
+  # Get Rover by Slug
+
+  Get details for a specific rover.
+
+  ## Available Slugs:
+  - `curiosity`
+  - `perseverance`
+  - `opportunity`
+  - `spirit`
+}

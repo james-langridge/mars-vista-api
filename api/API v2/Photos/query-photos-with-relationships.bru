@@ -1,0 +1,31 @@
+meta {
+  name: Query Photos - Include Relationships
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/v2/photos?rovers=curiosity&include=rover,camera&per_page=5
+  body: none
+  auth: inherit
+}
+
+headers {
+  X-API-Key: {{apiKey}}
+}
+
+params:query {
+  rovers: curiosity
+  include: rover,camera
+  per_page: 5
+}
+
+docs {
+  # Include Relationships
+
+  Include related rover and camera details in the response.
+
+  Available relationships:
+  - `rover` - Rover details (name, status, landing_date, etc.)
+  - `camera` - Camera details (full_name, etc.)
+}

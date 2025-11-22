@@ -1,0 +1,45 @@
+meta {
+  name: Regenerate API Key
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/v1/internal/keys/regenerate
+  body: json
+  auth: none
+}
+
+headers {
+  X-Internal-Secret: {{internalSecret}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "userEmail": "user@example.com"
+  }
+}
+
+docs {
+  # Regenerate API Key (Internal)
+
+  **Internal endpoint** - Regenerate an existing API key (invalidates the old one).
+  Called by Next.js frontend after validating Auth.js session.
+
+  ## Request Body:
+  ```json
+  {
+    "userEmail": "user@example.com"
+  }
+  ```
+
+  ## Response:
+  Returns the new plaintext API key.
+
+  ## Error Cases:
+  - 400: Invalid email format
+  - 404: No existing API key found (use generate instead)
+
+  **Note:** This endpoint is NOT part of the public API.
+}

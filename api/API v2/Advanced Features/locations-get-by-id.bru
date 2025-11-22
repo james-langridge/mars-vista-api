@@ -1,0 +1,35 @@
+meta {
+  name: Locations - Get by ID
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/api/v2/locations/curiosity_79_1204
+  body: none
+  auth: inherit
+}
+
+headers {
+  X-API-Key: {{apiKey}}
+}
+
+docs {
+  # Get Location by ID
+
+  Retrieve details about a specific location.
+
+  ## Location ID Format:
+  `{rover}_{site}_{drive}`
+
+  Example: `curiosity_79_1204`
+  - Rover: Curiosity
+  - Site: 79
+  - Drive: 1204
+
+  ## Response includes:
+  - Location coordinates (site/drive)
+  - Photo count at this location
+  - Date range (first and last visit)
+  - Cameras used at this location
+}

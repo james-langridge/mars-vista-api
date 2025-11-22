@@ -1,0 +1,43 @@
+meta {
+  name: Get Rate Limit Violations
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/v1/admin/rate-limit-violations?limit=50
+  body: none
+  auth: none
+}
+
+headers {
+  X-API-Key: {{adminApiKey}}
+}
+
+params:query {
+  limit: 50
+}
+
+docs {
+  # Get Rate Limit Violations (Admin)
+
+  **Admin endpoint** - Get recent rate limit violations (429 errors).
+
+  ## Query Parameters:
+  - `limit` - Number of violations to return (default: 50, max: 200)
+
+  ## Response includes:
+  For each violation:
+  - Timestamp
+  - User email
+  - Tier
+  - Violation type
+  - Endpoint
+
+  Useful for:
+  - Identifying users hitting rate limits
+  - Understanding usage patterns
+  - Detecting abuse
+
+  **Note:** This endpoint requires an admin API key.
+}

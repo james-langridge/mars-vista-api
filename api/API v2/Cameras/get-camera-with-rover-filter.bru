@@ -1,0 +1,28 @@
+meta {
+  name: Get Camera - Filter by Rover
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/v2/cameras/NAVCAM?rover=curiosity
+  body: none
+  auth: inherit
+}
+
+headers {
+  X-API-Key: {{apiKey}}
+}
+
+params:query {
+  rover: curiosity
+}
+
+docs {
+  # Get Camera with Rover Filter
+
+  Get details for a camera on a specific rover.
+
+  Useful when a camera name is shared across rovers (e.g., NAVCAM).
+  Filter to a specific rover to get camera-specific stats.
+}

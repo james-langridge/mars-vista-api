@@ -1,0 +1,50 @@
+meta {
+  name: Locations - List All
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/v2/locations?rovers=curiosity&per_page=25
+  body: none
+  auth: inherit
+}
+
+headers {
+  X-API-Key: {{apiKey}}
+}
+
+params:query {
+  rovers: curiosity
+  per_page: 25
+}
+
+docs {
+  # List Unique Locations
+
+  Get all unique locations visited by rovers (site/drive combinations).
+
+  ## Optional Parameters:
+  - `rovers` - Comma-separated list of rover names
+  - `sol_min` - Minimum sol
+  - `sol_max` - Maximum sol
+  - `min_photos` - Minimum number of photos at location
+  - `page` - Page number (default: 1)
+  - `per_page` - Items per page (default: 25, max: 100)
+
+  ## Examples:
+
+  ```
+  # All locations
+  ?per_page=25
+
+  # Filter by rover
+  ?rovers=curiosity
+
+  # Sol range
+  ?rovers=curiosity&sol_min=1000&sol_max=2000
+
+  # Well-documented locations (many photos)
+  ?min_photos=50
+  ```
+}

@@ -1,0 +1,33 @@
+meta {
+  name: Query Photos - Sorting
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{baseUrl}}/api/v2/photos?rovers=curiosity&cameras=MAST&sort=-earth_date&per_page=10
+  body: none
+  auth: inherit
+}
+
+headers {
+  X-API-Key: {{apiKey}}
+}
+
+params:query {
+  rovers: curiosity
+  cameras: MAST
+  sort: -earth_date
+  per_page: 10
+}
+
+docs {
+  # Sorting
+
+  Sort results by any field. Use `-` prefix for descending order.
+
+  Examples:
+  - `sort=earth_date` - Ascending
+  - `sort=-earth_date` - Descending
+  - `sort=-earth_date,camera` - Multiple fields
+}

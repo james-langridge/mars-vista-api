@@ -1,0 +1,46 @@
+meta {
+  name: Generate API Key
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/v1/internal/keys/generate
+  body: json
+  auth: none
+}
+
+headers {
+  X-Internal-Secret: {{internalSecret}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "userEmail": "user@example.com"
+  }
+}
+
+docs {
+  # Generate API Key (Internal)
+
+  **Internal endpoint** - Called by Next.js frontend after validating Auth.js session.
+  Protected by InternalApiMiddleware (X-Internal-Secret header).
+
+  ## Request Body:
+  ```json
+  {
+    "userEmail": "user@example.com"
+  }
+  ```
+
+  ## Response:
+  Returns the plaintext API key (ONLY time it's visible).
+
+  ## Error Cases:
+  - 400: Invalid email format
+  - 409: User already has an API key (use regenerate instead)
+
+  **Note:** This endpoint is NOT part of the public API.
+  It's only accessible to the Next.js frontend with the internal secret.
+}

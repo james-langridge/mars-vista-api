@@ -1,0 +1,28 @@
+meta {
+  name: Query Photos - Date Range
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/api/v2/photos?rovers=perseverance&date_min=2023-01-01&date_max=2023-12-31
+  body: none
+  auth: inherit
+}
+
+headers {
+  X-API-Key: {{apiKey}}
+}
+
+params:query {
+  rovers: perseverance
+  date_min: 2023-01-01
+  date_max: 2023-12-31
+}
+
+docs {
+  # Date Range Query
+
+  Query photos within a specific Earth date range.
+  Format: YYYY-MM-DD
+}

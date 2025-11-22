@@ -1,0 +1,27 @@
+meta {
+  name: Query Photos - Multiple Rovers
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/v2/photos?rovers=curiosity,perseverance&per_page=10
+  body: none
+  auth: inherit
+}
+
+headers {
+  X-API-Key: {{apiKey}}
+}
+
+params:query {
+  rovers: curiosity,perseverance
+  per_page: 10
+}
+
+docs {
+  # Query Multiple Rovers
+
+  Demonstrates querying photos from multiple rovers in a single request.
+  This is a key v2 feature not available in v1.
+}

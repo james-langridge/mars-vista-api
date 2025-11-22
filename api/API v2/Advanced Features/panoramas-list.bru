@@ -1,0 +1,50 @@
+meta {
+  name: Panoramas - List All
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/v2/panoramas?rovers=curiosity&per_page=25
+  body: none
+  auth: inherit
+}
+
+headers {
+  X-API-Key: {{apiKey}}
+}
+
+params:query {
+  rovers: curiosity
+  per_page: 25
+}
+
+docs {
+  # List Panoramas
+
+  Get all detected panoramas (sequences of photos taken at the same location).
+
+  ## Optional Parameters:
+  - `rovers` - Comma-separated list of rover names
+  - `sol_min` - Minimum sol
+  - `sol_max` - Maximum sol
+  - `min_photos` - Minimum number of photos in panorama
+  - `page` - Page number (default: 1)
+  - `per_page` - Items per page (default: 25, max: 100)
+
+  ## Examples:
+
+  ```
+  # All panoramas
+  ?per_page=25
+
+  # Filter by rover
+  ?rovers=curiosity,perseverance
+
+  # Filter by sol range
+  ?rovers=curiosity&sol_min=1000&sol_max=2000
+
+  # Large panoramas only
+  ?min_photos=10
+  ```
+}
