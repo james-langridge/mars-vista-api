@@ -1,0 +1,19 @@
+meta {
+  name: Golden hour photos
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{baseUrl}}/api/v2/photos?mars_time_golden_hour=true
+  body: none
+  auth: inherit
+}
+
+params:query {
+  mars_time_golden_hour: true
+}
+
+settings {
+  encodeUrl: true
+}
