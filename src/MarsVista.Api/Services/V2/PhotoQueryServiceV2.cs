@@ -257,7 +257,7 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
     /// </summary>
     private IQueryable<Photo> BuildQuery(PhotoQueryParameters parameters)
     {
-        var query = _context.Photos.AsQueryable();
+        var query = _context.Photos.AsNoTracking().AsQueryable();
 
         // Filter by rovers
         if (parameters.RoverList.Count > 0)
@@ -382,11 +382,20 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
         // Filter by aspect ratio
         if (parameters.AspectRatioParsed.HasValue)
         {
-            var aspectRatio = parameters.AspectRatioParsed.Value;
-            query = query.AsEnumerable()
-                .Where(p => p.Width.HasValue && p.Height.HasValue &&
-                           MarsTimeHelper.MatchesAspectRatio(p.Width.Value, p.Height.Value, aspectRatio))
-                .AsQueryable();
+            var (targetWidth, targetHeight) = parameters.AspectRatioParsed.Value;
+            var aspectRatio = (double)targetWidth / targetHeight;
+            var tolerance = 0.1; // 10% tolerance for aspect ratio matching
+
+            // Calculate aspect ratio at database level
+            // For 16:9 (1.777), accept ratios between 1.6 and 1.95
+            var minRatio = aspectRatio - tolerance;
+            var maxRatio = aspectRatio + tolerance;
+
+            // Use database-level filtering with computed column
+            // Cast to double for proper division in SQL
+            query = query.Where(p => p.Width.HasValue && p.Height.HasValue &&
+                                   ((double)p.Width.Value / (double)p.Height.Value) >= minRatio &&
+                                   ((double)p.Width.Value / (double)p.Height.Value) <= maxRatio);
         }
 
         // Filter by camera angles
