@@ -24,12 +24,6 @@ export default function Docs() {
             >
               Interactive Swagger UI
             </a>
-            <a
-              href="/pricing"
-              className="px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold transition"
-            >
-              View Pricing
-            </a>
           </div>
         </div>
       </div>
@@ -570,36 +564,18 @@ curl -H "X-API-Key: your_key" \\
         <section className="mb-16">
           <h2 className="text-3xl font-bold mb-6 text-slate-900">Rate Limits</h2>
           <p className="text-slate-700 mb-6">
-            Rate limits vary by pricing tier. All responses include rate limit headers.
+            The Mars Vista API is free for all users with generous rate limits. All responses include rate limit headers.
           </p>
-          <div className="grid md:grid-cols-3 gap-6">
-            <div className="border border-slate-300 rounded-lg p-6">
-              <h3 className="text-xl font-semibold mb-3 text-slate-900">Free</h3>
-              <ul className="space-y-2 text-slate-700">
-                <li>60 requests/hour</li>
-                <li>500 requests/day</li>
-                <li>3 concurrent requests</li>
-              </ul>
-            </div>
-            <div className="border border-orange-300 bg-orange-50 rounded-lg p-6">
-              <h3 className="text-xl font-semibold mb-3 text-slate-900">Pro</h3>
-              <ul className="space-y-2 text-slate-700">
-                <li>5,000 requests/hour</li>
-                <li>100,000 requests/day</li>
-                <li>50 concurrent requests</li>
-              </ul>
-            </div>
-            <div className="border border-slate-300 rounded-lg p-6">
-              <h3 className="text-xl font-semibold mb-3 text-slate-900">Enterprise</h3>
-              <ul className="space-y-2 text-slate-700">
-                <li>100,000+ requests/hour</li>
-                <li>Unlimited daily</li>
-                <li>100 concurrent requests</li>
-              </ul>
-            </div>
+          <div className="border border-orange-300 bg-orange-50 rounded-lg p-6 max-w-md">
+            <h3 className="text-xl font-semibold mb-3 text-slate-900">Free for All Users</h3>
+            <ul className="space-y-2 text-slate-700">
+              <li>10,000 requests/hour</li>
+              <li>100,000 requests/day</li>
+              <li>50 concurrent requests</li>
+            </ul>
           </div>
           <p className="text-slate-600 mt-4">
-            See <a href="/pricing" className="text-blue-600 hover:text-blue-700 underline">pricing page</a> for details.
+            These generous limits are suitable for most applications, from personal projects to production services.
           </p>
         </section>
 
@@ -686,16 +662,10 @@ curl -H "X-API-Key: your_key" \\
                 <p className="text-slate-600 mt-1">Try all endpoints directly in your browser with live examples</p>
               </li>
               <li>
-                <a href="/pricing" className="text-orange-600 hover:text-orange-700 font-medium text-lg">
-                  API Pricing & Rate Limits →
-                </a>
-                <p className="text-slate-600 mt-1">Free tier includes 60 requests/hour and 500 requests/day</p>
-              </li>
-              <li>
                 <a href="/dashboard" className="text-orange-600 hover:text-orange-700 font-medium text-lg">
                   Get Your API Key →
                 </a>
-                <p className="text-slate-600 mt-1">Sign in to generate your free API key and start exploring</p>
+                <p className="text-slate-600 mt-1">Sign in to generate your free API key and start exploring Mars</p>
               </li>
             </ul>
           </div>

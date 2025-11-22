@@ -16,9 +16,6 @@ export default async function Header() {
             <Link href="/docs" className="hover:text-gray-300 transition-colors">
               Docs
             </Link>
-            <Link href="/pricing" className="hover:text-gray-300 transition-colors">
-              Pricing
-            </Link>
             {session ? (
               <Link
                 href="/dashboard"

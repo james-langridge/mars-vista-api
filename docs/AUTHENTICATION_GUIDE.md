@@ -121,42 +121,24 @@ MARS_VISTA_API_KEY=mv_live_a1b2c3d4e5f6789012345678901234567890abcd
 
 ## Rate Limits
 
-### Free Tier (Default)
-
-When you create an account, you start on the free tier:
-
-- **1,000 requests per hour** (16 per minute sustained)
-- **10,000 requests per day**
-- **5 concurrent requests**
-
-**Matches NASA's API Gateway** (which offers 1,000 req/hour shared across all 16 APIs)
-
-**Advantage over NASA:** Our 1,000 req/hour is dedicated to Mars photos only, not shared with other APIs!
-
-Perfect for:
-- Learning and experimentation
-- Personal projects
-- Small applications
-- Educational use
-
-### Pro Tier ($20/month)
-
-Upgrade at [marsvista.dev/pricing](https://marsvista.dev/pricing):
+The Mars Vista API is free for all users with generous rate limits:
 
 - **10,000 requests per hour** (166 per minute sustained)
 - **100,000 requests per day**
-- **25 concurrent requests**
-- **Usage analytics dashboard**
-- **Priority support**
+- **50 concurrent requests**
 
-**10x better than NASA's API Gateway**
+**10x better than NASA's API Gateway** (which offers 1,000 req/hour shared across all 16 APIs)
 
-Perfect for:
+**Advantage over NASA:** Our limits are dedicated to Mars photos only, not shared with other APIs!
+
+These generous limits are suitable for:
+- Learning and experimentation
+- Personal projects and portfolios
 - Production applications
-- Growing startups
 - Research projects
 - Commercial use
 - High-traffic websites
+- Educational use
 
 ## Rate Limit Headers
 
@@ -164,21 +146,23 @@ Every API response includes rate limit information in the headers:
 
 ```http
 HTTP/1.1 200 OK
-X-RateLimit-Limit: 1000
-X-RateLimit-Remaining: 987
-X-RateLimit-Reset: 1731859200
-X-RateLimit-Tier: free
-X-RateLimit-Upgrade-Url: https://marsvista.dev/pricing
+X-RateLimit-Limit-Hour: 10000
+X-RateLimit-Remaining-Hour: 9876
+X-RateLimit-Reset-Hour: 1731859200
+X-RateLimit-Limit-Day: 100000
+X-RateLimit-Remaining-Day: 98765
+X-RateLimit-Reset-Day: 1731945600
 Content-Type: application/json
 ```
 
 **Header Descriptions:**
 
-- `X-RateLimit-Limit` - Maximum requests allowed in current window (hour)
-- `X-RateLimit-Remaining` - Requests remaining in current window
-- `X-RateLimit-Reset` - Unix timestamp when the limit resets
-- `X-RateLimit-Tier` - Your current tier (`free` or `pro`)
-- `X-RateLimit-Upgrade-Url` - URL to upgrade your tier
+- `X-RateLimit-Limit-Hour` - Maximum requests allowed per hour (10,000)
+- `X-RateLimit-Remaining-Hour` - Requests remaining in current hour
+- `X-RateLimit-Reset-Hour` - Unix timestamp when the hourly limit resets
+- `X-RateLimit-Limit-Day` - Maximum requests allowed per day (100,000)
+- `X-RateLimit-Remaining-Day` - Requests remaining in current day
+- `X-RateLimit-Reset-Day` - Unix timestamp when the daily limit resets
 
 ### Checking Rate Limits in Code
 
@@ -239,24 +223,26 @@ If your API key is compromised or you want to rotate it:
 
 ### 429 Too Many Requests - Rate Limit Exceeded
 
-**Cause:** You've exceeded your tier's rate limits.
+**Cause:** You've exceeded the rate limits.
 
 **Response:**
 ```json
 {
-  "error": "Rate limit exceeded",
-  "message": "You have exceeded the 60 requests per hour limit for the free tier.",
-  "tier": "free",
-  "limit": 60,
-  "resetAt": "2025-11-18T15:00:00Z",
-  "upgradeUrl": "https://marsvista.dev/pricing"
+  "error": "Too Many Requests",
+  "message": "Rate limit exceeded. Limits: 10000 requests/hour, 100000 requests/day.",
+  "hourlyLimit": 10000,
+  "hourlyRemaining": 0,
+  "dailyLimit": 100000,
+  "dailyRemaining": 45678,
+  "hourlyResetAt": "2025-11-18T15:00:00Z",
+  "dailyResetAt": "2025-11-19T00:00:00Z"
 }
 ```
 
 **Solutions:**
-1. **Wait:** Rate limits reset every hour
+1. **Wait:** Rate limits reset every hour (or at midnight for daily limits)
 2. **Optimize:** Reduce unnecessary requests, implement caching
-3. **Upgrade:** Switch to Pro or Enterprise tier
+3. **Use pagination:** Request only what you need with `per_page` parameter
 
 ### Best Practices for Avoiding Rate Limits
 
@@ -447,7 +433,7 @@ Need help with authentication?
 
 - **Documentation:** [docs/API_ENDPOINTS.md](API_ENDPOINTS.md)
 - **Dashboard:** [marsvista.dev/dashboard](https://marsvista.dev/dashboard)
-- **Pricing:** [marsvista.dev/pricing](https://marsvista.dev/pricing)
+- **API Docs:** [marsvista.dev/docs](https://marsvista.dev/docs)
 
 ## Summary
 
@@ -455,6 +441,6 @@ Need help with authentication?
 2. **Generate API key** from dashboard
 3. **Include key** in `X-API-Key` header for all requests
 4. **Monitor usage** via rate limit headers
-5. **Upgrade tier** if needed at marsvista.dev/pricing
+5. **Start exploring** - you have 10,000 requests per hour!
 
 Happy exploring Mars! 🚀
