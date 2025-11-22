@@ -91,20 +91,38 @@ public class PanoramaService : IPanoramaService
             }
         }
 
-        // Get all candidate photos ordered by time
-        // Include navigation properties for in-memory processing
-        var photos = await query
-            .Include(p => p.Rover)
-            .Include(p => p.Camera)
-            .OrderBy(p => p.RoverId)
-            .ThenBy(p => p.Sol)
-            .ThenBy(p => p.Site)
-            .ThenBy(p => p.Drive)
-            .ThenBy(p => p.SpacecraftClock)
+        // OPTIMIZATION: Process panoramas in batches by sol to avoid loading all photos into memory
+        // Get distinct sols that have potential panorama photos
+        var sols = await query
+            .Select(p => p.Sol)
+            .Distinct()
+            .OrderBy(s => s)
             .ToListAsync(cancellationToken);
 
-        // Detect panorama sequences
-        var panoramas = DetectPanoramas(photos, minPhotos ?? MinPhotosForPanorama);
+        var allPanoramas = new List<PanoramaSequence>();
+        var panoramaIndex = 0;
+
+        // Process each sol independently to limit memory usage
+        foreach (var sol in sols)
+        {
+            var solPhotos = await query
+                .Where(p => p.Sol == sol)
+                .Include(p => p.Rover)
+                .Include(p => p.Camera)
+                .AsNoTracking() // Don't track entities for read-only operations
+                .OrderBy(p => p.RoverId)
+                .ThenBy(p => p.Site)
+                .ThenBy(p => p.Drive)
+                .ThenBy(p => p.SpacecraftClock)
+                .ToListAsync(cancellationToken);
+
+            // Detect panoramas for this sol
+            var solPanoramas = DetectPanoramasOptimized(solPhotos, minPhotos ?? MinPhotosForPanorama, ref panoramaIndex);
+            allPanoramas.AddRange(solPanoramas);
+        }
+
+        // Use the detected panoramas
+        var panoramas = allPanoramas;
 
         // Apply pagination
         var totalCount = panoramas.Count;
@@ -174,12 +192,11 @@ public class PanoramaService : IPanoramaService
     }
 
     /// <summary>
-    /// Detect panorama sequences from a list of photos
+    /// Optimized panorama detection that processes sol batches
     /// </summary>
-    private List<PanoramaSequence> DetectPanoramas(List<Entities.Photo> photos, int minPhotos)
+    private List<PanoramaSequence> DetectPanoramasOptimized(List<Entities.Photo> photos, int minPhotos, ref int panoramaIndex)
     {
         var panoramas = new List<PanoramaSequence>();
-        var panoramaIndex = 0;
 
         // Group by rover, sol, site, drive, and camera
         // Use IDs for grouping to avoid navigation property issues
@@ -259,6 +276,15 @@ public class PanoramaService : IPanoramaService
         }
 
         return panoramas;
+    }
+
+    /// <summary>
+    /// Detect panorama sequences from a list of photos (legacy method for single sol)
+    /// </summary>
+    private List<PanoramaSequence> DetectPanoramas(List<Entities.Photo> photos, int minPhotos)
+    {
+        var panoramaIndex = 0;
+        return DetectPanoramasOptimized(photos, minPhotos, ref panoramaIndex);
     }
 
     /// <summary>
