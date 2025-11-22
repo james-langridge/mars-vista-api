@@ -110,6 +110,29 @@ public static class MarsTimeHelper
     }
 
     /// <summary>
+    /// Extract hour component from Mars timestamp for database indexing
+    /// </summary>
+    /// <param name="marsTimestamp">Full Mars timestamp (e.g., "Sol-01646M15:18:15.866")</param>
+    /// <returns>Hour (0-23) or null if parsing fails</returns>
+    public static int? ExtractHour(string? marsTimestamp)
+    {
+        if (TryExtractTimeFromTimestamp(marsTimestamp, out var time))
+            return time.Hours;
+        return null;
+    }
+
+    /// <summary>
+    /// Check if an hour value indicates golden hour
+    /// Golden hour: 05:30-07:30 (hours 5-7) and 17:30-19:30 (hours 17-19)
+    /// </summary>
+    /// <param name="hour">Hour value (0-23)</param>
+    /// <returns>True if hour could contain golden hour photos</returns>
+    public static bool IsGoldenHourRange(int hour)
+    {
+        return hour >= 5 && hour <= 7 || hour >= 17 && hour <= 19;
+    }
+
+    /// <summary>
     /// Determine lighting conditions based on Mars local time
     /// </summary>
     /// <param name="marsTime">Mars local time</param>

@@ -306,6 +306,7 @@ public class SpiritScraper : IScraperService
             EarthDate = row.StartTime?.Date,
             DateTakenUtc = row.StartTime ?? DateTime.UtcNow,  // Fallback if null (shouldn't happen)
             DateTakenMars = row.LocalTrueSolarTime ?? "",
+            MarsTimeHour = Helpers.MarsTimeHelper.ExtractHour(row.LocalTrueSolarTime),
             DateReceived = row.EarthReceivedStart,
 
             // Image URLs (only browse JPG available for MER)

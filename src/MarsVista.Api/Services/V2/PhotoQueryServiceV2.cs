@@ -26,65 +26,29 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
         PhotoQueryParameters parameters,
         CancellationToken cancellationToken = default)
     {
-        // Check if Mars time filtering is used (requires client-side evaluation)
-        var usesMarsTimeFilter = parameters.MarsTimeMinParsed.HasValue ||
-                                 parameters.MarsTimeMaxParsed.HasValue ||
-                                 parameters.MarsTimeGoldenHour == true;
+        // Build query with ALL filters (including Mars time) at the database level
+        var query = BuildQuery(parameters);
 
-        List<Photo> photos;
-        int totalCount;
+        // Get total count for pagination metadata
+        var totalCount = await query.CountAsync(cancellationToken);
 
-        if (usesMarsTimeFilter)
+        // Apply sorting
+        query = ApplySorting(query, parameters);
+
+        // Apply pagination
+        var skip = (parameters.PageNumber - 1) * parameters.PageSize;
+        var paginatedQuery = query.Skip(skip).Take(parameters.PageSize);
+
+        // Eager load related entities if needed
+        if (parameters.IncludeList.Contains("rover") || parameters.IncludeList.Contains("camera"))
         {
-            // Mars time filtering requires client-side evaluation
-            // Build query WITHOUT Mars time filters
-            var query = BuildQueryWithoutMarsTime(parameters);
-
-            // Eager load related entities
-            if (parameters.IncludeList.Contains("rover") || parameters.IncludeList.Contains("camera"))
-            {
-                query = query.Include(p => p.Rover).Include(p => p.Camera);
-            }
-
-            // Materialize to memory and apply Mars time filtering
-            var allPhotos = await query.ToListAsync(cancellationToken);
-            var filtered = ApplyMarsTimeFiltering(allPhotos, parameters);
-
-            totalCount = filtered.Count;
-
-            // Apply sorting in memory
-            filtered = ApplySortingInMemory(filtered, parameters);
-
-            // Apply pagination in memory
-            var skip = (parameters.PageNumber - 1) * parameters.PageSize;
-            photos = filtered.Skip(skip).Take(parameters.PageSize).ToList();
+            paginatedQuery = paginatedQuery
+                .Include(p => p.Rover)
+                .Include(p => p.Camera);
         }
-        else
-        {
-            // Standard EF query path (no client-side evaluation needed)
-            var query = BuildQuery(parameters);
 
-            // Get total count for pagination metadata
-            totalCount = await query.CountAsync(cancellationToken);
-
-            // Apply sorting
-            query = ApplySorting(query, parameters);
-
-            // Apply pagination
-            var skip = (parameters.PageNumber - 1) * parameters.PageSize;
-            var paginatedQuery = query.Skip(skip).Take(parameters.PageSize);
-
-            // Eager load related entities if needed
-            if (parameters.IncludeList.Contains("rover") || parameters.IncludeList.Contains("camera"))
-            {
-                paginatedQuery = paginatedQuery
-                    .Include(p => p.Rover)
-                    .Include(p => p.Camera);
-            }
-
-            // Execute query
-            photos = await paginatedQuery.ToListAsync(cancellationToken);
-        }
+        // Execute query (everything happens in database now!)
+        var photos = await paginatedQuery.ToListAsync(cancellationToken);
 
         // Map to DTOs
         var photoDtos = photos.Select(p => MapToPhotoResource(p, parameters)).ToList();
@@ -329,8 +293,29 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
             query = query.Where(p => p.EarthDate <= parameters.DateMaxParsed.Value);
         }
 
-        // Note: Mars time filtering moved to ApplyMarsTimeFiltering() to avoid AsEnumerable/AsQueryable issues
-        // This is handled separately in QueryPhotosAsync() when usesMarsTimeFilter is true
+        // Mars time filtering (database-level using indexed mars_time_hour column)
+        if (parameters.MarsTimeGoldenHour == true)
+        {
+            // Golden hour: hours 5-7 (morning) and 17-19 (evening)
+            query = query.Where(p => p.MarsTimeHour.HasValue &&
+                (p.MarsTimeHour.Value >= 5 && p.MarsTimeHour.Value <= 7 ||
+                 p.MarsTimeHour.Value >= 17 && p.MarsTimeHour.Value <= 19));
+        }
+        else if (parameters.MarsTimeMinParsed.HasValue || parameters.MarsTimeMaxParsed.HasValue)
+        {
+            // Range-based Mars time filtering by hour
+            if (parameters.MarsTimeMinParsed.HasValue)
+            {
+                var minHour = parameters.MarsTimeMinParsed.Value.Hours;
+                query = query.Where(p => p.MarsTimeHour.HasValue && p.MarsTimeHour.Value >= minHour);
+            }
+
+            if (parameters.MarsTimeMaxParsed.HasValue)
+            {
+                var maxHour = parameters.MarsTimeMaxParsed.Value.Hours;
+                query = query.Where(p => p.MarsTimeHour.HasValue && p.MarsTimeHour.Value <= maxHour);
+            }
+        }
 
         // Filter by location - site/drive ranges
         if (parameters.SiteMin.HasValue)

@@ -13,6 +13,7 @@ public class Photo : ITimestamped
     public DateTime? EarthDate { get; set; }
     public DateTime DateTakenUtc { get; set; }
     public string? DateTakenMars { get; set; }  // "Sol-01646M15:18:15.866"
+    public int? MarsTimeHour { get; set; }  // Extracted hour (0-23) for efficient golden hour queries
 
     // Image URLs (NASA provides multiple sizes)
     public string ImgSrcSmall { get; set; } = string.Empty;   // 320px wide (for thumbnails)

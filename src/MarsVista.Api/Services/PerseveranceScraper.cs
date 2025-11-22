@@ -178,6 +178,7 @@ public class PerseveranceScraper : IScraperService
                 EarthDate = earthDate,
                 DateTakenUtc = dateTakenUtc,
                 DateTakenMars = dateTakenMars,
+                MarsTimeHour = Helpers.MarsTimeHelper.ExtractHour(dateTakenMars),
                 DateReceived = TryGetDateTime(imageElement, "date_received"),
 
                 // Image URLs
