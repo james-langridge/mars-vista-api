@@ -671,41 +671,6 @@ curl -H "X-API-Key: your_key" \\
           </div>
         </section>
 
-        {/* Why Mars Vista */}
-        <section className="mb-16">
-          <h2 className="text-3xl font-bold mb-6 text-slate-900">Why Mars Vista API?</h2>
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="flex items-start gap-3">
-              <span className="text-orange-500 text-2xl">✓</span>
-              <div>
-                <h4 className="font-semibold text-slate-900">20x More Queryable Data</h4>
-                <p className="text-slate-600">NASA's API exposes 5% of available fields. We provide access to 100% of the data including Mars time, locations, camera angles, and telemetry.</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <span className="text-orange-500 text-2xl">✓</span>
-              <div>
-                <h4 className="font-semibold text-slate-900">Features Never Before Available</h4>
-                <p className="text-slate-600">Query by Mars sunrise time, track rover journeys, detect panoramas, and explore locations - impossible with the original API.</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <span className="text-orange-500 text-2xl">✓</span>
-              <div>
-                <h4 className="font-semibold text-slate-900">Performance Optimized</h4>
-                <p className="text-slate-600">HTTP caching, multiple image sizes, field selection, and efficient pagination reduce bandwidth by 60%+.</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <span className="text-orange-500 text-2xl">✓</span>
-              <div>
-                <h4 className="font-semibold text-slate-900">Modern API Design</h4>
-                <p className="text-slate-600">Follows REST best practices with consistent responses, helpful errors, and comprehensive documentation.</p>
-              </div>
-            </div>
-          </div>
-        </section>
-
       </div>
     </div>
   );

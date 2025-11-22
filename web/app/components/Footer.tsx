@@ -19,11 +19,6 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/pricing" className="text-gray-400 hover:text-white transition-colors">
-                  Pricing
-                </Link>
-              </li>
-              <li>
                 <a
                   href="https://status.marsvista.dev"
                   target="_blank"
