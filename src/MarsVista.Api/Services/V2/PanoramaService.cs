@@ -52,9 +52,13 @@ public class PanoramaService : IPanoramaService
         if (!string.IsNullOrWhiteSpace(rovers))
         {
             var roverList = rovers.Split(',')
-                .Select(r => r.Trim().ToLowerInvariant())
+                .Select(r => r.Trim())
+                .Where(r => !string.IsNullOrWhiteSpace(r))
                 .ToList();
-            query = query.Where(p => roverList.Contains(p.Rover.Name.ToLower()));
+
+            // Use case-insensitive comparison via ILIKE (PostgreSQL)
+            // EF Core will auto-join to Rover table for this filter
+            query = query.Where(p => roverList.Any(r => EF.Functions.ILike(p.Rover.Name, r)));
         }
 
         if (solMin.HasValue)
@@ -68,10 +72,11 @@ public class PanoramaService : IPanoramaService
         }
 
         // Get all candidate photos ordered by time
+        // Include navigation properties for in-memory processing
         var photos = await query
             .Include(p => p.Rover)
             .Include(p => p.Camera)
-            .OrderBy(p => p.Rover.Name)
+            .OrderBy(p => p.RoverId)
             .ThenBy(p => p.Sol)
             .ThenBy(p => p.Site)
             .ThenBy(p => p.Drive)
@@ -155,15 +160,16 @@ public class PanoramaService : IPanoramaService
     {
         var panoramas = new List<PanoramaSequence>();
 
-        // Group by rover, sol, site, and drive
+        // Group by rover, sol, site, drive, and camera
+        // Use IDs for grouping to avoid navigation property issues
         var groups = photos
             .GroupBy(p => new
             {
-                Rover = p.Rover.Name,
+                p.RoverId,
                 p.Sol,
                 Site = p.Site ?? 0,
                 Drive = p.Drive ?? 0,
-                Camera = p.Camera.Name
+                p.CameraId
             })
             .Where(g => g.Count() >= minPhotos);
 

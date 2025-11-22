@@ -4,6 +4,7 @@ using System.Text.Json;
 using MarsVista.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MarsVista.Api.Migrations
 {
     [DbContext(typeof(MarsVistaDbContext))]
-    partial class MarsVistaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251122000613_MakeDateTakenMarsNullable")]
+    partial class MakeDateTakenMarsNullable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

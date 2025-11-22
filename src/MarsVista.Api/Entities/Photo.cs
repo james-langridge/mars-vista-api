@@ -12,7 +12,7 @@ public class Photo : ITimestamped
     public int Sol { get; set; }
     public DateTime? EarthDate { get; set; }
     public DateTime DateTakenUtc { get; set; }
-    public string DateTakenMars { get; set; } = string.Empty;  // "Sol-01646M15:18:15.866"
+    public string? DateTakenMars { get; set; }  // "Sol-01646M15:18:15.866"
 
     // Image URLs (NASA provides multiple sizes)
     public string ImgSrcSmall { get; set; } = string.Empty;   // 320px wide (for thumbnails)
