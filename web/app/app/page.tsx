@@ -59,7 +59,7 @@ async function getStatistics(): Promise<DatabaseStatistics | null> {
 async function getLatestPhotos(): Promise<Photo[]> {
   try {
     const res = await fetch(
-      'https://api.marsvista.dev/api/v1/rovers/perseverance/latest?per_page=10&format=camelCase',
+      'https://api.marsvista.dev/api/v1/rovers/perseverance/latest?per_page=12&format=camelCase',
       {
         headers: {
           'X-API-Key': process.env.MARSVISTA_API_KEY || '',
