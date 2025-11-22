@@ -1,0 +1,1598 @@
+[
+  {
+    "test_number": 1,
+    "category": "basic",
+    "method": "GET",
+    "path": "/health",
+    "description": "Health check (no auth)",
+    "http_code": 200,
+    "time_seconds": 0.338002,
+    "success": true,
+    "timestamp": "2025-11-22T09:05:47-08:00"
+  }
+,
+  {
+    "test_number": 2,
+    "category": "basic",
+    "method": "GET",
+    "path": "/api/v2",
+    "description": "API discovery",
+    "http_code": 200,
+    "time_seconds": 0.274357,
+    "success": true,
+    "timestamp": "2025-11-22T09:05:48-08:00"
+  }
+,
+  {
+    "test_number": 3,
+    "category": "basic",
+    "method": "GET",
+    "path": "/api/v1/rovers",
+    "description": "Get all rovers (v1)",
+    "http_code": 200,
+    "time_seconds": 0.519002,
+    "success": true,
+    "timestamp": "2025-11-22T09:05:48-08:00"
+  }
+,
+  {
+    "test_number": 4,
+    "category": "basic",
+    "method": "GET",
+    "path": "/api/v1/rovers?format=camelCase",
+    "description": "Get all rovers (v1 camelCase)",
+    "http_code": 200,
+    "time_seconds": 0.296945,
+    "success": true,
+    "timestamp": "2025-11-22T09:05:48-08:00"
+  }
+,
+  {
+    "test_number": 5,
+    "category": "basic",
+    "method": "GET",
+    "path": "/api/v2/rovers",
+    "description": "Get all rovers (v2)",
+    "http_code": 200,
+    "time_seconds": 0.364831,
+    "success": true,
+    "timestamp": "2025-11-22T09:05:49-08:00"
+  }
+,
+  {
+    "test_number": 6,
+    "category": "basic",
+    "method": "GET",
+    "path": "/api/v1/rovers/curiosity",
+    "description": "Get Curiosity (v1)",
+    "http_code": 200,
+    "time_seconds": 0.321713,
+    "success": true,
+    "timestamp": "2025-11-22T09:05:49-08:00"
+  }
+,
+  {
+    "test_number": 7,
+    "category": "basic",
+    "method": "GET",
+    "path": "/api/v1/rovers/perseverance",
+    "description": "Get Perseverance (v1)",
+    "http_code": 200,
+    "time_seconds": 0.351508,
+    "success": true,
+    "timestamp": "2025-11-22T09:05:50-08:00"
+  }
+,
+  {
+    "test_number": 8,
+    "category": "basic",
+    "method": "GET",
+    "path": "/api/v2/rovers/curiosity",
+    "description": "Get Curiosity (v2)",
+    "http_code": 200,
+    "time_seconds": 0.316927,
+    "success": true,
+    "timestamp": "2025-11-22T09:05:50-08:00"
+  }
+,
+  {
+    "test_number": 9,
+    "category": "basic",
+    "method": "GET",
+    "path": "/api/v2/rovers/perseverance",
+    "description": "Get Perseverance (v2)",
+    "http_code": 200,
+    "time_seconds": 0.215986,
+    "success": true,
+    "timestamp": "2025-11-22T09:05:50-08:00"
+  }
+,
+  {
+    "test_number": 10,
+    "category": "basic",
+    "method": "GET",
+    "path": "/api/v1/manifests/curiosity",
+    "description": "Curiosity manifest (v1)",
+    "http_code": 200,
+    "time_seconds": 0.980537,
+    "success": true,
+    "timestamp": "2025-11-22T09:05:51-08:00"
+  }
+,
+  {
+    "test_number": 11,
+    "category": "basic",
+    "method": "GET",
+    "path": "/api/v2/rovers/curiosity/manifest",
+    "description": "Curiosity manifest (v2)",
+    "http_code": 200,
+    "time_seconds": 1.213998,
+    "success": true,
+    "timestamp": "2025-11-22T09:05:53-08:00"
+  }
+,
+  {
+    "test_number": 12,
+    "category": "basic",
+    "method": "GET",
+    "path": "/api/v2/rovers/curiosity/cameras",
+    "description": "Curiosity cameras",
+    "http_code": 200,
+    "time_seconds": 0.380729,
+    "success": true,
+    "timestamp": "2025-11-22T09:05:53-08:00"
+  }
+,
+  {
+    "test_number": 13,
+    "category": "basic",
+    "method": "GET",
+    "path": "/api/v2/rovers/perseverance/cameras",
+    "description": "Perseverance cameras",
+    "http_code": 200,
+    "time_seconds": 0.319284,
+    "success": true,
+    "timestamp": "2025-11-22T09:05:54-08:00"
+  }
+,
+  {
+    "test_number": 14,
+    "category": "v1_photos",
+    "method": "GET",
+    "path": "/api/v1/rovers/curiosity/photos?sol=0",
+    "description": "Curiosity sol 0",
+    "http_code": 200,
+    "time_seconds": 0.372834,
+    "success": true,
+    "timestamp": "2025-11-22T09:05:54-08:00"
+  }
+,
+  {
+    "test_number": 15,
+    "category": "v1_photos",
+    "method": "GET",
+    "path": "/api/v1/rovers/curiosity/photos?sol=1",
+    "description": "Curiosity sol 1",
+    "http_code": 200,
+    "time_seconds": 0.270928,
+    "success": true,
+    "timestamp": "2025-11-22T09:05:54-08:00"
+  }
+,
+  {
+    "test_number": 16,
+    "category": "v1_photos",
+    "method": "GET",
+    "path": "/api/v1/rovers/curiosity/photos?sol=1000",
+    "description": "Curiosity sol 1000",
+    "http_code": 200,
+    "time_seconds": 0.211321,
+    "success": true,
+    "timestamp": "2025-11-22T09:05:55-08:00"
+  }
+,
+  {
+    "test_number": 17,
+    "category": "v1_photos",
+    "method": "GET",
+    "path": "/api/v1/rovers/perseverance/photos?sol=0",
+    "description": "Perseverance sol 0",
+    "http_code": 200,
+    "time_seconds": 0.324471,
+    "success": true,
+    "timestamp": "2025-11-22T09:05:55-08:00"
+  }
+,
+  {
+    "test_number": 18,
+    "category": "v1_photos",
+    "method": "GET",
+    "path": "/api/v1/rovers/perseverance/photos?sol=500",
+    "description": "Perseverance sol 500",
+    "http_code": 200,
+    "time_seconds": 0.211789,
+    "success": true,
+    "timestamp": "2025-11-22T09:05:55-08:00"
+  }
+,
+  {
+    "test_number": 19,
+    "category": "v1_photos",
+    "method": "GET",
+    "path": "/api/v1/rovers/curiosity/photos?earth_date=2012-08-06",
+    "description": "Curiosity landing day",
+    "http_code": 200,
+    "time_seconds": 44.034280,
+    "success": true,
+    "timestamp": "2025-11-22T09:06:39-08:00"
+  }
+,
+  {
+    "test_number": 20,
+    "category": "v1_photos",
+    "method": "GET",
+    "path": "/api/v1/rovers/curiosity/photos?earth_date=2024-11-20",
+    "description": "Curiosity recent date",
+    "http_code": 200,
+    "time_seconds": 2.286209,
+    "success": true,
+    "timestamp": "2025-11-22T09:06:42-08:00"
+  }
+,
+  {
+    "test_number": 21,
+    "category": "v1_photos",
+    "method": "GET",
+    "path": "/api/v1/rovers/perseverance/photos?earth_date=2021-02-18",
+    "description": "Perseverance landing day",
+    "http_code": 200,
+    "time_seconds": 1.248380,
+    "success": true,
+    "timestamp": "2025-11-22T09:06:43-08:00"
+  }
+,
+  {
+    "test_number": 22,
+    "category": "v1_photos",
+    "method": "GET",
+    "path": "/api/v1/rovers/curiosity/photos?sol=1000&camera=MAST",
+    "description": "Curiosity MAST camera",
+    "http_code": 200,
+    "time_seconds": 0.237586,
+    "success": true,
+    "timestamp": "2025-11-22T09:06:43-08:00"
+  }
+,
+  {
+    "test_number": 23,
+    "category": "v1_photos",
+    "method": "GET",
+    "path": "/api/v1/rovers/curiosity/photos?sol=1000&camera=NAVCAM",
+    "description": "Curiosity NAVCAM camera",
+    "http_code": 200,
+    "time_seconds": 0.173943,
+    "success": true,
+    "timestamp": "2025-11-22T09:06:43-08:00"
+  }
+,
+  {
+    "test_number": 24,
+    "category": "v1_photos",
+    "method": "GET",
+    "path": "/api/v1/rovers/perseverance/photos?sol=500&camera=MCZ_LEFT",
+    "description": "Perseverance MCZ_LEFT camera",
+    "http_code": 200,
+    "time_seconds": 0.253663,
+    "success": true,
+    "timestamp": "2025-11-22T09:06:44-08:00"
+  }
+,
+  {
+    "test_number": 25,
+    "category": "v1_photos",
+    "method": "GET",
+    "path": "/api/v1/rovers/curiosity/photos?sol=0&page=1&per_page=10",
+    "description": "Pagination 10 per page",
+    "http_code": 200,
+    "time_seconds": 0.326965,
+    "success": true,
+    "timestamp": "2025-11-22T09:06:44-08:00"
+  }
+,
+  {
+    "test_number": 26,
+    "category": "v1_photos",
+    "method": "GET",
+    "path": "/api/v1/rovers/curiosity/photos?sol=0&page=1&per_page=50",
+    "description": "Pagination 50 per page",
+    "http_code": 200,
+    "time_seconds": 0.216337,
+    "success": true,
+    "timestamp": "2025-11-22T09:06:44-08:00"
+  }
+,
+  {
+    "test_number": 27,
+    "category": "v1_photos",
+    "method": "GET",
+    "path": "/api/v1/rovers/curiosity/photos?sol=0&page=1&per_page=100",
+    "description": "Pagination 100 per page",
+    "http_code": 200,
+    "time_seconds": 0.208182,
+    "success": true,
+    "timestamp": "2025-11-22T09:06:45-08:00"
+  }
+,
+  {
+    "test_number": 28,
+    "category": "v1_photos",
+    "method": "GET",
+    "path": "/api/v1/rovers/curiosity/latest",
+    "description": "Latest photos",
+    "http_code": 200,
+    "time_seconds": 0.291534,
+    "success": true,
+    "timestamp": "2025-11-22T09:06:45-08:00"
+  }
+,
+  {
+    "test_number": 29,
+    "category": "v1_photos",
+    "method": "GET",
+    "path": "/api/v1/rovers/curiosity/latest?per_page=10",
+    "description": "Latest photos (10)",
+    "http_code": 200,
+    "time_seconds": 0.252536,
+    "success": true,
+    "timestamp": "2025-11-22T09:06:45-08:00"
+  }
+,
+  {
+    "test_number": 30,
+    "category": "v1_photos",
+    "method": "GET",
+    "path": "/api/v1/photos/451991",
+    "description": "Photo by ID (v1)",
+    "http_code": 200,
+    "time_seconds": 0.155551,
+    "success": true,
+    "timestamp": "2025-11-22T09:06:45-08:00"
+  }
+,
+  {
+    "test_number": 31,
+    "category": "v1_photos",
+    "method": "GET",
+    "path": "/api/v2/photos/451991",
+    "description": "Photo by ID (v2)",
+    "http_code": 200,
+    "time_seconds": 0.304234,
+    "success": true,
+    "timestamp": "2025-11-22T09:06:46-08:00"
+  }
+,
+  {
+    "test_number": 32,
+    "category": "v2_basic",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity",
+    "description": "Single rover: Curiosity",
+    "http_code": 200,
+    "time_seconds": 0.490062,
+    "success": true,
+    "timestamp": "2025-11-22T09:06:46-08:00"
+  }
+,
+  {
+    "test_number": 33,
+    "category": "v2_basic",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=perseverance",
+    "description": "Single rover: Perseverance",
+    "http_code": 200,
+    "time_seconds": 0.377034,
+    "success": true,
+    "timestamp": "2025-11-22T09:06:47-08:00"
+  }
+,
+  {
+    "test_number": 34,
+    "category": "v2_basic",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity,perseverance",
+    "description": "Multiple rovers",
+    "http_code": 200,
+    "time_seconds": 0.323169,
+    "success": true,
+    "timestamp": "2025-11-22T09:06:47-08:00"
+  }
+,
+  {
+    "test_number": 35,
+    "category": "v2_basic",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&sol=1000",
+    "description": "Exact sol (shorthand)",
+    "http_code": 200,
+    "time_seconds": 0.186974,
+    "success": true,
+    "timestamp": "2025-11-22T09:06:47-08:00"
+  }
+,
+  {
+    "test_number": 36,
+    "category": "v2_basic",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&sol_min=1000&sol_max=1100",
+    "description": "Sol range",
+    "http_code": 200,
+    "time_seconds": 5.094059,
+    "success": true,
+    "timestamp": "2025-11-22T09:06:52-08:00"
+  }
+,
+  {
+    "test_number": 37,
+    "category": "v2_basic",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&sol_min=4000",
+    "description": "Sol minimum only",
+    "http_code": 200,
+    "time_seconds": 0.479813,
+    "success": true,
+    "timestamp": "2025-11-22T09:06:53-08:00"
+  }
+,
+  {
+    "test_number": 38,
+    "category": "v2_basic",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&sol_max=100",
+    "description": "Sol maximum only",
+    "http_code": 200,
+    "time_seconds": 35.610815,
+    "success": true,
+    "timestamp": "2025-11-22T09:07:29-08:00"
+  }
+,
+  {
+    "test_number": 39,
+    "category": "v2_basic",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&earth_date=2012-08-06",
+    "description": "Exact earth date (shorthand)",
+    "http_code": 200,
+    "time_seconds": 0.204728,
+    "success": true,
+    "timestamp": "2025-11-22T09:07:29-08:00"
+  }
+,
+  {
+    "test_number": 40,
+    "category": "v2_basic",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&date_min=2023-01-01&date_max=2023-12-31",
+    "description": "Date range (2023)",
+    "http_code": 200,
+    "time_seconds": 0.512538,
+    "success": true,
+    "timestamp": "2025-11-22T09:07:29-08:00"
+  }
+,
+  {
+    "test_number": 41,
+    "category": "v2_basic",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&date_min=2024-01-01",
+    "description": "Date minimum only",
+    "http_code": 200,
+    "time_seconds": 0.203823,
+    "success": true,
+    "timestamp": "2025-11-22T09:07:30-08:00"
+  }
+,
+  {
+    "test_number": 42,
+    "category": "v2_basic",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&cameras=MAST",
+    "description": "Single camera",
+    "http_code": 200,
+    "time_seconds": 0.222085,
+    "success": true,
+    "timestamp": "2025-11-22T09:07:30-08:00"
+  }
+,
+  {
+    "test_number": 43,
+    "category": "v2_basic",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&cameras=MAST,NAVCAM",
+    "description": "Multiple cameras",
+    "http_code": 200,
+    "time_seconds": 0.224840,
+    "success": true,
+    "timestamp": "2025-11-22T09:07:30-08:00"
+  }
+,
+  {
+    "test_number": 44,
+    "category": "v2_basic",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=perseverance&cameras=MCZ_LEFT,MCZ_RIGHT",
+    "description": "Perseverance stereo cameras",
+    "http_code": 400,
+    "time_seconds": 0.162097,
+    "success": false,
+    "timestamp": "2025-11-22T09:07:30-08:00"
+  }
+,
+  {
+    "test_number": 45,
+    "category": "v2_basic",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&sort=earth_date",
+    "description": "Sort by date ascending",
+    "http_code": 200,
+    "time_seconds": 1.520798,
+    "success": true,
+    "timestamp": "2025-11-22T09:07:32-08:00"
+  }
+,
+  {
+    "test_number": 46,
+    "category": "v2_basic",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&sort=-earth_date",
+    "description": "Sort by date descending",
+    "http_code": 200,
+    "time_seconds": 0.284809,
+    "success": true,
+    "timestamp": "2025-11-22T09:07:32-08:00"
+  }
+,
+  {
+    "test_number": 47,
+    "category": "v2_basic",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&sort=-sol,camera",
+    "description": "Multi-field sort",
+    "http_code": 200,
+    "time_seconds": 0.392945,
+    "success": true,
+    "timestamp": "2025-11-22T09:07:33-08:00"
+  }
+,
+  {
+    "test_number": 48,
+    "category": "v2_basic",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&page=1&per_page=25",
+    "description": "Pagination (default)",
+    "http_code": 200,
+    "time_seconds": 0.220379,
+    "success": true,
+    "timestamp": "2025-11-22T09:07:33-08:00"
+  }
+,
+  {
+    "test_number": 49,
+    "category": "v2_basic",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&page=1&per_page=100",
+    "description": "Pagination (max)",
+    "http_code": 200,
+    "time_seconds": 0.474938,
+    "success": true,
+    "timestamp": "2025-11-22T09:07:34-08:00"
+  }
+,
+  {
+    "test_number": 50,
+    "category": "v2_mars_time",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&mars_time_min=M06:00:00",
+    "description": "Mars time minimum (morning)",
+    "http_code": 200,
+    "time_seconds": 0.994062,
+    "success": true,
+    "timestamp": "2025-11-22T09:07:35-08:00"
+  }
+,
+  {
+    "test_number": 51,
+    "category": "v2_mars_time",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&mars_time_max=M18:00:00",
+    "description": "Mars time maximum (evening)",
+    "http_code": 200,
+    "time_seconds": 0.739510,
+    "success": true,
+    "timestamp": "2025-11-22T09:07:35-08:00"
+  }
+,
+  {
+    "test_number": 52,
+    "category": "v2_mars_time",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&mars_time_min=M12:00:00&mars_time_max=M14:00:00",
+    "description": "Mars time midday range",
+    "http_code": 200,
+    "time_seconds": 0.456762,
+    "success": true,
+    "timestamp": "2025-11-22T09:07:36-08:00"
+  }
+,
+  {
+    "test_number": 53,
+    "category": "v2_mars_time",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&mars_time_golden_hour=true",
+    "description": "Golden hour (Curiosity)",
+    "http_code": 200,
+    "time_seconds": 0.415735,
+    "success": true,
+    "timestamp": "2025-11-22T09:07:36-08:00"
+  }
+,
+  {
+    "test_number": 54,
+    "category": "v2_mars_time",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=perseverance&mars_time_golden_hour=true",
+    "description": "Golden hour (Perseverance)",
+    "http_code": 200,
+    "time_seconds": 0.365797,
+    "success": true,
+    "timestamp": "2025-11-22T09:07:37-08:00"
+  }
+,
+  {
+    "test_number": 55,
+    "category": "v2_mars_time",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity,perseverance&mars_time_golden_hour=true",
+    "description": "Golden hour (multiple rovers)",
+    "http_code": 200,
+    "time_seconds": 0.426185,
+    "success": true,
+    "timestamp": "2025-11-22T09:07:37-08:00"
+  }
+,
+  {
+    "test_number": 56,
+    "category": "v2_mars_time",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&mars_time_golden_hour=true&cameras=MAST",
+    "description": "Golden hour + camera filter",
+    "http_code": 200,
+    "time_seconds": 0.204923,
+    "success": true,
+    "timestamp": "2025-11-22T09:07:38-08:00"
+  }
+,
+  {
+    "test_number": 57,
+    "category": "v2_mars_time",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&mars_time_golden_hour=true&sol_min=1000&sol_max=2000",
+    "description": "Golden hour + sol range",
+    "http_code": 200,
+    "time_seconds": 0.234804,
+    "success": true,
+    "timestamp": "2025-11-22T09:07:38-08:00"
+  }
+,
+  {
+    "test_number": 58,
+    "category": "v2_location",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&site=82&drive=2176",
+    "description": "Exact site+drive (busy location)",
+    "http_code": 200,
+    "time_seconds": 0.201902,
+    "success": true,
+    "timestamp": "2025-11-22T09:07:38-08:00"
+  }
+,
+  {
+    "test_number": 59,
+    "category": "v2_location",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&site=105&drive=418",
+    "description": "Exact site+drive (location 2)",
+    "http_code": 200,
+    "time_seconds": 0.191309,
+    "success": true,
+    "timestamp": "2025-11-22T09:07:38-08:00"
+  }
+,
+  {
+    "test_number": 60,
+    "category": "v2_location",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&site=82",
+    "description": "Site only",
+    "http_code": 200,
+    "time_seconds": 0.255733,
+    "success": true,
+    "timestamp": "2025-11-22T09:07:39-08:00"
+  }
+,
+  {
+    "test_number": 61,
+    "category": "v2_location",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&site_min=80&site_max=90",
+    "description": "Site range",
+    "http_code": 200,
+    "time_seconds": 0.443438,
+    "success": true,
+    "timestamp": "2025-11-22T09:07:39-08:00"
+  }
+,
+  {
+    "test_number": 62,
+    "category": "v2_location",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&drive_min=1000&drive_max=1500",
+    "description": "Drive range",
+    "http_code": 200,
+    "time_seconds": 0.572959,
+    "success": true,
+    "timestamp": "2025-11-22T09:07:40-08:00"
+  }
+,
+  {
+    "test_number": 63,
+    "category": "v2_location",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&site=82&drive=2176&location_radius=5",
+    "description": "Location proximity (radius 5)",
+    "http_code": 200,
+    "time_seconds": 0.225952,
+    "success": true,
+    "timestamp": "2025-11-22T09:07:40-08:00"
+  }
+,
+  {
+    "test_number": 64,
+    "category": "v2_location",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&site=82&drive=2176&location_radius=10",
+    "description": "Location proximity (radius 10)",
+    "http_code": 200,
+    "time_seconds": 0.203676,
+    "success": true,
+    "timestamp": "2025-11-22T09:07:40-08:00"
+  }
+,
+  {
+    "test_number": 65,
+    "category": "v2_location",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&site=82&drive=2176&location_radius=20",
+    "description": "Location proximity (radius 20)",
+    "http_code": 200,
+    "time_seconds": 0.451895,
+    "success": true,
+    "timestamp": "2025-11-22T09:07:41-08:00"
+  }
+,
+  {
+    "test_number": 66,
+    "category": "v2_location",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&site=82&drive=2176&cameras=NAVCAM",
+    "description": "Location + camera filter",
+    "http_code": 200,
+    "time_seconds": 0.486159,
+    "success": true,
+    "timestamp": "2025-11-22T09:07:41-08:00"
+  }
+,
+  {
+    "test_number": 67,
+    "category": "v2_image_quality",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&min_width=1024",
+    "description": "Min width 1024px",
+    "http_code": 200,
+    "time_seconds": 4.847320,
+    "success": true,
+    "timestamp": "2025-11-22T09:07:46-08:00"
+  }
+,
+  {
+    "test_number": 68,
+    "category": "v2_image_quality",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&min_width=1920",
+    "description": "Min width 1920px (HD)",
+    "http_code": 200,
+    "time_seconds": 3.233071,
+    "success": true,
+    "timestamp": "2025-11-22T09:07:49-08:00"
+  }
+,
+  {
+    "test_number": 69,
+    "category": "v2_image_quality",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&min_height=1080",
+    "description": "Min height 1080px",
+    "http_code": 200,
+    "time_seconds": 3.438860,
+    "success": true,
+    "timestamp": "2025-11-22T09:07:53-08:00"
+  }
+,
+  {
+    "test_number": 70,
+    "category": "v2_image_quality",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&min_width=1920&min_height=1080",
+    "description": "HD resolution (1920x1080)",
+    "http_code": 200,
+    "time_seconds": 3.296905,
+    "success": true,
+    "timestamp": "2025-11-22T09:07:56-08:00"
+  }
+,
+  {
+    "test_number": 71,
+    "category": "v2_image_quality",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&sample_type=Full",
+    "description": "Sample type: Full",
+    "http_code": 200,
+    "time_seconds": 3.456607,
+    "success": true,
+    "timestamp": "2025-11-22T09:08:00-08:00"
+  }
+,
+  {
+    "test_number": 72,
+    "category": "v2_image_quality",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&sample_type=Thumbnail",
+    "description": "Sample type: Thumbnail",
+    "http_code": 200,
+    "time_seconds": 1.853339,
+    "success": true,
+    "timestamp": "2025-11-22T09:08:02-08:00"
+  }
+,
+  {
+    "test_number": 73,
+    "category": "v2_image_quality",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&aspect_ratio=16:9",
+    "description": "Aspect ratio 16:9",
+    "http_code": 500,
+    "time_seconds": 0.434328,
+    "success": false,
+    "timestamp": "2025-11-22T09:08:02-08:00"
+  }
+,
+  {
+    "test_number": 74,
+    "category": "v2_image_quality",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&aspect_ratio=4:3",
+    "description": "Aspect ratio 4:3",
+    "http_code": 500,
+    "time_seconds": 0.196811,
+    "success": false,
+    "timestamp": "2025-11-22T09:08:02-08:00"
+  }
+,
+  {
+    "test_number": 75,
+    "category": "v2_image_quality",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&min_width=1920&aspect_ratio=16:9",
+    "description": "HD + 16:9 aspect ratio",
+    "http_code": 500,
+    "time_seconds": 0.201830,
+    "success": false,
+    "timestamp": "2025-11-22T09:08:03-08:00"
+  }
+,
+  {
+    "test_number": 76,
+    "category": "v2_angles",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&mast_elevation_min=0&mast_elevation_max=45",
+    "description": "Elevation: looking up (0-45°)",
+    "http_code": 200,
+    "time_seconds": 0.564699,
+    "success": true,
+    "timestamp": "2025-11-22T09:08:03-08:00"
+  }
+,
+  {
+    "test_number": 77,
+    "category": "v2_angles",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&mast_elevation_min=-45&mast_elevation_max=0",
+    "description": "Elevation: looking down (-45-0°)",
+    "http_code": 200,
+    "time_seconds": 0.859022,
+    "success": true,
+    "timestamp": "2025-11-22T09:08:04-08:00"
+  }
+,
+  {
+    "test_number": 78,
+    "category": "v2_angles",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&mast_elevation_min=-30&mast_elevation_max=30",
+    "description": "Elevation: horizon view (-30-30°)",
+    "http_code": 200,
+    "time_seconds": 0.667861,
+    "success": true,
+    "timestamp": "2025-11-22T09:08:05-08:00"
+  }
+,
+  {
+    "test_number": 79,
+    "category": "v2_angles",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&mast_azimuth_min=0&mast_azimuth_max=90",
+    "description": "Azimuth: north-east (0-90°)",
+    "http_code": 200,
+    "time_seconds": 0.590818,
+    "success": true,
+    "timestamp": "2025-11-22T09:08:05-08:00"
+  }
+,
+  {
+    "test_number": 80,
+    "category": "v2_angles",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&mast_azimuth_min=90&mast_azimuth_max=180",
+    "description": "Azimuth: east-south (90-180°)",
+    "http_code": 200,
+    "time_seconds": 0.565586,
+    "success": true,
+    "timestamp": "2025-11-22T09:08:06-08:00"
+  }
+,
+  {
+    "test_number": 81,
+    "category": "v2_angles",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&mast_elevation_min=0&mast_elevation_max=45&mast_azimuth_min=90&mast_azimuth_max=180",
+    "description": "Combined elevation + azimuth",
+    "http_code": 200,
+    "time_seconds": 0.397442,
+    "success": true,
+    "timestamp": "2025-11-22T09:08:07-08:00"
+  }
+,
+  {
+    "test_number": 82,
+    "category": "v2_angles",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&mast_elevation_min=0&cameras=MAST",
+    "description": "Elevation filter + MAST camera",
+    "http_code": 200,
+    "time_seconds": 1.036970,
+    "success": true,
+    "timestamp": "2025-11-22T09:08:08-08:00"
+  }
+,
+  {
+    "test_number": 83,
+    "category": "v2_fields",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&fields=id,img_src",
+    "description": "Sparse fields: id, img_src",
+    "http_code": 200,
+    "time_seconds": 0.291873,
+    "success": true,
+    "timestamp": "2025-11-22T09:08:08-08:00"
+  }
+,
+  {
+    "test_number": 84,
+    "category": "v2_fields",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&fields=id,img_src,sol,earth_date",
+    "description": "Sparse fields: basic set",
+    "http_code": 200,
+    "time_seconds": 0.238586,
+    "success": true,
+    "timestamp": "2025-11-22T09:08:08-08:00"
+  }
+,
+  {
+    "test_number": 85,
+    "category": "v2_fields",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&include=rover",
+    "description": "Include rover relationship",
+    "http_code": 200,
+    "time_seconds": 0.420811,
+    "success": true,
+    "timestamp": "2025-11-22T09:08:09-08:00"
+  }
+,
+  {
+    "test_number": 86,
+    "category": "v2_fields",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&include=camera",
+    "description": "Include camera relationship",
+    "http_code": 200,
+    "time_seconds": 0.356926,
+    "success": true,
+    "timestamp": "2025-11-22T09:08:09-08:00"
+  }
+,
+  {
+    "test_number": 87,
+    "category": "v2_fields",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&include=rover,camera",
+    "description": "Include both relationships",
+    "http_code": 200,
+    "time_seconds": 0.248317,
+    "success": true,
+    "timestamp": "2025-11-22T09:08:09-08:00"
+  }
+,
+  {
+    "test_number": 88,
+    "category": "v2_fields",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&field_set=minimal",
+    "description": "Field set: minimal",
+    "http_code": 200,
+    "time_seconds": 0.286376,
+    "success": true,
+    "timestamp": "2025-11-22T09:08:10-08:00"
+  }
+,
+  {
+    "test_number": 89,
+    "category": "v2_fields",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&field_set=standard",
+    "description": "Field set: standard",
+    "http_code": 200,
+    "time_seconds": 0.305667,
+    "success": true,
+    "timestamp": "2025-11-22T09:08:10-08:00"
+  }
+,
+  {
+    "test_number": 90,
+    "category": "v2_fields",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&field_set=extended",
+    "description": "Field set: extended",
+    "http_code": 200,
+    "time_seconds": 0.298539,
+    "success": true,
+    "timestamp": "2025-11-22T09:08:10-08:00"
+  }
+,
+  {
+    "test_number": 91,
+    "category": "v2_fields",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&field_set=scientific",
+    "description": "Field set: scientific",
+    "http_code": 200,
+    "time_seconds": 0.354346,
+    "success": true,
+    "timestamp": "2025-11-22T09:08:11-08:00"
+  }
+,
+  {
+    "test_number": 92,
+    "category": "v2_fields",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&field_set=complete",
+    "description": "Field set: complete",
+    "http_code": 200,
+    "time_seconds": 0.321279,
+    "success": true,
+    "timestamp": "2025-11-22T09:08:11-08:00"
+  }
+,
+  {
+    "test_number": 93,
+    "category": "v2_fields",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&image_sizes=small",
+    "description": "Image size: small only",
+    "http_code": 200,
+    "time_seconds": 0.473901,
+    "success": true,
+    "timestamp": "2025-11-22T09:08:12-08:00"
+  }
+,
+  {
+    "test_number": 94,
+    "category": "v2_fields",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&image_sizes=medium,large",
+    "description": "Image sizes: medium, large",
+    "http_code": 200,
+    "time_seconds": 0.510067,
+    "success": true,
+    "timestamp": "2025-11-22T09:08:12-08:00"
+  }
+,
+  {
+    "test_number": 95,
+    "category": "v2_fields",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&exclude_images=true",
+    "description": "Exclude images (metadata only)",
+    "http_code": 200,
+    "time_seconds": 0.503877,
+    "success": true,
+    "timestamp": "2025-11-22T09:08:13-08:00"
+  }
+,
+  {
+    "test_number": 96,
+    "category": "v2_combined",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&sol_min=1000&sol_max=1100&cameras=MAST,NAVCAM&mars_time_golden_hour=true",
+    "description": "Multi-filter: sol + cameras + golden hour",
+    "http_code": 200,
+    "time_seconds": 0.286596,
+    "success": true,
+    "timestamp": "2025-11-22T09:08:13-08:00"
+  }
+,
+  {
+    "test_number": 97,
+    "category": "v2_combined",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&site=82&drive=2176&location_radius=10&min_width=1920&min_height=1080",
+    "description": "Multi-filter: location + HD quality",
+    "http_code": 200,
+    "time_seconds": 0.245595,
+    "success": true,
+    "timestamp": "2025-11-22T09:08:13-08:00"
+  }
+,
+  {
+    "test_number": 98,
+    "category": "v2_combined",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&mars_time_min=M14:00:00&mars_time_max=M16:00:00&mast_elevation_min=0&mast_elevation_max=45&cameras=MAST",
+    "description": "Multi-filter: time + angle + camera",
+    "http_code": 200,
+    "time_seconds": 31.797340,
+    "success": true,
+    "timestamp": "2025-11-22T09:08:45-08:00"
+  }
+,
+  {
+    "test_number": 99,
+    "category": "v2_combined",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=perseverance&date_min=2024-01-01&cameras=MCZ_LEFT,MCZ_RIGHT&aspect_ratio=16:9&field_set=extended",
+    "description": "Multi-filter: date + cameras + quality + fields",
+    "http_code": 400,
+    "time_seconds": 0.241097,
+    "success": false,
+    "timestamp": "2025-11-22T09:08:46-08:00"
+  }
+,
+  {
+    "test_number": 100,
+    "category": "v2_combined",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&sol_min=1000&sol_max=2000&cameras=MAST&mast_elevation_min=0&mast_elevation_max=30&sample_type=Full&min_width=2048&field_set=scientific",
+    "description": "Complex scientific query (7 filters)",
+    "http_code": 200,
+    "time_seconds": 0.494722,
+    "success": true,
+    "timestamp": "2025-11-22T09:08:46-08:00"
+  }
+,
+  {
+    "test_number": 101,
+    "category": "v2_stats",
+    "method": "GET",
+    "path": "/api/v2/photos/stats?rovers=curiosity&group_by=camera",
+    "description": "Stats by camera (Curiosity)",
+    "http_code": 200,
+    "time_seconds": 0.558424,
+    "success": true,
+    "timestamp": "2025-11-22T09:08:47-08:00"
+  }
+,
+  {
+    "test_number": 102,
+    "category": "v2_stats",
+    "method": "GET",
+    "path": "/api/v2/photos/stats?rovers=perseverance&group_by=camera",
+    "description": "Stats by camera (Perseverance)",
+    "http_code": 200,
+    "time_seconds": 0.411461,
+    "success": true,
+    "timestamp": "2025-11-22T09:08:47-08:00"
+  }
+,
+  {
+    "test_number": 103,
+    "category": "v2_stats",
+    "method": "GET",
+    "path": "/api/v2/photos/stats?group_by=rover",
+    "description": "Stats by rover (all)",
+    "http_code": 200,
+    "time_seconds": 0.405310,
+    "success": true,
+    "timestamp": "2025-11-22T09:08:48-08:00"
+  }
+,
+  {
+    "test_number": 104,
+    "category": "v2_stats",
+    "method": "GET",
+    "path": "/api/v2/photos/stats?rovers=curiosity&group_by=sol&sol_min=1&sol_max=100",
+    "description": "Stats by sol (range)",
+    "http_code": 200,
+    "time_seconds": 0.369337,
+    "success": true,
+    "timestamp": "2025-11-22T09:08:48-08:00"
+  }
+,
+  {
+    "test_number": 105,
+    "category": "v2_stats",
+    "method": "GET",
+    "path": "/api/v2/photos/stats?rovers=curiosity&group_by=camera&date_min=2023-01-01&date_max=2023-12-31",
+    "description": "Stats with date filter",
+    "http_code": 200,
+    "time_seconds": 0.323770,
+    "success": true,
+    "timestamp": "2025-11-22T09:08:48-08:00"
+  }
+,
+  {
+    "test_number": 106,
+    "category": "v2_stats",
+    "method": "GET",
+    "path": "/api/v2/photos/stats?rovers=curiosity&group_by=camera&mars_time_golden_hour=true",
+    "description": "Stats for golden hour photos",
+    "http_code": 200,
+    "time_seconds": 0.505238,
+    "success": true,
+    "timestamp": "2025-11-22T09:08:49-08:00"
+  }
+,
+  {
+    "test_number": 107,
+    "category": "v2_rovers_cameras",
+    "method": "GET",
+    "path": "/api/v2/cameras",
+    "description": "Get all cameras",
+    "http_code": 200,
+    "time_seconds": 0.460823,
+    "success": true,
+    "timestamp": "2025-11-22T09:08:49-08:00"
+  }
+,
+  {
+    "test_number": 108,
+    "category": "v2_rovers_cameras",
+    "method": "GET",
+    "path": "/api/v2/cameras/MAST",
+    "description": "Get MAST camera",
+    "http_code": 200,
+    "time_seconds": 0.463052,
+    "success": true,
+    "timestamp": "2025-11-22T09:08:50-08:00"
+  }
+,
+  {
+    "test_number": 109,
+    "category": "v2_rovers_cameras",
+    "method": "GET",
+    "path": "/api/v2/cameras/NAVCAM",
+    "description": "Get NAVCAM camera",
+    "http_code": 200,
+    "time_seconds": 0.233879,
+    "success": true,
+    "timestamp": "2025-11-22T09:08:50-08:00"
+  }
+,
+  {
+    "test_number": 110,
+    "category": "v2_rovers_cameras",
+    "method": "GET",
+    "path": "/api/v2/cameras/MCZ_LEFT",
+    "description": "Get MCZ_LEFT camera",
+    "http_code": 200,
+    "time_seconds": 2.039236,
+    "success": true,
+    "timestamp": "2025-11-22T09:08:52-08:00"
+  }
+,
+  {
+    "test_number": 111,
+    "category": "v2_rovers_cameras",
+    "method": "GET",
+    "path": "/api/v2/cameras/MAST?rover=curiosity",
+    "description": "Get MAST (Curiosity filter)",
+    "http_code": 200,
+    "time_seconds": 0.401305,
+    "success": true,
+    "timestamp": "2025-11-22T09:08:53-08:00"
+  }
+,
+  {
+    "test_number": 112,
+    "category": "v2_rovers_cameras",
+    "method": "GET",
+    "path": "/api/v2/rovers/curiosity/journey",
+    "description": "Journey tracking (Curiosity)",
+    "http_code": 200,
+    "time_seconds": 1.157946,
+    "success": true,
+    "timestamp": "2025-11-22T09:08:54-08:00"
+  }
+,
+  {
+    "test_number": 113,
+    "category": "v2_rovers_cameras",
+    "method": "GET",
+    "path": "/api/v2/rovers/curiosity/journey?sol_min=1000&sol_max=2000",
+    "description": "Journey tracking (sol range)",
+    "http_code": 200,
+    "time_seconds": 0.534924,
+    "success": true,
+    "timestamp": "2025-11-22T09:08:55-08:00"
+  }
+,
+  {
+    "test_number": 114,
+    "category": "v2_advanced",
+    "method": "GET",
+    "path": "/api/v2/panoramas",
+    "description": "Get all panoramas",
+    "http_code": 200,
+    "time_seconds": 3.329639,
+    "success": true,
+    "timestamp": "2025-11-22T09:08:58-08:00"
+  }
+,
+  {
+    "test_number": 115,
+    "category": "v2_advanced",
+    "method": "GET",
+    "path": "/api/v2/panoramas?rovers=curiosity",
+    "description": "Panoramas (Curiosity)",
+    "http_code": 200,
+    "time_seconds": 3.286008,
+    "success": true,
+    "timestamp": "2025-11-22T09:09:02-08:00"
+  }
+,
+  {
+    "test_number": 116,
+    "category": "v2_advanced",
+    "method": "GET",
+    "path": "/api/v2/panoramas?rovers=curiosity&sol_min=1000",
+    "description": "Panoramas (sol filter)",
+    "http_code": 200,
+    "time_seconds": 94.851834,
+    "success": true,
+    "timestamp": "2025-11-22T09:10:37-08:00"
+  }
+,
+  {
+    "test_number": 117,
+    "category": "v2_advanced",
+    "method": "GET",
+    "path": "/api/v2/panoramas?rovers=curiosity&min_photos=10",
+    "description": "Panoramas (min 10 photos)",
+    "http_code": 200,
+    "time_seconds": 3.144638,
+    "success": true,
+    "timestamp": "2025-11-22T09:10:40-08:00"
+  }
+,
+  {
+    "test_number": 118,
+    "category": "v2_advanced",
+    "method": "GET",
+    "path": "/api/v2/locations",
+    "description": "Get all locations",
+    "http_code": 200,
+    "time_seconds": 1.014883,
+    "success": true,
+    "timestamp": "2025-11-22T09:10:41-08:00"
+  }
+,
+  {
+    "test_number": 119,
+    "category": "v2_advanced",
+    "method": "GET",
+    "path": "/api/v2/locations?rovers=curiosity",
+    "description": "Locations (Curiosity)",
+    "http_code": 200,
+    "time_seconds": 0.632093,
+    "success": true,
+    "timestamp": "2025-11-22T09:10:42-08:00"
+  }
+,
+  {
+    "test_number": 120,
+    "category": "v2_advanced",
+    "method": "GET",
+    "path": "/api/v2/locations?rovers=curiosity&min_photos=50",
+    "description": "Locations (min 50 photos)",
+    "http_code": 200,
+    "time_seconds": 0.674890,
+    "success": true,
+    "timestamp": "2025-11-22T09:10:42-08:00"
+  }
+,
+  {
+    "test_number": 121,
+    "category": "v2_advanced",
+    "method": "GET",
+    "path": "/api/v2/time-machine?site=82&drive=2176",
+    "description": "Time machine (site 82, drive 2176)",
+    "http_code": 200,
+    "time_seconds": 0.827270,
+    "success": true,
+    "timestamp": "2025-11-22T09:10:43-08:00"
+  }
+,
+  {
+    "test_number": 122,
+    "category": "v2_advanced",
+    "method": "GET",
+    "path": "/api/v2/time-machine?site=105&drive=418&rover=curiosity",
+    "description": "Time machine + rover filter",
+    "http_code": 200,
+    "time_seconds": 0.560806,
+    "success": true,
+    "timestamp": "2025-11-22T09:10:44-08:00"
+  }
+,
+  {
+    "test_number": 123,
+    "category": "v2_advanced",
+    "method": "GET",
+    "path": "/api/v2/time-machine?site=82&drive=2176&camera=NAVCAM&limit=50",
+    "description": "Time machine + camera + limit",
+    "http_code": 200,
+    "time_seconds": 0.390864,
+    "success": true,
+    "timestamp": "2025-11-22T09:10:44-08:00"
+  }
+,
+  {
+    "test_number": 124,
+    "category": "errors",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=invalid_rover",
+    "description": "Invalid rover name (error)",
+    "http_code": 400,
+    "time_seconds": 0.122521,
+    "success": true,
+    "timestamp": "2025-11-22T09:10:44-08:00"
+  }
+,
+  {
+    "test_number": 125,
+    "category": "errors",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&sol_min=-1",
+    "description": "Negative sol (error)",
+    "http_code": 400,
+    "time_seconds": 0.129851,
+    "success": true,
+    "timestamp": "2025-11-22T09:10:45-08:00"
+  }
+,
+  {
+    "test_number": 126,
+    "category": "errors",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&per_page=101",
+    "description": "Per page > 100 (error)",
+    "http_code": 400,
+    "time_seconds": 0.168985,
+    "success": true,
+    "timestamp": "2025-11-22T09:10:45-08:00"
+  }
+,
+  {
+    "test_number": 127,
+    "category": "errors",
+    "method": "GET",
+    "path": "/api/v2/photos?rovers=curiosity&date_min=invalid-date",
+    "description": "Invalid date format (error)",
+    "http_code": 400,
+    "time_seconds": 0.131806,
+    "success": true,
+    "timestamp": "2025-11-22T09:10:45-08:00"
+  }
+,
+  {
+    "test_number": 128,
+    "category": "errors",
+    "method": "GET",
+    "path": "/api/v2/photos/stats?rovers=curiosity",
+    "description": "Stats without group_by (error)",
+    "http_code": 400,
+    "time_seconds": 0.143157,
+    "success": true,
+    "timestamp": "2025-11-22T09:10:45-08:00"
+  }
+,
+  {
+    "test_number": 129,
+    "category": "errors",
+    "method": "GET",
+    "path": "/api/v2/photos/stats?rovers=curiosity&group_by=invalid",
+    "description": "Stats invalid group_by (error)",
+    "http_code": 400,
+    "time_seconds": 0.141584,
+    "success": true,
+    "timestamp": "2025-11-22T09:10:45-08:00"
+  }
+,
+  {
+    "test_number": 130,
+    "category": "errors",
+    "method": "GET",
+    "path": "/api/v2/time-machine",
+    "description": "Time machine missing params (error)",
+    "http_code": 400,
+    "time_seconds": 0.118518,
+    "success": true,
+    "timestamp": "2025-11-22T09:10:46-08:00"
+  }
+,
+  {
+    "test_number": 131,
+    "category": "errors",
+    "method": "GET",
+    "path": "/api/v1/rovers/nonexistent",
+    "description": "Nonexistent rover (error)",
+    "http_code": 404,
+    "time_seconds": 0.182689,
+    "success": true,
+    "timestamp": "2025-11-22T09:10:46-08:00"
+  }
+,
+  {
+    "test_number": 132,
+    "category": "errors",
+    "method": "GET",
+    "path": "/api/v1/photos/999999999",
+    "description": "Nonexistent photo ID (error)",
+    "http_code": 404,
+    "time_seconds": 0.144167,
+    "success": true,
+    "timestamp": "2025-11-22T09:10:46-08:00"
+  }
+,
+  {
+    "test_number": 133,
+    "category": "errors",
+    "method": "GET",
+    "path": "/api/v2/cameras/INVALID_CAMERA",
+    "description": "Invalid camera name (error)",
+    "http_code": 404,
+    "time_seconds": 0.130914,
+    "success": true,
+    "timestamp": "2025-11-22T09:10:46-08:00"
+  }
+
+]
