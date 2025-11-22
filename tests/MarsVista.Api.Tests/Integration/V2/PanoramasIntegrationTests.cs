@@ -114,6 +114,8 @@ public class PanoramasIntegrationTests : IntegrationTestBase
         // Act
         var response = await _panoramaService.GetPanoramasAsync(
             rovers: null, // All rovers
+            solMin: 0, // Explicit range to include all test data (overrides default 500-sol limit)
+            solMax: 2000,
             pageNumber: 1,
             pageSize: 25);
 
@@ -160,6 +162,8 @@ public class PanoramasIntegrationTests : IntegrationTestBase
         // Act - Require at least 5 photos
         var response = await _panoramaService.GetPanoramasAsync(
             rovers: null,
+            solMin: 0, // Explicit range to include all test data (overrides default 500-sol limit)
+            solMax: 2000,
             minPhotos: 5,
             pageNumber: 1,
             pageSize: 25);
@@ -215,6 +219,8 @@ public class PanoramasIntegrationTests : IntegrationTestBase
         // Act - Get first page
         var page1 = await _panoramaService.GetPanoramasAsync(
             rovers: null,
+            solMin: 0, // Explicit range to include all test data (overrides default 500-sol limit)
+            solMax: 2000,
             pageNumber: 1,
             pageSize: 2);
 
