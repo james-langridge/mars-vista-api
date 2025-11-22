@@ -1,0 +1,46 @@
+meta {
+  name: Get Endpoint Usage
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/v1/admin/metrics/endpoints
+  body: none
+  auth: none
+}
+
+headers {
+  X-API-Key: {{adminApiKey}}
+}
+
+docs {
+  # Get Endpoint Usage Statistics (Admin)
+
+  **Admin endpoint** - Get usage statistics by endpoint.
+
+  ## Response includes:
+
+  **Top Endpoints:**
+  - Endpoint path
+  - Total calls
+  - Average response time
+  - Error rate
+  - Success rate
+  - Last 24h call count
+
+  **Rover Usage:**
+  - Breakdown by rover
+  - Call counts per rover
+
+  **Camera Usage:**
+  - Breakdown by camera
+  - Call counts per camera
+
+  Useful for:
+  - Understanding API usage patterns
+  - Identifying popular endpoints
+  - Optimizing performance for high-traffic routes
+
+  **Note:** This endpoint requires an admin API key.
+}

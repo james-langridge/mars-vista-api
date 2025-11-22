@@ -1,0 +1,30 @@
+meta {
+  name: Query Photos - Field Selection
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/v2/photos?rovers=curiosity&fields=id,img_src,sol,earth_date&per_page=5
+  body: none
+  auth: inherit
+}
+
+headers {
+  X-API-Key: {{apiKey}}
+}
+
+params:query {
+  rovers: curiosity
+  fields: id,img_src,sol,earth_date
+  per_page: 5
+}
+
+docs {
+  # Field Selection
+
+  Return only the fields you need to reduce response size.
+  This is particularly useful for mobile apps or bandwidth-constrained environments.
+
+  Available fields: id, img_src, sol, earth_date, camera, rover_id
+}

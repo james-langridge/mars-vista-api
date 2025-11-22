@@ -1,0 +1,42 @@
+meta {
+  name: Batch Get Photos
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{baseUrl}}/api/v2/photos/batch
+  body: json
+  auth: inherit
+}
+
+headers {
+  X-API-Key: {{apiKey}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "ids": [451603, 451604, 451605, 451606, 451607]
+  }
+}
+
+docs {
+  # Batch Get Photos
+
+  Retrieve multiple photos by ID in a single request.
+
+  ## Request Body:
+  ```json
+  {
+    "ids": [123456, 123457, 123458]
+  }
+  ```
+
+  ## Limits:
+  - Maximum 100 IDs per request
+
+  ## Response:
+  Returns photos in the same order as requested IDs.
+  Missing photos are omitted from the response.
+}

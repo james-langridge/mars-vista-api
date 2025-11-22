@@ -1,0 +1,51 @@
+meta {
+  name: Get Performance Trends
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/v1/admin/metrics/trends?period=24h
+  body: none
+  auth: none
+}
+
+headers {
+  X-API-Key: {{adminApiKey}}
+}
+
+params:query {
+  period: 24h
+}
+
+docs {
+  # Get Performance Trends (Admin)
+
+  **Admin endpoint** - Get performance trends over time.
+
+  ## Query Parameters:
+  - `period` - Time period: `1h`, `24h` (default), `7d`, `30d`
+
+  ## Response includes:
+
+  **Response Time Trend:**
+  - Timestamps
+  - Average response time
+  - P95 response time
+
+  **Throughput Trend:**
+  - Timestamps
+  - Requests per minute
+
+  **Error Rate Trend:**
+  - Timestamps
+  - Error percentage
+
+  Time windows:
+  - 1h: 5-minute intervals
+  - 24h: 1-hour intervals
+  - 7d: 6-hour intervals
+  - 30d: 1-day intervals
+
+  **Note:** This endpoint requires an admin API key.
+}

@@ -1,0 +1,30 @@
+meta {
+  name: API Discovery
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v2
+  body: none
+  auth: inherit
+}
+
+headers {
+  X-API-Key: {{apiKey}}
+}
+
+docs {
+  # API Discovery
+
+  Get API v2 capabilities and available filter values.
+
+  ## Returns:
+  - API version
+  - Available resources and their endpoints
+  - Available filters and their types
+  - Valid filter values (rovers, cameras, etc.)
+
+  This is a self-documenting endpoint that helps clients understand
+  what's available without consulting external documentation.
+}

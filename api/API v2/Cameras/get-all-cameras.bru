@@ -1,0 +1,32 @@
+meta {
+  name: Get All Cameras
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v2/cameras
+  body: none
+  auth: inherit
+}
+
+headers {
+  X-API-Key: {{apiKey}}
+}
+
+docs {
+  # Get All Cameras
+
+  List all cameras across all rovers with photo counts and statistics.
+
+  ## Response includes:
+  - Camera name and full name
+  - Photo count for each camera
+  - First and last photo sol
+  - Associated rover
+
+  This endpoint is useful for:
+  - Understanding camera usage patterns
+  - Finding which cameras are most prolific
+  - Seeing camera availability across rovers
+}

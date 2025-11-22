@@ -1,0 +1,27 @@
+meta {
+  name: Get Rover Cameras
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/v2/rovers/curiosity/cameras
+  body: none
+  auth: inherit
+}
+
+headers {
+  X-API-Key: {{apiKey}}
+}
+
+docs {
+  # Get Rover Cameras
+
+  Get all cameras for a specific rover with photo counts.
+
+  ## Response includes:
+  - Camera name and full name
+  - Photo count for this camera
+  - First and last photo sol
+  - Useful for understanding camera usage patterns
+}

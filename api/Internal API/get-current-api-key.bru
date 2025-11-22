@@ -1,0 +1,43 @@
+meta {
+  name: Get Current API Key
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/v1/internal/keys/current?userEmail=user@example.com
+  body: none
+  auth: none
+}
+
+headers {
+  X-Internal-Secret: {{internalSecret}}
+}
+
+params:query {
+  userEmail: user@example.com
+}
+
+docs {
+  # Get Current API Key (Internal)
+
+  **Internal endpoint** - Get current API key information (masked).
+  Called by Next.js to display key info in dashboard.
+
+  ## Query Parameters:
+  - `userEmail` (required) - User's email address
+
+  ## Response:
+  ```json
+  {
+    "keyPreview": "mv_live_***...***",
+    "tier": "pro",
+    "isActive": true,
+    "createdAt": "2024-01-01T00:00:00Z",
+    "lastUsedAt": "2024-01-15T12:30:00Z"
+  }
+  ```
+
+  **Note:** Never returns plaintext key from this endpoint.
+  The key hash cannot be reversed, so we show a generic preview.
+}

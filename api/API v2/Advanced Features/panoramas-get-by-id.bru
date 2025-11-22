@@ -1,0 +1,34 @@
+meta {
+  name: Panoramas - Get by ID
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/v2/panoramas/pano_curiosity_1000_14
+  body: none
+  auth: inherit
+}
+
+headers {
+  X-API-Key: {{apiKey}}
+}
+
+docs {
+  # Get Panorama by ID
+
+  Retrieve a specific panorama with all its constituent photos.
+
+  ## Panorama ID Format:
+  `pano_{rover}_{sol}_{sequence}`
+
+  Example: `pano_curiosity_1000_14`
+  - Rover: Curiosity
+  - Sol: 1000
+  - Sequence: 14
+
+  ## Response includes:
+  - Panorama metadata (sol, location, time)
+  - List of all photos in the panorama
+  - Photo count and camera info
+}

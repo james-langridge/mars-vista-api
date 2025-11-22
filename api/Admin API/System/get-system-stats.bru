@@ -1,0 +1,32 @@
+meta {
+  name: Get System Stats
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/admin/stats
+  body: none
+  auth: none
+}
+
+headers {
+  X-API-Key: {{adminApiKey}}
+}
+
+docs {
+  # Get System Statistics (Admin)
+
+  **Admin endpoint** - Requires admin role.
+
+  ## Response includes:
+  - Total users
+  - Active API keys
+  - Total API calls
+  - Total photos retrieved
+  - API calls last 24h/7d
+  - Average response time
+  - System uptime
+
+  **Note:** This endpoint requires an admin API key.
+}

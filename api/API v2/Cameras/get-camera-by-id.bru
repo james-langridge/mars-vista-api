@@ -1,0 +1,36 @@
+meta {
+  name: Get Camera by ID
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/v2/cameras/MAST
+  body: none
+  auth: inherit
+}
+
+headers {
+  X-API-Key: {{apiKey}}
+}
+
+docs {
+  # Get Camera by ID
+
+  Get details for a specific camera by name.
+
+  ## Available Camera IDs:
+  - MAST, NAVCAM, FHAZ, RHAZ (Curiosity)
+  - MCZ_LEFT, MCZ_RIGHT, NAVCAM_LEFT, NAVCAM_RIGHT (Perseverance)
+  - PANCAM, NAVCAM, HAZCAM, MI (Opportunity, Spirit)
+  - And more...
+
+  ## Optional Parameters:
+  - `rover` - Filter to a specific rover (e.g., ?rover=curiosity)
+
+  ## Response includes:
+  - Camera name and full name
+  - Total photo count
+  - First and last photo sol
+  - Associated rover
+}

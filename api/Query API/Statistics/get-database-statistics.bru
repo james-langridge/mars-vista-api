@@ -1,0 +1,26 @@
+meta {
+  name: Get Database Statistics
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/statistics
+  body: none
+  auth: none
+}
+
+docs {
+  # Get Database Statistics
+
+  Public endpoint for database statistics (no auth required).
+  Used for displaying stats on the landing page.
+
+  ## Response includes:
+  - Total photos in database
+  - Recent additions
+  - Date ranges
+  - Per-rover statistics
+
+  **Note:** This endpoint does NOT require authentication.
+}

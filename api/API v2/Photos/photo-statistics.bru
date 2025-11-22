@@ -1,0 +1,45 @@
+meta {
+  name: Photo Statistics
+  type: http
+  seq: 10
+}
+
+get {
+  url: {{baseUrl}}/api/v2/photos/stats?rovers=curiosity&group_by=camera
+  body: none
+  auth: inherit
+}
+
+headers {
+  X-API-Key: {{apiKey}}
+}
+
+params:query {
+  rovers: curiosity
+  group_by: camera
+}
+
+docs {
+  # Photo Statistics
+
+  Get aggregated statistics about photos.
+
+  ## Required Parameters:
+  - `group_by` - Grouping field: `camera`, `rover`, or `sol`
+
+  ## Optional Filters:
+  All photo filters apply (rovers, cameras, date ranges, etc.)
+
+  ## Examples:
+
+  ```
+  # Group by camera
+  ?rovers=curiosity&group_by=camera
+
+  # Group by rover
+  ?group_by=rover
+
+  # Group by sol with date filter
+  ?rovers=curiosity&group_by=sol&date_min=2023-01-01&date_max=2023-12-31
+  ```
+}

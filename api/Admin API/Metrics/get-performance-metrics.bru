@@ -1,0 +1,44 @@
+meta {
+  name: Get Performance Metrics
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/admin/metrics/performance
+  body: none
+  auth: none
+}
+
+headers {
+  X-API-Key: {{adminApiKey}}
+}
+
+docs {
+  # Get Performance Metrics (Admin)
+
+  **Admin endpoint** - Get detailed performance metrics.
+
+  ## Response includes:
+
+  **Current Metrics (last hour):**
+  - Average response time
+  - P50, P95, P99 response times
+  - Requests per minute
+  - Error rate
+  - Success rate
+
+  **Last 24 Hours:**
+  - Hourly breakdowns
+  - Response time trends
+  - Request volume
+  - Error counts
+
+  **Slow Queries:**
+  - Endpoints with >1000ms response time
+  - Average and max response times
+  - Occurrence counts
+  - Last occurrence timestamp
+
+  **Note:** This endpoint requires an admin API key.
+}

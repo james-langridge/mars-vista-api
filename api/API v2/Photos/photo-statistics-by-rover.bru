@@ -1,0 +1,26 @@
+meta {
+  name: Photo Statistics - By Rover
+  type: http
+  seq: 11
+}
+
+get {
+  url: {{baseUrl}}/api/v2/photos/stats?group_by=rover
+  body: none
+  auth: inherit
+}
+
+headers {
+  X-API-Key: {{apiKey}}
+}
+
+params:query {
+  group_by: rover
+}
+
+docs {
+  # Photo Statistics by Rover
+
+  Get photo counts and statistics grouped by rover.
+  Useful for understanding the overall data distribution.
+}

@@ -1,0 +1,29 @@
+meta {
+  name: Get Rover Manifest
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/v2/rovers/curiosity/manifest
+  body: none
+  auth: inherit
+}
+
+headers {
+  X-API-Key: {{apiKey}}
+}
+
+docs {
+  # Get Rover Manifest
+
+  Get photo history by sol for a specific rover.
+
+  ## Response includes:
+  - Rover summary information
+  - Photo breakdown by sol:
+    - Sol number
+    - Earth date
+    - Total photos
+    - Cameras that took photos
+}
