@@ -49,7 +49,7 @@ public class PanoramaServiceTests : IntegrationTestBase
                 Drive = 1204,
                 MastAz = 45.0f + (i * 10.0f), // 45, 55, 65, 75, 85 degrees (40 degree range)
                 MastEl = -10.0f, // Same elevation
-                SpacecraftClock = 813073669.0f + (i * 30.0f), // 30 seconds apart
+                SpacecraftClock = 813073000.0f + (i * 100.0f), // 100 seconds apart (avoid float precision issues)
                 Xyz = "{\"x\": 35.4362, \"y\": 22.5714, \"z\": -9.46445}",
                 RoverId = 1,
                 CameraId = 2, // MAST camera
@@ -151,7 +151,7 @@ public class PanoramaServiceTests : IntegrationTestBase
                 Drive = 1300,
                 MastAz = 50.0f + (i * 15.0f),
                 MastEl = -5.0f,
-                SpacecraftClock = 913073669.0f + (i * 30.0f),
+                SpacecraftClock = 913073000.0f + (i * 100.0f),
                 RoverId = 1,
                 CameraId = 2,
                 CreatedAt = now,
@@ -211,7 +211,7 @@ public class PanoramaServiceTests : IntegrationTestBase
                     Drive = 1300,
                     MastAz = 50.0f + (i * 15.0f), // 30 degree range
                     MastEl = -5.0f,
-                    SpacecraftClock = 913073669.0f + (i * 30.0f),
+                    SpacecraftClock = 913073000.0f + (i * 100.0f),
                     RoverId = 1,
                     CameraId = 2,
                     CreatedAt = now,
@@ -356,7 +356,7 @@ public class PanoramaServiceTests : IntegrationTestBase
                 Drive = 1205, // Different drive
                 MastAz = 100.0f + (i * 15.0f), // 45 degree range
                 MastEl = 5.0f,
-                SpacecraftClock = 813080000.0f + (i * 30.0f),
+                SpacecraftClock = 813080000.0f + (i * 100.0f),
                 RoverId = 1,
                 CameraId = 2,
                 CreatedAt = now,
@@ -400,7 +400,7 @@ public class PanoramaServiceTests : IntegrationTestBase
                 Drive = 1500,
                 MastAz = 50.0f + (i * 2.0f), // Only 8 degree range (too small)
                 MastEl = -10.0f,
-                SpacecraftClock = 1013073669.0f + (i * 30.0f),
+                SpacecraftClock = 1013073000.0f + (i * 100.0f),
                 RoverId = 1,
                 CameraId = 2,
                 CreatedAt = now,
@@ -444,7 +444,7 @@ public class PanoramaServiceTests : IntegrationTestBase
                 Drive = 1600,
                 MastAz = 50.0f + (i * 15.0f),
                 MastEl = -10.0f,
-                SpacecraftClock = 1113073669.0f + (i * 30.0f),
+                SpacecraftClock = 1000000.0f + (i * 100.0f),
                 RoverId = 1,
                 CameraId = 2,
                 CreatedAt = now,
@@ -467,7 +467,7 @@ public class PanoramaServiceTests : IntegrationTestBase
             Drive = 1600,
             MastAz = 95.0f,
             MastEl = -10.0f,
-            SpacecraftClock = 1113073669.0f + 400.0f, // 400 seconds gap (> 300 max)
+            SpacecraftClock = 1000200.0f + 400.0f, // 400 seconds gap from last photo (> 300 max)
             RoverId = 1,
             CameraId = 2,
             CreatedAt = now,
@@ -485,8 +485,9 @@ public class PanoramaServiceTests : IntegrationTestBase
             pageNumber: 1,
             pageSize: 25);
 
-        // Assert - Should only detect one panorama (first 3 photos), not 4
-        result.Data.Should().BeEmpty("time delta breaks the sequence");
+        // Assert - Should detect one panorama (first 3 photos), the 4th photo is too far in time
+        result.Data.Should().HaveCount(1, "time delta breaks the sequence after 3 photos");
+        result.Data.First().Attributes!.TotalPhotos.Should().Be(3);
     }
 
     [Fact]
@@ -510,7 +511,7 @@ public class PanoramaServiceTests : IntegrationTestBase
                 Drive = 1204,
                 MastAz = 45.0f + (i * 15.0f), // 30 degree range
                 MastEl = -10.0f,
-                SpacecraftClock = 813073669.0f + (i * 30.0f),
+                SpacecraftClock = 813073000.0f + (i * 100.0f),
                 RoverId = 2, // Perseverance
                 CameraId = 3, // NAVCAM
                 CreatedAt = now,
