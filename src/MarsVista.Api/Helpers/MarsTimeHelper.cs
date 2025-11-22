@@ -198,7 +198,10 @@ public static class MarsTimeHelper
 
     /// <summary>
     /// Parse XYZ coordinate string to individual components
-    /// Format: "(35.4362,22.5714,-9.46445)" or "35.4362,22.5714,-9.46445"
+    /// Supports formats:
+    /// - JSON: {"x": 35.4362, "y": 22.5714, "z": -9.46445}
+    /// - Tuple: (35.4362,22.5714,-9.46445)
+    /// - Simple: 35.4362,22.5714,-9.46445
     /// </summary>
     /// <param name="xyz">XYZ coordinate string</param>
     /// <param name="result">Parsed (x, y, z) tuple</param>
@@ -210,18 +213,47 @@ public static class MarsTimeHelper
         if (string.IsNullOrWhiteSpace(xyz))
             return false;
 
-        // Remove parentheses if present
-        var cleaned = xyz.Trim().Trim('(', ')');
+        var trimmed = xyz.Trim();
+
+        // Try JSON format first: {"x": 35.4362, "y": 22.5714, "z": -9.46445}
+        if (trimmed.StartsWith("{") && trimmed.EndsWith("}"))
+        {
+            try
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(trimmed);
+                var root = doc.RootElement;
+
+                if (root.TryGetProperty("x", out var xElement) &&
+                    root.TryGetProperty("y", out var yElement) &&
+                    root.TryGetProperty("z", out var zElement))
+                {
+                    if (xElement.TryGetSingle(out var x) &&
+                        yElement.TryGetSingle(out var y) &&
+                        zElement.TryGetSingle(out var z))
+                    {
+                        result = (x, y, z);
+                        return true;
+                    }
+                }
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        // Try simple comma-separated format: (35.4362,22.5714,-9.46445) or 35.4362,22.5714,-9.46445
+        var cleaned = trimmed.Trim('(', ')');
         var parts = cleaned.Split(',');
 
         if (parts.Length != 3)
             return false;
 
-        if (float.TryParse(parts[0].Trim(), out var x) &&
-            float.TryParse(parts[1].Trim(), out var y) &&
-            float.TryParse(parts[2].Trim(), out var z))
+        if (float.TryParse(parts[0].Trim(), out var xVal) &&
+            float.TryParse(parts[1].Trim(), out var yVal) &&
+            float.TryParse(parts[2].Trim(), out var zVal))
         {
-            result = (x, y, z);
+            result = (xVal, yVal, zVal);
             return true;
         }
 
