@@ -159,6 +159,7 @@ public class PanoramaService : IPanoramaService
     private List<PanoramaSequence> DetectPanoramas(List<Entities.Photo> photos, int minPhotos)
     {
         var panoramas = new List<PanoramaSequence>();
+        var panoramaIndex = 0;
 
         // Group by rover, sol, site, drive, and camera
         // Use IDs for grouping to avoid navigation property issues
@@ -213,7 +214,8 @@ public class PanoramaService : IPanoramaService
                         {
                             panoramas.Add(new PanoramaSequence
                             {
-                                Photos = new List<Entities.Photo>(currentSequence)
+                                Photos = new List<Entities.Photo>(currentSequence),
+                                Index = panoramaIndex++
                             });
                         }
 
@@ -230,7 +232,8 @@ public class PanoramaService : IPanoramaService
             {
                 panoramas.Add(new PanoramaSequence
                 {
-                    Photos = new List<Entities.Photo>(currentSequence)
+                    Photos = new List<Entities.Photo>(currentSequence),
+                    Index = panoramaIndex++
                 });
             }
         }
@@ -263,8 +266,8 @@ public class PanoramaService : IPanoramaService
         var rover = firstPhoto.Rover.Name.ToLowerInvariant();
         var sol = firstPhoto.Sol;
 
-        // Generate panorama ID
-        var panoramaId = $"pano_{rover}_{sol}_{sequence.GetHashCode():X8}";
+        // Generate panorama ID using sequence index
+        var panoramaId = $"pano_{rover}_{sol}_{sequence.Index}";
 
         // Calculate coverage
         var azimuths = sequence.Photos.Select(p => p.MastAz ?? 0).ToList();
@@ -340,5 +343,6 @@ public class PanoramaService : IPanoramaService
     private class PanoramaSequence
     {
         public List<Entities.Photo> Photos { get; set; } = new();
+        public int Index { get; set; }
     }
 }

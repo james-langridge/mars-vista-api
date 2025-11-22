@@ -38,7 +38,7 @@ public class PanoramasIntegrationTests : IntegrationTestBase
                 Drive = 1204,
                 MastAz = 45.0f + (i * 15.0f), // 75 degree range
                 MastEl = -10.0f, // Same elevation
-                SpacecraftClock = 813073669.0f + (i * 30.0f), // 30 seconds apart
+                SpacecraftClock = 813073000.0f + (i * 100.0f), // 100 seconds apart (avoid float precision)
                 Xyz = "{\"x\": 35.4362, \"y\": 22.5714, \"z\": -9.46445}",
                 ImgSrcSmall = $"https://mars.nasa.gov/pano_{i}_s.jpg",
                 ImgSrcMedium = $"https://mars.nasa.gov/pano_{i}_m.jpg",
@@ -65,7 +65,7 @@ public class PanoramasIntegrationTests : IntegrationTestBase
                 Drive = 1205,
                 MastAz = 100.0f + (i * 12.0f), // 36 degree range
                 MastEl = 5.0f,
-                SpacecraftClock = 823073669.0f + (i * 30.0f),
+                SpacecraftClock = 823073000.0f + (i * 100.0f),
                 Xyz = "{\"x\": 36.1234, \"y\": 23.5678, \"z\": -8.12345}",
                 ImgSrcSmall = $"https://mars.nasa.gov/pano2_{i}_s.jpg",
                 ImgSrcMedium = $"https://mars.nasa.gov/pano2_{i}_m.jpg",
@@ -92,7 +92,7 @@ public class PanoramasIntegrationTests : IntegrationTestBase
                 Drive = 100,
                 MastAz = 200.0f + (i * 10.0f), // 40 degree range
                 MastEl = 0.0f,
-                SpacecraftClock = 900000000.0f + (i * 30.0f),
+                SpacecraftClock = 900000000.0f + (i * 100.0f),
                 Xyz = "{\"x\": 10.0, \"y\": 20.0, \"z\": -5.0}",
                 ImgSrcSmall = $"https://mars.nasa.gov/pers_pano_{i}_s.jpg",
                 ImgSrcMedium = $"https://mars.nasa.gov/pers_pano_{i}_m.jpg",

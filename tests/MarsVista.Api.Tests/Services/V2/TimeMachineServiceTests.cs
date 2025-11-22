@@ -534,6 +534,9 @@ public class TimeMachineServiceTests : IntegrationTestBase
             drive: 1204);
 
         // Assert
-        result.Data.Should().NotContain(x => x.Photo.Attributes!.Location!.Site == 80); // Photo at site 80, drive 1300
+        result.Data.Should().NotContain(x =>
+            x.Photo.Attributes != null &&
+            x.Photo.Attributes.Location != null &&
+            x.Photo.Attributes.Location.Site == 80); // Photo at site 80, drive 1300
     }
 }
