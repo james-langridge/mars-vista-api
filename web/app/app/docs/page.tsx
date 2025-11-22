@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'API Documentation - Mars Vista API',
@@ -37,7 +38,7 @@ export default function Docs() {
           <div className="bg-blue-50 border-l-4 border-blue-500 p-6 mb-6">
             <h3 className="text-xl font-semibold mb-2 text-slate-900">Authentication Required</h3>
             <p className="text-slate-700 mb-3">
-              All API requests require an API key. Get yours for free by <a href="/signin" className="text-blue-600 hover:text-blue-700 font-medium underline">signing in</a> and visiting your dashboard.
+              All API requests require an API key. Get yours for free by <Link href="/signin" className="text-blue-600 hover:text-blue-700 font-medium underline">signing in</Link> and visiting your dashboard.
             </p>
             <p className="text-slate-700">
               Include your API key in the <code className="bg-blue-100 px-2 py-1 rounded">X-API-Key</code> header:
@@ -430,6 +431,169 @@ curl -H "X-API-Key: your_key" \\
           </div>
         </section>
 
+        {/* Performance Expectations */}
+        <section className="mb-16">
+          <h2 className="text-3xl font-bold mb-6 text-slate-900">Performance Expectations</h2>
+          <p className="text-slate-700 mb-6">
+            The Mars Vista API queries a database of nearly 2 million Mars photos. While we've optimized for speed, some queries may take longer depending on complexity.
+          </p>
+
+          <div className="bg-slate-50 rounded-lg p-6 mb-8">
+            <h3 className="text-xl font-semibold mb-4 text-slate-900">Current Performance Metrics</h3>
+            <div className="grid md:grid-cols-3 gap-4">
+              <div className="bg-white rounded p-4 border border-slate-200">
+                <div className="text-2xl font-bold text-orange-600">0.68s</div>
+                <div className="text-sm text-slate-600">Average Response Time</div>
+              </div>
+              <div className="bg-white rounded p-4 border border-slate-200">
+                <div className="text-2xl font-bold text-orange-600">2.4s</div>
+                <div className="text-sm text-slate-600">P95 Response Time</div>
+              </div>
+              <div className="bg-white rounded p-4 border border-slate-200">
+                <div className="text-2xl font-bold text-orange-600">1.99M</div>
+                <div className="text-sm text-slate-600">Photos in Database</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Response Time Table */}
+          <div className="mb-8">
+            <h3 className="text-xl font-semibold mb-4 text-slate-900">Expected Response Times</h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full bg-white border border-slate-200 rounded-lg">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Query Type</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Typical Time</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Maximum Time</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Tips</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  <tr>
+                    <td className="px-6 py-4 text-sm text-slate-900">Single photo</td>
+                    <td className="px-6 py-4 text-sm text-slate-600">{'<'} 0.5s</td>
+                    <td className="px-6 py-4 text-sm text-slate-600">1s</td>
+                    <td className="px-6 py-4 text-sm text-slate-600">Use photo ID directly</td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 text-sm text-slate-900">Basic filters</td>
+                    <td className="px-6 py-4 text-sm text-slate-600">0.5-1s</td>
+                    <td className="px-6 py-4 text-sm text-slate-600">2s</td>
+                    <td className="px-6 py-4 text-sm text-slate-600">Combine filters for efficiency</td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 text-sm text-slate-900">Date/sol ranges</td>
+                    <td className="px-6 py-4 text-sm text-slate-600">1-2s</td>
+                    <td className="px-6 py-4 text-sm text-slate-600">3s</td>
+                    <td className="px-6 py-4 text-sm text-slate-600">Use smaller ranges</td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 text-sm text-slate-900">Image quality filters</td>
+                    <td className="px-6 py-4 text-sm text-slate-600">2-3s</td>
+                    <td className="px-6 py-4 text-sm text-slate-600">5s</td>
+                    <td className="px-6 py-4 text-sm text-slate-600">Combine with other filters</td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 text-sm text-slate-900">Panorama detection</td>
+                    <td className="px-6 py-4 text-sm text-slate-600">5-10s</td>
+                    <td className="px-6 py-4 text-sm text-slate-600">16s</td>
+                    <td className="px-6 py-4 text-sm text-slate-600">Specify sol ranges</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Performance Tips */}
+          <div className="space-y-6">
+            <h3 className="text-xl font-semibold text-slate-900">Tips for Better Performance</h3>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+                <h4 className="font-semibold text-green-900 mb-3 flex items-center gap-2">
+                  <span className="text-green-600">✓</span>
+                  Use Specific Filters
+                </h4>
+                <p className="text-green-800 text-sm mb-2">Narrow your search with multiple parameters</p>
+                <pre className="bg-green-900 text-green-100 p-3 rounded text-xs overflow-x-auto">
+{`?rovers=curiosity&sol_min=1000&sol_max=1100&cameras=NAVCAM`}
+                </pre>
+              </div>
+
+              <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+                <h4 className="font-semibold text-green-900 mb-3 flex items-center gap-2">
+                  <span className="text-green-600">✓</span>
+                  Paginate Results
+                </h4>
+                <p className="text-green-800 text-sm mb-2">Request smaller chunks (25-50 per page)</p>
+                <pre className="bg-green-900 text-green-100 p-3 rounded text-xs overflow-x-auto">
+{`?per_page=25&page=1`}
+                </pre>
+              </div>
+
+              <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+                <h4 className="font-semibold text-green-900 mb-3 flex items-center gap-2">
+                  <span className="text-green-600">✓</span>
+                  Use Field Sets
+                </h4>
+                <p className="text-green-800 text-sm mb-2">Request only the data you need</p>
+                <pre className="bg-green-900 text-green-100 p-3 rounded text-xs overflow-x-auto">
+{`?field_set=minimal`}
+                </pre>
+              </div>
+
+              <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+                <h4 className="font-semibold text-green-900 mb-3 flex items-center gap-2">
+                  <span className="text-green-600">✓</span>
+                  Cache Responses
+                </h4>
+                <p className="text-green-800 text-sm mb-2">NASA data updates infrequently - use ETags</p>
+                <pre className="bg-green-900 text-green-100 p-3 rounded text-xs overflow-x-auto">
+{`If-None-Match: "etag-value"`}
+                </pre>
+              </div>
+            </div>
+
+            {/* Why Some Queries Are Slow */}
+            <div className="bg-blue-50 border-l-4 border-blue-500 p-6 mt-6">
+              <h4 className="text-lg font-semibold mb-3 text-slate-900">Why Some Queries Are Slow</h4>
+              <ul className="space-y-2 text-slate-700">
+                <li className="flex items-start gap-2">
+                  <span className="text-blue-500 mt-1">•</span>
+                  <span><strong>Panorama Detection:</strong> Analyzes photo sequences, camera angles, and timing patterns across thousands of photos</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-blue-500 mt-1">•</span>
+                  <span><strong>Large Date Ranges:</strong> Queries spanning years may match hundreds of thousands of photos</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-blue-500 mt-1">•</span>
+                  <span><strong>Image Quality Filters:</strong> Filtering by dimensions requires checking metadata for all 2M photos</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-blue-500 mt-1">•</span>
+                  <span><strong>Complex Filters:</strong> Multiple conditions across a large dataset require careful query planning</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* Link to Full Guide */}
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-6 mt-6">
+              <h4 className="text-lg font-semibold mb-2 text-slate-900">Need More Details?</h4>
+              <p className="text-slate-700 mb-4">
+                For comprehensive optimization strategies, caching recommendations, and example code, see our full{' '}
+                <Link
+                  href="/performance"
+                  className="text-orange-600 hover:text-orange-700 font-medium underline"
+                >
+                  Performance Guide
+                </Link>.
+              </p>
+            </div>
+          </div>
+        </section>
+
         {/* Response Format */}
         <section className="mb-16">
           <h2 className="text-3xl font-bold mb-6 text-slate-900">Response Format</h2>
@@ -662,9 +826,15 @@ curl -H "X-API-Key: your_key" \\
                 <p className="text-slate-600 mt-1">Try all endpoints directly in your browser with live examples</p>
               </li>
               <li>
-                <a href="/dashboard" className="text-orange-600 hover:text-orange-700 font-medium text-lg">
+                <Link href="/performance" className="text-orange-600 hover:text-orange-700 font-medium text-lg">
+                  Performance Guide →
+                </Link>
+                <p className="text-slate-600 mt-1">Learn optimization strategies and understand API response times</p>
+              </li>
+              <li>
+                <Link href="/dashboard" className="text-orange-600 hover:text-orange-700 font-medium text-lg">
                   Get Your API Key →
-                </a>
+                </Link>
                 <p className="text-slate-600 mt-1">Sign in to generate your free API key and start exploring Mars</p>
               </li>
             </ul>

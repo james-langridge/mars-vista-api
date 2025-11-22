@@ -869,14 +869,67 @@ The scraper includes automatic resilience policies:
 
 ## Performance Benchmarks
 
-### Typical Response Times
+### API Query Performance (Updated November 2025)
 
-- `GET /api/v1/rovers` - 50-100ms
-- `GET /api/v1/rovers/{name}/photos?sol={sol}` - 100-200ms
-- `POST /api/scraper/{rover}/sol/{sol}` - 2-5 seconds
-- `POST /api/scraper/{rover}/bulk?startSol=1&endSol=100` - 3-5 minutes
+**Database:** 1,988,601 photos across 4 rovers
+**Average Response Time:** 0.68 seconds
+**P95 Response Time:** 2.4 seconds
+**P99 Response Time:** 3.1 seconds
 
-### Bulk Scraping Performance
+### Expected Response Times by Endpoint Type
+
+#### Fast Queries (< 1 second)
+
+| Endpoint | Typical Time | Notes |
+|----------|-------------|-------|
+| `GET /api/v1/rovers` | 50-100ms | List all rovers |
+| `GET /api/v1/rovers/{name}` | 50-100ms | Get specific rover |
+| `GET /api/v1/photos/{id}` | 100-300ms | Direct lookup by ID |
+| `GET /api/v2/photos` (simple) | 200-500ms | Basic rover/camera filters |
+| `GET /api/v2/rovers` | 100-200ms | List rovers |
+
+#### Moderate Queries (1-2 seconds)
+
+| Endpoint | Typical Time | Notes |
+|----------|-------------|-------|
+| `GET /api/v2/photos` (date ranges) | 500ms-1.5s | Use smaller ranges for speed |
+| `GET /api/v2/photos` (sol ranges) | 500ms-1.5s | Limit range to 100-200 sols |
+| `GET /api/v2/photos` (combined filters) | 1-2s | Multiple filters together |
+| `GET /api/v1/manifests/{name}` | 500ms-1s | Photo manifest by sol |
+
+#### Slower Queries (2-5 seconds)
+
+| Endpoint | Typical Time | Optimization Tips |
+|----------|-------------|------------------|
+| `GET /api/v2/photos` (image quality) | 2-3s | Combine `min_width`/`min_height` with other filters |
+| `GET /api/v2/photos` (aspect ratio) | 2-3s | Use with specific rover/sol range |
+| `GET /api/v2/locations` | 1-3s | Specify sol range when possible |
+
+#### Analysis Queries (5-16 seconds)
+
+| Endpoint | Typical Time | Performance Notes |
+|----------|-------------|------------------|
+| `GET /api/v2/panoramas` | 5-16s | **Always specify `sol_min` and `sol_max`** to limit analysis |
+| `GET /api/v2/photos/stats` | 2-5s | Large aggregations across millions of photos |
+| `GET /api/v2/time-machine` | 3-8s | Complex temporal-location queries |
+
+**⚠️ Important Performance Notes:**
+
+- **Panorama Detection** is the most computationally expensive operation. Without sol limits, it may take 60-90 seconds analyzing all photos.
+- **Image Quality Filters** (`min_width`, `min_height`) scan all 2M photos. Always combine with rover/sol/date filters.
+- **Large Date Ranges** (> 1 year) may match hundreds of thousands of photos. Use smaller ranges for better performance.
+- **Caching** is critical: inactive rovers (Spirit/Opportunity) never change, cache for 1 year. Active rovers cache for 1 hour.
+
+For detailed optimization strategies, see [PERFORMANCE_GUIDE.md](PERFORMANCE_GUIDE.md).
+
+### Scraper Performance
+
+| Operation | Performance |
+|-----------|------------|
+| `POST /api/scraper/{rover}/sol/{sol}` | 2-5 seconds per sol |
+| `POST /api/scraper/{rover}/bulk?startSol=1&endSol=100` | 3-5 minutes |
+
+**Bulk Scraping Performance:**
 
 **Curiosity (4,683 sols):**
 - Average: 500 photos per sol

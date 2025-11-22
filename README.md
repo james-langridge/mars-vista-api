@@ -447,13 +447,34 @@ For complete deployment instructions, troubleshooting, and monitoring, see [DEPL
 
 ## Performance
 
-Tested with Perseverance rover data:
+### API Query Performance (Updated November 2025)
 
-- **Sol 10**: 11 photos in 28 seconds
-- **Sol 1000**: 385 photos in 19.8 seconds
-- **Sol 1368**: 580 photos in 19.4 seconds
-- **Re-scrape (idempotent)**: 0 photos in 0.08 seconds
-- **Bulk scrape estimate**: ~9-10 hours for all 1,682 sols (with 1s delay)
+**Current Statistics:**
+- **Database**: 1,988,601 photos across 4 rovers
+- **Average Response Time**: 0.68 seconds
+- **P50 (Median)**: 0.33 seconds
+- **P95**: 2.4 seconds
+- **P99**: 3.1 seconds
+- **Pass Rate**: 98%
+
+**Response Time Categories:**
+- **Fast queries** (< 1s): Single photos, simple filters, rover lists
+- **Moderate queries** (1-2s): Date ranges, sol ranges, combined filters
+- **Slower queries** (2-5s): Image quality filters, complex combinations
+- **Analysis queries** (5-16s): Panorama detection, statistics, location analysis
+
+**Performance Grade: A** (44% improvement from optimization work)
+
+For optimization tips and detailed performance expectations, see [docs/PERFORMANCE_GUIDE.md](docs/PERFORMANCE_GUIDE.md).
+
+### Scraper Performance
+
+Tested with all four rover scrapers:
+
+- **Sol scraping**: 500-1000 photos per second with batch insert optimization
+- **Bulk scrape estimate**: ~9-10 hours for Curiosity (4,683 sols), ~3-4 hours for Perseverance (1,682 sols)
+- **Re-scrape (idempotent)**: 0 photos in 0.08 seconds (duplicate detection)
+- **PDS scrapers** (Opportunity/Spirit): ~20-90 minutes for all volumes
 
 ## Documentation
 

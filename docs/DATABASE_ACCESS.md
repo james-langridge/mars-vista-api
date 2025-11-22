@@ -208,6 +208,83 @@ PGPASSWORD=<auth_password> psql -h nozomi.proxy.rlwy.net -U postgres -p 30913 -d
 
 ---
 
+## Database Indexes
+
+### Photos Table Indexes
+
+The photos table uses strategic indexes for optimal query performance:
+
+**Primary Query Indexes:**
+```sql
+-- Primary key
+CREATE INDEX pk_photos ON photos(id);
+
+-- Unique constraint for duplicate prevention
+CREATE UNIQUE INDEX ix_photos_nasa_id ON photos(nasa_id);
+
+-- Core filtering indexes
+CREATE INDEX ix_photos_rover_id ON photos(rover_id);
+CREATE INDEX ix_photos_camera_id ON photos(camera_id);
+CREATE INDEX ix_photos_sol ON photos(sol);
+CREATE INDEX ix_photos_earth_date ON photos(earth_date);
+
+-- Composite indexes for common query patterns
+CREATE INDEX ix_photos_rover_camera_sol ON photos(rover_id, camera_id, sol);
+CREATE INDEX ix_photos_site_drive ON photos(site, drive);
+```
+
+**Performance Optimization Indexes (Added November 2025):**
+```sql
+-- Image dimension indexes (for image quality filters)
+CREATE INDEX ix_photos_width ON photos(width) WHERE width IS NOT NULL;
+CREATE INDEX ix_photos_height ON photos(height) WHERE height IS NOT NULL;
+
+-- Sample type index (for filtering by Full/Thumbnail/Sub-frame)
+CREATE INDEX ix_photos_sample_type ON photos(sample_type);
+
+-- Mars time composite index (for Mars local time queries)
+CREATE INDEX ix_photos_rover_mars_time ON photos(rover_id, mars_time_hour)
+  WHERE mars_time_hour IS NOT NULL;
+
+-- JSONB GIN index (for raw_data queries and future flexibility)
+CREATE INDEX ix_photos_raw_data_gin ON photos USING gin(raw_data);
+```
+
+**Index Performance Impact:**
+
+| Query Type | Before Indexes | After Indexes | Improvement |
+|------------|---------------|---------------|-------------|
+| Image quality filters (`min_width`, `min_height`) | 5-8s | 2-3s | 60% faster |
+| Landing day photos | 44s | 2.3s | 95% faster |
+| Sol max queries | 36s | 1.9s | 95% faster |
+| Mars time filtering | 10-15s | 2-3s | 80% faster |
+
+For detailed performance metrics, see [PERFORMANCE_GUIDE.md](PERFORMANCE_GUIDE.md).
+
+**Index Maintenance:**
+
+Indexes are automatically maintained by PostgreSQL. VACUUM and ANALYZE operations run automatically on Railway.
+
+**Checking Index Usage:**
+```sql
+-- See which indexes are being used for a query
+EXPLAIN ANALYZE
+SELECT * FROM photos
+WHERE rover_id = 2 AND width >= 1920 AND height >= 1080;
+
+-- View index sizes
+SELECT
+    schemaname,
+    tablename,
+    indexname,
+    pg_size_pretty(pg_relation_size(indexname::regclass)) as index_size
+FROM pg_indexes
+WHERE schemaname = 'public' AND tablename = 'photos'
+ORDER BY pg_relation_size(indexname::regclass) DESC;
+```
+
+---
+
 ## Useful Queries
 
 ### Rover Statistics
