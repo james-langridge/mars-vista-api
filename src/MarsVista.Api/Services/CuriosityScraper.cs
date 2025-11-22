@@ -245,6 +245,7 @@ public class CuriosityScraper : IScraperService
 
                     // Mars local time and spacecraft data
                     DateTakenMars = TryGetString(extended, "lmst") ?? "",
+                    MarsTimeHour = Helpers.MarsTimeHelper.ExtractHour(TryGetString(extended, "lmst")),
                     Attitude = TryGetString(photo, "attitude"),
                     SpacecraftClock = TryGetFloat(photo, "spacecraft_clock"),
 
