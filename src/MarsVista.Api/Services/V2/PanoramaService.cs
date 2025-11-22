@@ -21,6 +21,10 @@ public class PanoramaService : IPanoramaService
     private const int MinPhotosForPanorama = 3; // At least 3 photos
     private const float MaxTimeDeltaSeconds = 300.0f; // Max 5 minutes between photos
 
+    // Performance optimization: Limit sol range to prevent loading all photos into memory
+    // TODO: Long-term solution should pre-compute panoramas in a dedicated table (see .claude/decisions/PANORAMA_OPTIMIZATION.md)
+    private const int DefaultSolRangeLimit = 500; // Default to most recent 500 sols when no range specified
+
     public PanoramaService(
         MarsVistaDbContext context,
         ILogger<PanoramaService> logger,
@@ -69,6 +73,22 @@ public class PanoramaService : IPanoramaService
         if (solMax.HasValue)
         {
             query = query.Where(p => p.Sol <= solMax.Value);
+        }
+
+        // Performance optimization: If no sol range specified, default to recent sols
+        // This prevents loading 200k+ photos into memory (which takes 2-3 minutes)
+        if (!solMin.HasValue && !solMax.HasValue)
+        {
+            var maxSol = await query.MaxAsync(p => (int?)p.Sol, cancellationToken);
+            if (maxSol.HasValue)
+            {
+                var defaultSolMin = Math.Max(0, maxSol.Value - DefaultSolRangeLimit);
+                query = query.Where(p => p.Sol >= defaultSolMin);
+
+                _logger.LogInformation(
+                    "No sol range specified, defaulting to recent {SolCount} sols (sol {MinSol} to {MaxSol})",
+                    DefaultSolRangeLimit, defaultSolMin, maxSol.Value);
+            }
         }
 
         // Get all candidate photos ordered by time
