@@ -43,9 +43,6 @@ export default function Performance() {
               <div className="text-sm text-slate-600 mt-1">Pass Rate</div>
             </div>
           </div>
-          <p className="text-slate-600">
-            Performance Grade: <span className="font-bold text-green-600">A</span> (44% improvement from recent optimization work)
-          </p>
         </section>
 
         {/* Response Times */}
