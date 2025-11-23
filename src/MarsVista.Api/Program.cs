@@ -213,7 +213,7 @@ builder.Services.AddSwaggerGen(options =>
     {
         Title = "Mars Vista API v1",
         Version = "v1.0.0",
-        Description = "NASA-compatible Mars Rover Photo API. Drop-in replacement for NASA's Mars Rover Photos API with enhanced reliability and performance.",
+        Description = "Drop-in replacement for the archived original NASA Mars Rover API.",
         Contact = new OpenApiContact
         {
             Name = "Mars Vista API",
