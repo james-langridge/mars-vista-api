@@ -318,7 +318,7 @@ app.UseSwagger();
 app.UseSwaggerUI(options =>
 {
     options.SwaggerEndpoint("/swagger/v2/swagger.json", "Mars Vista API v2");
-    options.SwaggerEndpoint("/swagger/v1/swagger.json", "Mars Vista API v1 (NASA-compatible)");
+    options.SwaggerEndpoint("/swagger/v1/swagger.json", "Mars Vista API v1");
     options.RoutePrefix = "swagger"; // Swagger UI at /swagger
     options.DocumentTitle = "Mars Vista API Documentation";
     options.DisplayRequestDuration();
