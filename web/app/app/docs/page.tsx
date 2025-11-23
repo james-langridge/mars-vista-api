@@ -31,7 +31,7 @@ export default function Docs() {
       </div>
 
       {/* Main Content */}
-      <div className="container mx-auto px-6 py-12 max-w-6xl">
+      <div className="container mx-auto px-4 sm:px-6 py-12 max-w-6xl">
 
         {/* Getting Started */}
         <section className="mb-16">
@@ -53,7 +53,7 @@ export default function Docs() {
         <section className="mb-16">
           <h2 className="text-3xl font-bold mb-6 text-slate-900">API Versions</h2>
           <div className="grid md:grid-cols-2 gap-6">
-            <div className="border border-orange-300 bg-orange-50 rounded-lg p-6">
+            <div className="border border-orange-300 bg-orange-50 rounded-lg p-4 md:p-6">
               <h3 className="text-2xl font-semibold mb-3 text-slate-900">API v2 (Recommended)</h3>
               <p className="text-slate-700 mb-4">
                 Modern REST API with powerful filtering, field selection, HTTP caching, and revolutionary features:
@@ -81,7 +81,7 @@ export default function Docs() {
                 </li>
               </ul>
             </div>
-            <div className="border border-slate-300 bg-slate-50 rounded-lg p-6">
+            <div className="border border-slate-300 bg-slate-50 rounded-lg p-4 md:p-6">
               <h3 className="text-2xl font-semibold mb-3 text-slate-900">API v1</h3>
               <p className="text-slate-700 mb-4">
                 Drop-in replacement for the{' '}

@@ -23,10 +23,10 @@ export default function CodeBlock({ code, language = 'bash' }: CodeBlockProps) {
   };
 
   return (
-    <div className="relative group">
+    <div className="relative group overflow-x-auto">
       <button
         onClick={handleCopy}
-        className="absolute top-2 right-2 p-2 rounded bg-gray-700 hover:bg-gray-600 opacity-0 group-hover:opacity-100 transition-opacity"
+        className="absolute top-2 right-2 p-2 rounded bg-gray-700 hover:bg-gray-600 opacity-0 group-hover:opacity-100 transition-opacity z-10"
         title={copied ? 'Copied!' : 'Copy to clipboard'}
       >
         {copied ? (
@@ -47,6 +47,7 @@ export default function CodeBlock({ code, language = 'bash' }: CodeBlockProps) {
           padding: '1rem',
           fontSize: '0.875rem',
           margin: 0,
+          overflowX: 'auto',
         }}
         showLineNumbers={false}
       >
