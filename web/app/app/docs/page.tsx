@@ -14,7 +14,7 @@ export default function Docs() {
         <div className="container mx-auto px-6 max-w-6xl">
           <h1 className="text-5xl font-bold mb-4">API Documentation</h1>
           <p className="text-xl text-slate-300 mb-8">
-            Access Mars rover imagery with powerful filtering, location queries, and advanced features never before available
+            Access Mars rover imagery with powerful filtering, location queries, and advanced features
           </p>
           <div className="flex gap-4">
             <a
@@ -322,7 +322,7 @@ curl -H "X-API-Key: your_key" \\
         <section className="mb-16">
           <h2 className="text-3xl font-bold mb-6 text-slate-900">Advanced Features</h2>
           <p className="text-slate-700 mb-6">
-            These endpoints leverage our complete NASA data storage to provide features never before available in any Mars photo API.
+            These endpoints leverage our complete NASA data storage to provide powerful capabilities for exploring Mars imagery.
           </p>
 
           {/* Panoramas */}
