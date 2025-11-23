@@ -83,20 +83,20 @@ export default function Docs() {
               </ul>
             </div>
             <div className="border border-slate-300 bg-slate-50 rounded-lg p-6">
-              <h3 className="text-2xl font-semibold mb-3 text-slate-900">API v1 (NASA-compatible)</h3>
+              <h3 className="text-2xl font-semibold mb-3 text-slate-900">API v1</h3>
               <p className="text-slate-700 mb-4">
-                Drop-in replacement for NASA's Mars Rover Photos API. Fully compatible with the{' '}
+                Simple REST API following the{' '}
                 <a
                   href="https://github.com/corincerami/mars-photo-api"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-blue-600 hover:text-blue-700 underline"
                 >
-                  original API format
+                  original Mars Photo API format
                 </a>.
               </p>
               <p className="text-slate-600">
-                Use v1 for compatibility with existing NASA API integrations. For new projects, we recommend v2 for access to enhanced features.
+                For new projects, we recommend v2 for access to enhanced features.
               </p>
             </div>
           </div>
