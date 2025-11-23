@@ -18,10 +18,10 @@ export default async function Header() {
             </Link>
             {session ? (
               <Link
-                href="/dashboard"
+                href="/api-keys"
                 className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-medium transition-colors"
               >
-                Dashboard
+                API Keys
               </Link>
             ) : (
               <Link

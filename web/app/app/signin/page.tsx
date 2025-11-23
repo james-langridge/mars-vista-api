@@ -5,15 +5,15 @@ import SignInForm from '@/components/SignInForm';
 
 export const metadata: Metadata = {
   title: 'Sign In - Mars Vista API',
-  description: 'Sign in to your Mars Vista API dashboard',
+  description: 'Sign in to manage your Mars Vista API keys',
 };
 
 export default async function SignIn() {
   const session = await auth();
 
-  // Redirect to dashboard if already authenticated
+  // Redirect to API keys page if already authenticated
   if (session) {
-    redirect('/dashboard');
+    redirect('/api-keys');
   }
 
   return (
@@ -22,7 +22,7 @@ export default async function SignIn() {
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold mb-2">Sign in to Mars Vista</h1>
           <p className="text-gray-300">
-            Access your dashboard to manage API keys and view usage
+            Access your API keys and start querying Mars rover photos
           </p>
         </div>
 

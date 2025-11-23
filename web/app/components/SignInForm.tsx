@@ -18,7 +18,7 @@ export default function SignInForm() {
       const result = await signIn('resend', {
         email,
         redirect: false,
-        callbackUrl: '/dashboard',
+        callbackUrl: '/api-keys',
       });
 
       if (result?.error) {
@@ -54,8 +54,7 @@ export default function SignInForm() {
           We&apos;ve sent a magic link to <strong>{email}</strong>
         </p>
         <p className="text-sm text-gray-400">
-          Click the link in the email to sign in to your dashboard. The link will expire in 24
-          hours.
+          Click the link in the email to sign in and access your API keys. The link will expire in 24 hours.
         </p>
       </div>
     );

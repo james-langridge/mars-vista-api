@@ -728,7 +728,7 @@ curl -H "X-API-Key: your_key" \\
                 <p className="text-slate-600 mt-1">Try all endpoints directly in your browser with live examples</p>
               </li>
               <li>
-                <Link href="/dashboard" className="text-orange-600 hover:text-orange-700 font-medium text-lg">
+                <Link href="/api-keys" className="text-orange-600 hover:text-orange-700 font-medium text-lg">
                   Get Your API Key →
                 </Link>
                 <p className="text-slate-600 mt-1">Sign in to generate your free API key and start exploring Mars</p>

@@ -4,11 +4,11 @@ import type { Metadata } from 'next';
 import ApiKeyManager from '@/components/ApiKeyManager';
 
 export const metadata: Metadata = {
-  title: 'Dashboard - Mars Vista API',
-  description: 'Manage your Mars Vista API keys and usage',
+  title: 'API Keys - Mars Vista API',
+  description: 'Manage your Mars Vista API keys',
 };
 
-export default async function Dashboard() {
+export default async function ApiKeys() {
   const session = await auth();
 
   // Protect this page - redirect to signin if not authenticated
@@ -19,9 +19,9 @@ export default async function Dashboard() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold mb-2">Dashboard</h1>
+        <h1 className="text-3xl font-bold mb-2">API Keys</h1>
         <p className="text-gray-300">
-          Welcome to your Mars Vista API dashboard, {session?.user?.name || session?.user?.email}
+          Manage your Mars Vista API keys
         </p>
       </div>
 
