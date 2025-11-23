@@ -102,6 +102,25 @@ export default function Docs() {
           </div>
         </section>
 
+        {/* Rate Limits */}
+        <section className="mb-16">
+          <h2 className="text-3xl font-bold mb-6 text-slate-900">Rate Limits</h2>
+          <p className="text-slate-700 mb-6">
+            The Mars Vista API is free for all users with generous rate limits. All responses include rate limit headers.
+          </p>
+          <div className="border border-orange-300 bg-orange-50 rounded-lg p-6 max-w-md">
+            <h3 className="text-xl font-semibold mb-3 text-slate-900">Free for All Users</h3>
+            <ul className="space-y-2 text-slate-700">
+              <li>10,000 requests/hour</li>
+              <li>100,000 requests/day</li>
+              <li>50 concurrent requests</li>
+            </ul>
+          </div>
+          <p className="text-slate-600 mt-4">
+            These generous limits are suitable for most applications, from personal projects to production services.
+          </p>
+        </section>
+
         {/* Core Endpoints */}
         <section className="mb-16">
           <h2 className="text-3xl font-bold mb-6 text-slate-900">Core v2 Endpoints</h2>
@@ -691,25 +710,6 @@ curl -H "X-API-Key: your_key" \\
   "https://api.marsvista.dev/api/v2/photos?sol=1000"
 # Returns 304 Not Modified if unchanged`}
           </pre>
-        </section>
-
-        {/* Rate Limits */}
-        <section className="mb-16">
-          <h2 className="text-3xl font-bold mb-6 text-slate-900">Rate Limits</h2>
-          <p className="text-slate-700 mb-6">
-            The Mars Vista API is free for all users with generous rate limits. All responses include rate limit headers.
-          </p>
-          <div className="border border-orange-300 bg-orange-50 rounded-lg p-6 max-w-md">
-            <h3 className="text-xl font-semibold mb-3 text-slate-900">Free for All Users</h3>
-            <ul className="space-y-2 text-slate-700">
-              <li>10,000 requests/hour</li>
-              <li>100,000 requests/day</li>
-              <li>50 concurrent requests</li>
-            </ul>
-          </div>
-          <p className="text-slate-600 mt-4">
-            These generous limits are suitable for most applications, from personal projects to production services.
-          </p>
         </section>
 
         {/* Use Cases */}
