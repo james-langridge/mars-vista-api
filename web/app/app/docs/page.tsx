@@ -31,7 +31,7 @@ export default function Docs() {
       </div>
 
       {/* Main Content */}
-      <div className="container mx-auto px-4 sm:px-6 py-12 max-w-6xl">
+      <div className="container mx-auto px-4 py-12 max-w-6xl">
 
         {/* Getting Started */}
         <section className="mb-16">
@@ -52,8 +52,8 @@ export default function Docs() {
         {/* API Versions */}
         <section className="mb-16">
           <h2 className="text-3xl font-bold mb-6 text-slate-900">API Versions</h2>
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="border border-orange-300 bg-orange-50 rounded-lg p-4 md:p-6">
+          <div className="grid md:grid-cols-2 gap-4 md:gap-6">
+            <div className="border border-orange-300 bg-orange-50 rounded-lg p-4 md:p-6 min-w-0">
               <h3 className="text-2xl font-semibold mb-3 text-slate-900">API v2 (Recommended)</h3>
               <p className="text-slate-700 mb-4">
                 Modern REST API with powerful filtering, field selection, HTTP caching, and revolutionary features:
@@ -81,7 +81,7 @@ export default function Docs() {
                 </li>
               </ul>
             </div>
-            <div className="border border-slate-300 bg-slate-50 rounded-lg p-4 md:p-6">
+            <div className="border border-slate-300 bg-slate-50 rounded-lg p-4 md:p-6 min-w-0">
               <h3 className="text-2xl font-semibold mb-3 text-slate-900">API v1</h3>
               <p className="text-slate-700 mb-4">
                 Drop-in replacement for the{' '}
@@ -419,42 +419,42 @@ curl -H "X-API-Key: your_key" \\
               <table className="min-w-full bg-white border border-slate-200 rounded-lg">
                 <thead className="bg-slate-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Query Type</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Typical Time</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Maximum Time</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">Tips</th>
+                    <th className="px-3 sm:px-6 py-3 text-left text-sm font-semibold text-slate-900">Query Type</th>
+                    <th className="px-3 sm:px-6 py-3 text-left text-sm font-semibold text-slate-900">Typical Time</th>
+                    <th className="px-3 sm:px-6 py-3 text-left text-sm font-semibold text-slate-900">Maximum Time</th>
+                    <th className="px-3 sm:px-6 py-3 text-left text-sm font-semibold text-slate-900">Tips</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
                   <tr>
-                    <td className="px-6 py-4 text-sm text-slate-900">Single photo</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">{'<'} 0.5s</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">1s</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">Use photo ID directly</td>
+                    <td className="px-3 sm:px-6 py-4 text-sm text-slate-900">Single photo</td>
+                    <td className="px-3 sm:px-6 py-4 text-sm text-slate-600">{'<'} 0.5s</td>
+                    <td className="px-3 sm:px-6 py-4 text-sm text-slate-600">1s</td>
+                    <td className="px-3 sm:px-6 py-4 text-sm text-slate-600">Use photo ID directly</td>
                   </tr>
                   <tr>
-                    <td className="px-6 py-4 text-sm text-slate-900">Basic filters</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">0.5-1s</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">2s</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">Combine filters for efficiency</td>
+                    <td className="px-3 sm:px-6 py-4 text-sm text-slate-900">Basic filters</td>
+                    <td className="px-3 sm:px-6 py-4 text-sm text-slate-600">0.5-1s</td>
+                    <td className="px-3 sm:px-6 py-4 text-sm text-slate-600">2s</td>
+                    <td className="px-3 sm:px-6 py-4 text-sm text-slate-600">Combine filters for efficiency</td>
                   </tr>
                   <tr>
-                    <td className="px-6 py-4 text-sm text-slate-900">Date/sol ranges</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">1-2s</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">3s</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">Use smaller ranges</td>
+                    <td className="px-3 sm:px-6 py-4 text-sm text-slate-900">Date/sol ranges</td>
+                    <td className="px-3 sm:px-6 py-4 text-sm text-slate-600">1-2s</td>
+                    <td className="px-3 sm:px-6 py-4 text-sm text-slate-600">3s</td>
+                    <td className="px-3 sm:px-6 py-4 text-sm text-slate-600">Use smaller ranges</td>
                   </tr>
                   <tr>
-                    <td className="px-6 py-4 text-sm text-slate-900">Image quality filters</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">2-3s</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">5s</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">Combine with other filters</td>
+                    <td className="px-3 sm:px-6 py-4 text-sm text-slate-900">Image quality filters</td>
+                    <td className="px-3 sm:px-6 py-4 text-sm text-slate-600">2-3s</td>
+                    <td className="px-3 sm:px-6 py-4 text-sm text-slate-600">5s</td>
+                    <td className="px-3 sm:px-6 py-4 text-sm text-slate-600">Combine with other filters</td>
                   </tr>
                   <tr>
-                    <td className="px-6 py-4 text-sm text-slate-900">Panorama detection</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">5-10s</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">16s</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">Specify sol ranges</td>
+                    <td className="px-3 sm:px-6 py-4 text-sm text-slate-900">Panorama detection</td>
+                    <td className="px-3 sm:px-6 py-4 text-sm text-slate-600">5-10s</td>
+                    <td className="px-3 sm:px-6 py-4 text-sm text-slate-600">16s</td>
+                    <td className="px-3 sm:px-6 py-4 text-sm text-slate-600">Specify sol ranges</td>
                   </tr>
                 </tbody>
               </table>
@@ -465,8 +465,8 @@ curl -H "X-API-Key: your_key" \\
           <div className="space-y-6">
             <h3 className="text-xl font-semibold text-slate-900">Tips for Better Performance</h3>
 
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+            <div className="grid md:grid-cols-2 gap-4 md:gap-6">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-6 min-w-0">
                 <h4 className="font-semibold text-green-900 mb-3 flex items-center gap-2">
                   <span className="text-green-600">✓</span>
                   Use Specific Filters
@@ -475,7 +475,7 @@ curl -H "X-API-Key: your_key" \\
                 <CodeBlock code={`?rovers=curiosity&sol_min=1000&sol_max=1100&cameras=NAVCAM`} />
               </div>
 
-              <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-6 min-w-0">
                 <h4 className="font-semibold text-green-900 mb-3 flex items-center gap-2">
                   <span className="text-green-600">✓</span>
                   Paginate Results
@@ -484,7 +484,7 @@ curl -H "X-API-Key: your_key" \\
                 <CodeBlock code={`?per_page=25&page=1`} />
               </div>
 
-              <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-6 min-w-0">
                 <h4 className="font-semibold text-green-900 mb-3 flex items-center gap-2">
                   <span className="text-green-600">✓</span>
                   Use Field Sets
@@ -493,7 +493,7 @@ curl -H "X-API-Key: your_key" \\
                 <CodeBlock code={`?field_set=minimal`} />
               </div>
 
-              <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-6 min-w-0">
                 <h4 className="font-semibold text-green-900 mb-3 flex items-center gap-2">
                   <span className="text-green-600">✓</span>
                   Cache Responses
