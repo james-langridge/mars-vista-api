@@ -1,8 +1,6 @@
 {
   "dependencies": {
     "@tailwindcss/vite": "^4.1.17",
-    "@types/react-syntax-highlighter": "^15.5.13",
-    "react-syntax-highlighter": "^16.1.0",
     "tailwindcss": "^4.1.17"
   }
 }

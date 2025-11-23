@@ -17,11 +17,13 @@
     "@prisma/client": "^6.19.0",
     "@react-email/components": "^1.0.1",
     "@react-email/render": "^2.0.0",
+    "@types/react-syntax-highlighter": "^15.5.13",
     "next": "16.0.3",
     "next-auth": "^5.0.0-beta.30",
     "prisma": "^6.19.0",
     "react": "19.2.0",
     "react-dom": "19.2.0",
+    "react-syntax-highlighter": "^16.1.0",
     "resend": "^6.4.2"
   },
   "devDependencies": {
