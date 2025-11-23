@@ -322,7 +322,7 @@ curl -H "X-API-Key: your_key" \\
         <section className="mb-16">
           <h2 className="text-3xl font-bold mb-6 text-slate-900">Advanced Features</h2>
           <p className="text-slate-700 mb-6">
-            These endpoints leverage our complete NASA data storage to provide powerful capabilities for exploring Mars imagery.
+            These endpoints leverage the complete NASA Mars Rover data to provide powerful capabilities for exploring Mars imagery.
           </p>
 
           {/* Panoramas */}
