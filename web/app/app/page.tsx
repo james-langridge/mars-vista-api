@@ -87,10 +87,18 @@ export default async function Home() {
     getLatestPhotos(),
   ]);
 
+  // Override latest_photo_date with the actual latest photo's date to ensure consistency
+  const enhancedStats = stats && photos.length > 0
+    ? {
+        ...stats,
+        latest_photo_date: photos[0].earthDate, // Photos are sorted by date desc, so first is newest
+      }
+    : stats;
+
   return (
     <main>
       <Hero />
-      {stats && <Statistics stats={stats} />}
+      {enhancedStats && <Statistics stats={enhancedStats} />}
       <LatestPhotos photos={photos} />
     </main>
   );
