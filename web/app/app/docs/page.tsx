@@ -409,7 +409,7 @@ curl -H "X-API-Key: your_key" \\
         <section className="mb-16">
           <h2 className="text-3xl font-bold mb-6 text-slate-900">Performance Expectations</h2>
           <p className="text-slate-700 mb-6">
-            The Mars Vista API queries a database of nearly 2 million Mars photos. While we've optimized for speed, some queries may take longer depending on complexity.
+            The Mars Vista API queries a database of nearly 2 million Mars photos. While the API is optimized for speed, some queries may take longer depending on complexity.
           </p>
 
           {/* Response Time Table */}
