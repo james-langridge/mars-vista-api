@@ -95,7 +95,7 @@ export default function Docs() {
                 </a>.
               </p>
               <p className="text-slate-600 mb-4">
-                Use v1 for full compatibility with existing Mars Rover API integrations. For new projects, we recommend v2 for access to enhanced features.
+                Use v1 for full compatibility with existing Mars Rover API integrations. For new projects, use v2 for access to enhanced data and features.
               </p>
               <CodeBlock code={`curl -H "X-API-Key: your_api_key_here" \\
   "https://api.marsvista.dev/api/v1/rovers/curiosity/photos?sol=1000"`} />
