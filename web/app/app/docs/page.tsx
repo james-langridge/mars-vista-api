@@ -85,18 +85,18 @@ export default function Docs() {
             <div className="border border-slate-300 bg-slate-50 rounded-lg p-6">
               <h3 className="text-2xl font-semibold mb-3 text-slate-900">API v1</h3>
               <p className="text-slate-700 mb-4">
-                Simple REST API following the{' '}
+                Drop-in replacement for the{' '}
                 <a
                   href="https://github.com/corincerami/mars-photo-api"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-blue-600 hover:text-blue-700 underline"
                 >
-                  original Mars Photo API format
+                  archived original Mars Rover API
                 </a>.
               </p>
               <p className="text-slate-600">
-                For new projects, we recommend v2 for access to enhanced features.
+                Use v1 for full compatibility with existing Mars Rover API integrations. For new projects, we recommend v2 for access to enhanced features.
               </p>
             </div>
           </div>
