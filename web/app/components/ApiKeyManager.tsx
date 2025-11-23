@@ -181,17 +181,11 @@ export default function ApiKeyManager() {
             </div>
 
             {/* Metadata */}
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="text-gray-400">Tier:</span>
-                <span className="ml-2 font-medium capitalize">{apiKeyInfo.tier}</span>
-              </div>
-              <div>
-                <span className="text-gray-400">Created:</span>
-                <span className="ml-2 font-medium">
-                  {apiKeyInfo.createdAt ? new Date(apiKeyInfo.createdAt).toLocaleDateString() : 'N/A'}
-                </span>
-              </div>
+            <div className="text-sm">
+              <span className="text-gray-400">Created:</span>
+              <span className="ml-2 font-medium">
+                {apiKeyInfo.createdAt ? new Date(apiKeyInfo.createdAt).toLocaleDateString() : 'N/A'}
+              </span>
             </div>
 
             {/* Usage Example */}
@@ -200,7 +194,7 @@ export default function ApiKeyManager() {
               <div className="bg-gray-900 p-4 rounded-lg border border-gray-700">
                 <code className="text-sm text-gray-300 whitespace-pre-wrap break-all">
 {`curl -H "X-API-Key: YOUR_API_KEY" \\
-  https://api.marsvista.dev/api/v1/rovers/curiosity/photos?sol=1000`}
+  https://api.marsvista.dev/api/v2/photos?rovers=curiosity&sol=1000`}
                 </code>
               </div>
             </div>
