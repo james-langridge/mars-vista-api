@@ -560,19 +560,6 @@ curl -H "X-API-Key: your_key" \\
               </ul>
             </div>
 
-            {/* Link to Full Guide */}
-            <div className="bg-orange-50 border border-orange-200 rounded-lg p-6 mt-6">
-              <h4 className="text-lg font-semibold mb-2 text-slate-900">Need More Details?</h4>
-              <p className="text-slate-700 mb-4">
-                For comprehensive optimization strategies, caching recommendations, and example code, see our full{' '}
-                <Link
-                  href="/performance"
-                  className="text-orange-600 hover:text-orange-700 font-medium underline"
-                >
-                  Performance Guide
-                </Link>.
-              </p>
-            </div>
           </div>
         </section>
 
@@ -806,12 +793,6 @@ curl -H "X-API-Key: your_key" \\
                   Interactive Swagger UI →
                 </a>
                 <p className="text-slate-600 mt-1">Try all endpoints directly in your browser with live examples</p>
-              </li>
-              <li>
-                <Link href="/performance" className="text-orange-600 hover:text-orange-700 font-medium text-lg">
-                  Performance Guide →
-                </Link>
-                <p className="text-slate-600 mt-1">Learn optimization strategies and understand API response times</p>
               </li>
               <li>
                 <Link href="/dashboard" className="text-orange-600 hover:text-orange-700 font-medium text-lg">
