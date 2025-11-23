@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import CodeBlock from '@/components/CodeBlock';
 
 export const metadata: Metadata = {
   title: 'API Documentation - Mars Vista API',
@@ -43,10 +44,8 @@ export default function Docs() {
             <p className="text-slate-700">
               Include your API key in the <code className="bg-blue-100 px-2 py-1 rounded">X-API-Key</code> header:
             </p>
-            <pre className="bg-slate-900 text-slate-100 p-4 rounded mt-3 text-sm overflow-x-auto">
-{`curl -H "X-API-Key: your_api_key_here" \\
-  "https://api.marsvista.dev/api/v2/photos"`}
-            </pre>
+            <CodeBlock code={`curl -H "X-API-Key: your_api_key_here" \\
+  "https://api.marsvista.dev/api/v2/photos"`} />
           </div>
         </section>
 
@@ -133,26 +132,20 @@ export default function Docs() {
             <div className="space-y-6 mb-8">
               <div>
                 <h5 className="font-semibold text-slate-800 mb-2">Query multiple rovers</h5>
-                <pre className="bg-slate-900 text-slate-100 p-4 rounded text-sm overflow-x-auto">
-{`curl -H "X-API-Key: your_key" \\
-  "https://api.marsvista.dev/api/v2/photos?rovers=curiosity,perseverance&per_page=10"`}
-                </pre>
+                <CodeBlock code={`curl -H "X-API-Key: your_key" \\
+  "https://api.marsvista.dev/api/v2/photos?rovers=curiosity,perseverance&per_page=10"`} />
               </div>
 
               <div>
                 <h5 className="font-semibold text-slate-800 mb-2">Filter by sol range</h5>
-                <pre className="bg-slate-900 text-slate-100 p-4 rounded text-sm overflow-x-auto">
-{`curl -H "X-API-Key: your_key" \\
-  "https://api.marsvista.dev/api/v2/photos?rovers=curiosity&sol_min=1000&sol_max=1100"`}
-                </pre>
+                <CodeBlock code={`curl -H "X-API-Key: your_key" \\
+  "https://api.marsvista.dev/api/v2/photos?rovers=curiosity&sol_min=1000&sol_max=1100"`} />
               </div>
 
               <div>
                 <h5 className="font-semibold text-slate-800 mb-2">Filter by date range and camera</h5>
-                <pre className="bg-slate-900 text-slate-100 p-4 rounded text-sm overflow-x-auto">
-{`curl -H "X-API-Key: your_key" \\
-  "https://api.marsvista.dev/api/v2/photos?cameras=NAVCAM,FHAZ&date_min=2024-01-01&date_max=2024-12-31"`}
-                </pre>
+                <CodeBlock code={`curl -H "X-API-Key: your_key" \\
+  "https://api.marsvista.dev/api/v2/photos?cameras=NAVCAM,FHAZ&date_min=2024-01-01&date_max=2024-12-31"`} />
               </div>
             </div>
 
@@ -162,22 +155,19 @@ export default function Docs() {
               <div>
                 <h5 className="font-semibold text-slate-800 mb-2">Mars time queries (Golden hour photography)</h5>
                 <p className="text-slate-600 mb-2 text-sm">Find photos taken during Mars sunrise or sunset for beautiful lighting</p>
-                <pre className="bg-slate-900 text-slate-100 p-4 rounded text-sm overflow-x-auto">
-{`# Photos during Mars sunrise (6-7 AM Mars time)
+                <CodeBlock code={`# Photos during Mars sunrise (6-7 AM Mars time)
 curl -H "X-API-Key: your_key" \\
   "https://api.marsvista.dev/api/v2/photos?mars_time_min=M06:00:00&mars_time_max=M07:00:00"
 
 # Or use the golden hour filter
 curl -H "X-API-Key: your_key" \\
-  "https://api.marsvista.dev/api/v2/photos?mars_time_golden_hour=true"`}
-                </pre>
+  "https://api.marsvista.dev/api/v2/photos?mars_time_golden_hour=true"`} />
               </div>
 
               <div>
                 <h5 className="font-semibold text-slate-800 mb-2">Location-based queries</h5>
                 <p className="text-slate-600 mb-2 text-sm">Query photos by rover position (site/drive coordinates)</p>
-                <pre className="bg-slate-900 text-slate-100 p-4 rounded text-sm overflow-x-auto">
-{`# Photos at specific location
+                <CodeBlock code={`# Photos at specific location
 curl -H "X-API-Key: your_key" \\
   "https://api.marsvista.dev/api/v2/photos?site=79&drive=1204"
 
@@ -187,15 +177,13 @@ curl -H "X-API-Key: your_key" \\
 
 # Photos along rover's journey
 curl -H "X-API-Key: your_key" \\
-  "https://api.marsvista.dev/api/v2/photos?site_min=70&site_max=80"`}
-                </pre>
+  "https://api.marsvista.dev/api/v2/photos?site_min=70&site_max=80"`} />
               </div>
 
               <div>
                 <h5 className="font-semibold text-slate-800 mb-2">Image quality filters</h5>
                 <p className="text-slate-600 mb-2 text-sm">Filter by resolution, aspect ratio, or sample type</p>
-                <pre className="bg-slate-900 text-slate-100 p-4 rounded text-sm overflow-x-auto">
-{`# High resolution only (1920x1080+)
+                <CodeBlock code={`# High resolution only (1920x1080+)
 curl -H "X-API-Key: your_key" \\
   "https://api.marsvista.dev/api/v2/photos?min_width=1920&min_height=1080"
 
@@ -205,15 +193,13 @@ curl -H "X-API-Key: your_key" \\
 
 # Widescreen aspect ratio
 curl -H "X-API-Key: your_key" \\
-  "https://api.marsvista.dev/api/v2/photos?aspect_ratio=16:9"`}
-                </pre>
+  "https://api.marsvista.dev/api/v2/photos?aspect_ratio=16:9"`} />
               </div>
 
               <div>
                 <h5 className="font-semibold text-slate-800 mb-2">Camera angle queries</h5>
                 <p className="text-slate-600 mb-2 text-sm">Find photos by camera orientation (useful for panoramas)</p>
-                <pre className="bg-slate-900 text-slate-100 p-4 rounded text-sm overflow-x-auto">
-{`# Looking at horizon (±5 degrees)
+                <CodeBlock code={`# Looking at horizon (±5 degrees)
 curl -H "X-API-Key: your_key" \\
   "https://api.marsvista.dev/api/v2/photos?mast_elevation_min=-5&mast_elevation_max=5"
 
@@ -223,8 +209,7 @@ curl -H "X-API-Key: your_key" \\
 
 # Specific compass direction (east to south)
 curl -H "X-API-Key: your_key" \\
-  "https://api.marsvista.dev/api/v2/photos?mast_azimuth_min=90&mast_azimuth_max=180"`}
-                </pre>
+  "https://api.marsvista.dev/api/v2/photos?mast_azimuth_min=90&mast_azimuth_max=180"`} />
               </div>
             </div>
 
@@ -234,8 +219,7 @@ curl -H "X-API-Key: your_key" \\
               <div>
                 <h5 className="font-semibold text-slate-800 mb-2">Field set presets</h5>
                 <p className="text-slate-600 mb-2 text-sm">Control response size with predefined field sets</p>
-                <pre className="bg-slate-900 text-slate-100 p-4 rounded text-sm overflow-x-auto">
-{`# Minimal: Just id, sol, and medium image
+                <CodeBlock code={`# Minimal: Just id, sol, and medium image
 curl -H "X-API-Key: your_key" \\
   "https://api.marsvista.dev/api/v2/photos?field_set=minimal"
 
@@ -245,35 +229,30 @@ curl -H "X-API-Key: your_key" \\
 
 # Scientific: All telemetry and coordinates
 curl -H "X-API-Key: your_key" \\
-  "https://api.marsvista.dev/api/v2/photos?field_set=scientific"`}
-                </pre>
+  "https://api.marsvista.dev/api/v2/photos?field_set=scientific"`} />
               </div>
 
               <div>
                 <h5 className="font-semibold text-slate-800 mb-2">Custom field selection</h5>
-                <pre className="bg-slate-900 text-slate-100 p-4 rounded text-sm overflow-x-auto">
-{`# Request specific fields only
+                <CodeBlock code={`# Request specific fields only
 curl -H "X-API-Key: your_key" \\
   "https://api.marsvista.dev/api/v2/photos?fields=id,img_src,sol,earth_date"
 
 # Include related resources
 curl -H "X-API-Key: your_key" \\
-  "https://api.marsvista.dev/api/v2/photos?fields=id,img_src&include=rover,camera"`}
-                </pre>
+  "https://api.marsvista.dev/api/v2/photos?fields=id,img_src&include=rover,camera"`} />
               </div>
 
               <div>
                 <h5 className="font-semibold text-slate-800 mb-2">Multiple image sizes</h5>
                 <p className="text-slate-600 mb-2 text-sm">Our API provides 4 image sizes for progressive loading</p>
-                <pre className="bg-slate-900 text-slate-100 p-4 rounded text-sm overflow-x-auto">
-{`# Only medium and large images (saves bandwidth)
+                <CodeBlock code={`# Only medium and large images (saves bandwidth)
 curl -H "X-API-Key: your_key" \\
   "https://api.marsvista.dev/api/v2/photos?image_sizes=medium,large"
 
 # Metadata only (no images)
 curl -H "X-API-Key: your_key" \\
-  "https://api.marsvista.dev/api/v2/photos?exclude_images=true"`}
-                </pre>
+  "https://api.marsvista.dev/api/v2/photos?exclude_images=true"`} />
               </div>
             </div>
 
@@ -282,20 +261,16 @@ curl -H "X-API-Key: your_key" \\
             <div className="space-y-6">
               <div>
                 <h5 className="font-semibold text-slate-800 mb-2">Sort results</h5>
-                <pre className="bg-slate-900 text-slate-100 p-4 rounded text-sm overflow-x-auto">
-{`# Sort by date (newest first), then by camera
+                <CodeBlock code={`# Sort by date (newest first), then by camera
 curl -H "X-API-Key: your_key" \\
-  "https://api.marsvista.dev/api/v2/photos?sort=-earth_date,camera"`}
-                </pre>
+  "https://api.marsvista.dev/api/v2/photos?sort=-earth_date,camera"`} />
               </div>
 
               <div>
                 <h5 className="font-semibold text-slate-800 mb-2">Pagination</h5>
-                <pre className="bg-slate-900 text-slate-100 p-4 rounded text-sm overflow-x-auto">
-{`# Page 2, 50 items per page (max 100)
+                <CodeBlock code={`# Page 2, 50 items per page (max 100)
 curl -H "X-API-Key: your_key" \\
-  "https://api.marsvista.dev/api/v2/photos?page=2&per_page=50"`}
-                </pre>
+  "https://api.marsvista.dev/api/v2/photos?page=2&per_page=50"`} />
               </div>
             </div>
           </div>
@@ -306,18 +281,14 @@ curl -H "X-API-Key: your_key" \\
             <p className="text-slate-700 mb-4">
               <code className="bg-slate-100 px-2 py-1 rounded">GET /api/v2/rovers</code> - Get information about all Mars rovers
             </p>
-            <pre className="bg-slate-900 text-slate-100 p-4 rounded text-sm overflow-x-auto mb-4">
-{`curl -H "X-API-Key: your_key" \\
-  "https://api.marsvista.dev/api/v2/rovers"`}
-            </pre>
+            <CodeBlock code={`curl -H "X-API-Key: your_key" \\
+  "https://api.marsvista.dev/api/v2/rovers"`} />
 
             <p className="text-slate-700 mb-4">
               <code className="bg-slate-100 px-2 py-1 rounded">GET /api/v2/rovers/{`{slug}`}</code> - Get specific rover details
             </p>
-            <pre className="bg-slate-900 text-slate-100 p-4 rounded text-sm overflow-x-auto">
-{`curl -H "X-API-Key: your_key" \\
-  "https://api.marsvista.dev/api/v2/rovers/curiosity"`}
-            </pre>
+            <CodeBlock code={`curl -H "X-API-Key: your_key" \\
+  "https://api.marsvista.dev/api/v2/rovers/curiosity"`} />
           </div>
 
           {/* Cameras Endpoint */}
@@ -326,10 +297,8 @@ curl -H "X-API-Key: your_key" \\
             <p className="text-slate-700 mb-4">
               <code className="bg-slate-100 px-2 py-1 rounded">GET /api/v2/cameras</code> - Get all rover cameras with capabilities
             </p>
-            <pre className="bg-slate-900 text-slate-100 p-4 rounded text-sm overflow-x-auto">
-{`curl -H "X-API-Key: your_key" \\
-  "https://api.marsvista.dev/api/v2/cameras"`}
-            </pre>
+            <CodeBlock code={`curl -H "X-API-Key: your_key" \\
+  "https://api.marsvista.dev/api/v2/cameras"`} />
           </div>
         </section>
 
@@ -349,15 +318,13 @@ curl -H "X-API-Key: your_key" \\
             <p className="text-slate-600 mb-4">
               Our system analyzes camera angles and timing to detect when rovers captured panoramic sequences. Get ordered photo sets ready for stitching.
             </p>
-            <pre className="bg-slate-900 text-slate-100 p-4 rounded text-sm overflow-x-auto">
-{`# Get all panoramas from Curiosity
+            <CodeBlock code={`# Get all panoramas from Curiosity
 curl -H "X-API-Key: your_key" \\
   "https://api.marsvista.dev/api/v2/panoramas?rovers=curiosity&min_photos=10"
 
 # Get specific panorama with all photos
 curl -H "X-API-Key: your_key" \\
-  "https://api.marsvista.dev/api/v2/panoramas/pano_curiosity_1000_14"`}
-            </pre>
+  "https://api.marsvista.dev/api/v2/panoramas/pano_curiosity_1000_14"`} />
           </div>
 
           {/* Locations */}
@@ -369,15 +336,13 @@ curl -H "X-API-Key: your_key" \\
             <p className="text-slate-600 mb-4">
               Track where rovers have been and how many photos were taken at each location. Perfect for creating journey maps and virtual tours.
             </p>
-            <pre className="bg-slate-900 text-slate-100 p-4 rounded text-sm overflow-x-auto">
-{`# Get all locations with 50+ photos
+            <CodeBlock code={`# Get all locations with 50+ photos
 curl -H "X-API-Key: your_key" \\
   "https://api.marsvista.dev/api/v2/locations?min_photos=50"
 
 # Get locations from specific sol range
 curl -H "X-API-Key: your_key" \\
-  "https://api.marsvista.dev/api/v2/locations?rovers=perseverance&sol_min=500&sol_max=1000"`}
-            </pre>
+  "https://api.marsvista.dev/api/v2/locations?rovers=perseverance&sol_min=500&sol_max=1000"`} />
           </div>
 
           {/* Journey */}
@@ -389,11 +354,9 @@ curl -H "X-API-Key: your_key" \\
             <p className="text-slate-600 mb-4">
               Visualize a rover's journey with location coordinates, distance traveled, and photos taken at each stop.
             </p>
-            <pre className="bg-slate-900 text-slate-100 p-4 rounded text-sm overflow-x-auto">
-{`# Get Curiosity's journey for sols 1000-2000
+            <CodeBlock code={`# Get Curiosity's journey for sols 1000-2000
 curl -H "X-API-Key: your_key" \\
-  "https://api.marsvista.dev/api/v2/rovers/curiosity/journey?sol_min=1000&sol_max=2000"`}
-            </pre>
+  "https://api.marsvista.dev/api/v2/rovers/curiosity/journey?sol_min=1000&sol_max=2000"`} />
           </div>
 
           {/* Time Machine */}
@@ -405,11 +368,9 @@ curl -H "X-API-Key: your_key" \\
             <p className="text-slate-600 mb-4">
               See how a location changed over time by finding all photos taken at the same site/drive coordinates during different rover visits.
             </p>
-            <pre className="bg-slate-900 text-slate-100 p-4 rounded text-sm overflow-x-auto">
-{`# Photos from site 79, drive 1204 at ~2 PM Mars time
+            <CodeBlock code={`# Photos from site 79, drive 1204 at ~2 PM Mars time
 curl -H "X-API-Key: your_key" \\
-  "https://api.marsvista.dev/api/v2/time-machine?site=79&drive=1204&mars_time=M14:00:00"`}
-            </pre>
+  "https://api.marsvista.dev/api/v2/time-machine?site=79&drive=1204&mars_time=M14:00:00"`} />
           </div>
 
           {/* Statistics */}
@@ -421,11 +382,9 @@ curl -H "X-API-Key: your_key" \\
             <p className="text-slate-600 mb-4">
               Get analytics on photo counts grouped by camera, rover, or sol. Perfect for dashboards and data analysis.
             </p>
-            <pre className="bg-slate-900 text-slate-100 p-4 rounded text-sm overflow-x-auto">
-{`# Camera usage statistics for Curiosity in 2024
+            <CodeBlock code={`# Camera usage statistics for Curiosity in 2024
 curl -H "X-API-Key: your_key" \\
-  "https://api.marsvista.dev/api/v2/photos/stats?rovers=curiosity&group_by=camera&date_min=2024-01-01"`}
-            </pre>
+  "https://api.marsvista.dev/api/v2/photos/stats?rovers=curiosity&group_by=camera&date_min=2024-01-01"`} />
           </div>
 
           {/* Batch Operations */}
@@ -437,12 +396,10 @@ curl -H "X-API-Key: your_key" \\
             <p className="text-slate-600 mb-4">
               Efficiently fetch up to 100 photos in a single request.
             </p>
-            <pre className="bg-slate-900 text-slate-100 p-4 rounded text-sm overflow-x-auto">
-{`curl -X POST -H "X-API-Key: your_key" \\
+            <CodeBlock code={`curl -X POST -H "X-API-Key: your_key" \\
   -H "Content-Type: application/json" \\
   -d '{"ids": [123456, 123457, 123458]}' \\
-  "https://api.marsvista.dev/api/v2/photos/batch"`}
-            </pre>
+  "https://api.marsvista.dev/api/v2/photos/batch"`} />
           </div>
         </section>
 
@@ -513,9 +470,7 @@ curl -H "X-API-Key: your_key" \\
                   Use Specific Filters
                 </h4>
                 <p className="text-green-800 text-sm mb-2">Narrow your search with multiple parameters</p>
-                <pre className="bg-green-900 text-green-100 p-3 rounded text-xs overflow-x-auto">
-{`?rovers=curiosity&sol_min=1000&sol_max=1100&cameras=NAVCAM`}
-                </pre>
+                <CodeBlock code={`?rovers=curiosity&sol_min=1000&sol_max=1100&cameras=NAVCAM`} />
               </div>
 
               <div className="bg-green-50 border border-green-200 rounded-lg p-6">
@@ -524,9 +479,7 @@ curl -H "X-API-Key: your_key" \\
                   Paginate Results
                 </h4>
                 <p className="text-green-800 text-sm mb-2">Request smaller chunks (25-50 per page)</p>
-                <pre className="bg-green-900 text-green-100 p-3 rounded text-xs overflow-x-auto">
-{`?per_page=25&page=1`}
-                </pre>
+                <CodeBlock code={`?per_page=25&page=1`} />
               </div>
 
               <div className="bg-green-50 border border-green-200 rounded-lg p-6">
@@ -535,9 +488,7 @@ curl -H "X-API-Key: your_key" \\
                   Use Field Sets
                 </h4>
                 <p className="text-green-800 text-sm mb-2">Request only the data you need</p>
-                <pre className="bg-green-900 text-green-100 p-3 rounded text-xs overflow-x-auto">
-{`?field_set=minimal`}
-                </pre>
+                <CodeBlock code={`?field_set=minimal`} />
               </div>
 
               <div className="bg-green-50 border border-green-200 rounded-lg p-6">
@@ -546,9 +497,7 @@ curl -H "X-API-Key: your_key" \\
                   Cache Responses
                 </h4>
                 <p className="text-green-800 text-sm mb-2">NASA data updates infrequently - use ETags</p>
-                <pre className="bg-green-900 text-green-100 p-3 rounded text-xs overflow-x-auto">
-{`If-None-Match: "etag-value"`}
-                </pre>
+                <CodeBlock code={`If-None-Match: "etag-value"`} />
               </div>
             </div>
 
@@ -584,8 +533,7 @@ curl -H "X-API-Key: your_key" \\
           <p className="text-slate-700 mb-4">
             All v2 endpoints return a consistent JSON:API-inspired structure with data, metadata, pagination, and navigation links.
           </p>
-          <pre className="bg-slate-900 text-slate-100 p-6 rounded text-sm overflow-x-auto">
-{`{
+          <CodeBlock code={`{
   "data": [
     {
       "id": 123456,
@@ -659,8 +607,7 @@ curl -H "X-API-Key: your_key" \\
     "first": "https://api.marsvista.dev/api/v2/photos?page=1",
     "last": "https://api.marsvista.dev/api/v2/photos?page=610"
   }
-}`}
-          </pre>
+}`} />
         </section>
 
         {/* Error Handling */}
@@ -669,8 +616,7 @@ curl -H "X-API-Key: your_key" \\
           <p className="text-slate-700 mb-4">
             Errors follow RFC 7807 Problem Details format with helpful field-level validation messages.
           </p>
-          <pre className="bg-slate-900 text-slate-100 p-6 rounded text-sm overflow-x-auto">
-{`{
+          <CodeBlock code={`{
   "type": "/errors/validation-error",
   "title": "Validation Error",
   "status": 400,
@@ -684,8 +630,7 @@ curl -H "X-API-Key: your_key" \\
       "example": "2023-01-01"
     }
   ]
-}`}
-          </pre>
+}`} />
         </section>
 
         {/* HTTP Caching */}
@@ -694,8 +639,7 @@ curl -H "X-API-Key: your_key" \\
           <p className="text-slate-700 mb-4">
             All endpoints support ETags and conditional requests for efficient caching. Photos from inactive rovers (Spirit, Opportunity) can be cached for 1 year.
           </p>
-          <pre className="bg-slate-900 text-slate-100 p-6 rounded text-sm overflow-x-auto">
-{`# First request - get ETag
+          <CodeBlock code={`# First request - get ETag
 curl -v -H "X-API-Key: your_key" \\
   "https://api.marsvista.dev/api/v2/photos?sol=1000"
 # Response includes: ETag: "abc123xyz"
@@ -704,8 +648,7 @@ curl -v -H "X-API-Key: your_key" \\
 curl -H "X-API-Key: your_key" \\
      -H "If-None-Match: \\"abc123xyz\\"" \\
   "https://api.marsvista.dev/api/v2/photos?sol=1000"
-# Returns 304 Not Modified if unchanged`}
-          </pre>
+# Returns 304 Not Modified if unchanged`} />
         </section>
 
         {/* Use Cases */}
@@ -718,15 +661,13 @@ curl -H "X-API-Key: your_key" \\
               <p className="text-slate-700 mb-4">
                 Use field sets and image sizes to create responsive, performant galleries:
               </p>
-              <pre className="bg-slate-900 text-slate-100 p-4 rounded text-sm overflow-x-auto">
-{`# Thumbnail view: minimal data, small images only
+              <CodeBlock code={`# Thumbnail view: minimal data, small images only
 curl -H "X-API-Key: your_key" \\
   "https://api.marsvista.dev/api/v2/photos?field_set=minimal&image_sizes=small&per_page=50"
 
 # Detail view: full data with all image sizes
 curl -H "X-API-Key: your_key" \\
-  "https://api.marsvista.dev/api/v2/photos/123456?field_set=extended"`}
-              </pre>
+  "https://api.marsvista.dev/api/v2/photos/123456?field_set=extended"`} />
             </div>
 
             <div className="bg-slate-50 rounded-lg p-6">
@@ -734,15 +675,13 @@ curl -H "X-API-Key: your_key" \\
               <p className="text-slate-700 mb-4">
                 Create an interactive map of where rovers have been:
               </p>
-              <pre className="bg-slate-900 text-slate-100 p-4 rounded text-sm overflow-x-auto">
-{`# Get journey data with coordinates
+              <CodeBlock code={`# Get journey data with coordinates
 curl -H "X-API-Key: your_key" \\
   "https://api.marsvista.dev/api/v2/rovers/perseverance/journey?sol_min=0&sol_max=1000"
 
 # Get photos from specific locations
 curl -H "X-API-Key: your_key" \\
-  "https://api.marsvista.dev/api/v2/locations?rovers=perseverance"`}
-              </pre>
+  "https://api.marsvista.dev/api/v2/locations?rovers=perseverance"`} />
             </div>
 
             <div className="bg-slate-50 rounded-lg p-6">
@@ -750,15 +689,13 @@ curl -H "X-API-Key: your_key" \\
               <p className="text-slate-700 mb-4">
                 Find and download panoramic sequences for stitching:
               </p>
-              <pre className="bg-slate-900 text-slate-100 p-4 rounded text-sm overflow-x-auto">
-{`# Get detected panoramas
+              <CodeBlock code={`# Get detected panoramas
 curl -H "X-API-Key: your_key" \\
   "https://api.marsvista.dev/api/v2/panoramas?rovers=curiosity&min_photos=20"
 
 # Or find them manually with camera angles
 curl -H "X-API-Key: your_key" \\
-  "https://api.marsvista.dev/api/v2/photos?sol=1000&sample_type=Full&mast_elevation_min=-5&mast_elevation_max=5"`}
-              </pre>
+  "https://api.marsvista.dev/api/v2/photos?sol=1000&sample_type=Full&mast_elevation_min=-5&mast_elevation_max=5"`} />
             </div>
 
             <div className="bg-slate-50 rounded-lg p-6">
@@ -766,15 +703,13 @@ curl -H "X-API-Key: your_key" \\
               <p className="text-slate-700 mb-4">
                 Access complete telemetry and metadata for research:
               </p>
-              <pre className="bg-slate-900 text-slate-100 p-4 rounded text-sm overflow-x-auto">
-{`# Get all data including camera angles and coordinates
+              <CodeBlock code={`# Get all data including camera angles and coordinates
 curl -H "X-API-Key: your_key" \\
   "https://api.marsvista.dev/api/v2/photos?field_set=scientific&rovers=curiosity"
 
 # Analyze photography patterns
 curl -H "X-API-Key: your_key" \\
-  "https://api.marsvista.dev/api/v2/photos/stats?group_by=camera&date_min=2024-01-01"`}
-              </pre>
+  "https://api.marsvista.dev/api/v2/photos/stats?group_by=camera&date_min=2024-01-01"`} />
             </div>
           </div>
         </section>
