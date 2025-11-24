@@ -330,6 +330,9 @@ app.UseHttpsRedirection();
 // Enable CORS middleware
 app.UseCors();
 
+// Response timing middleware (must come early to measure full pipeline processing time)
+app.UseMiddleware<ResponseTimingMiddleware>();
+
 // Request logging with Serilog (logs HTTP requests with timing)
 app.UseSerilogRequestLogging(options =>
 {
