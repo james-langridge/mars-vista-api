@@ -107,8 +107,9 @@ builder.Services.AddDbContext<MarsVistaDbContext>((serviceProvider, options) =>
             // Split queries for better performance with Include()
             npgsqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
 
-            // Command timeout for long-running queries
-            npgsqlOptions.CommandTimeout(30);
+            // Command timeout: 120s for migrations (computed columns on 630K+ photos), 30s for queries
+            // Migrations run at startup, so longer timeout is acceptable
+            npgsqlOptions.CommandTimeout(120);
 
             // Batch multiple operations
             npgsqlOptions.MaxBatchSize(100);
