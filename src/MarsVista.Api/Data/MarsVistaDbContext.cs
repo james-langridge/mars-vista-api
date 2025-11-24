@@ -128,9 +128,8 @@ public class MarsVistaDbContext : DbContext
                 .HasColumnType("jsonb");
 
             // Computed column for aspect ratio (stored, indexed)
-            // DECIMAL(10,3) allows values up to 9,999,999.999 (handles extreme panoramas)
+            // DECIMAL(10,3) defined in migration SQL to handle extreme panoramas
             entity.Property(e => e.AspectRatio)
-                .HasColumnType("decimal(10,3)")
                 .HasComputedColumnSql("CASE WHEN height IS NOT NULL AND height > 0 THEN ROUND((width::decimal / height), 3) ELSE NULL END", stored: true);
 
             entity.HasIndex(e => e.AspectRatio);
