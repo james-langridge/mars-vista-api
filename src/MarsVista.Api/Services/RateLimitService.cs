@@ -16,10 +16,12 @@ public class RateLimitService : IRateLimitService
     private readonly SemaphoreSlim _lock = new(1, 1);
 
     // Rate limit configurations by tier
+    // -1 = unlimited
     private static readonly Dictionary<string, (int hourly, int daily)> TierLimits = new()
     {
         { "free", (1000, 10000) },
-        { "pro", (10000, 100000) }
+        { "pro", (10000, 100000) },
+        { "unlimited", (-1, -1) }
     };
 
     public RateLimitService(IMemoryCache cache, ILogger<RateLimitService> logger)
@@ -74,9 +76,9 @@ public class RateLimitService : IRateLimitService
                 return 0;
             });
 
-            // Check if limits would be exceeded
-            var hourlyAllowed = hourlyCount < hourlyLimit;
-            var dailyAllowed = dailyLimit == -1 || dailyCount < dailyLimit; // -1 = unlimited
+            // Check if limits would be exceeded (-1 = unlimited)
+            var hourlyAllowed = hourlyLimit == -1 || hourlyCount < hourlyLimit;
+            var dailyAllowed = dailyLimit == -1 || dailyCount < dailyLimit;
 
             var allowed = hourlyAllowed && dailyAllowed;
 
@@ -86,7 +88,7 @@ public class RateLimitService : IRateLimitService
                 _cache.Set(hourlyKey, hourlyCount + 1, hourStart.AddHours(1));
                 _cache.Set(dailyKey, dailyCount + 1, dayStart.AddDays(1));
 
-                var hourlyRemaining = Math.Max(0, hourlyLimit - (hourlyCount + 1));
+                var hourlyRemaining = hourlyLimit == -1 ? int.MaxValue : Math.Max(0, hourlyLimit - (hourlyCount + 1));
                 var dailyRemaining = dailyLimit == -1 ? int.MaxValue : Math.Max(0, dailyLimit - (dailyCount + 1));
 
                 return (true, hourlyRemaining, dailyRemaining, hourlyResetAt, dailyResetAt);
@@ -94,7 +96,7 @@ public class RateLimitService : IRateLimitService
             else
             {
                 // Rate limit exceeded
-                var hourlyRemaining = Math.Max(0, hourlyLimit - hourlyCount);
+                var hourlyRemaining = hourlyLimit == -1 ? int.MaxValue : Math.Max(0, hourlyLimit - hourlyCount);
                 var dailyRemaining = dailyLimit == -1 ? int.MaxValue : Math.Max(0, dailyLimit - dailyCount);
 
                 _logger.LogWarning(
