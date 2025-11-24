@@ -74,19 +74,13 @@ if (!string.IsNullOrEmpty(databaseUrl))
     var uri = new Uri(databaseUrl);
     var password = uri.UserInfo.Split(':')[1];
     var username = uri.UserInfo.Split(':')[0];
-    connectionString = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.Trim('/')};Username={username};Password={password};SSL Mode=Require;Trust Server Certificate=true;Pooling=true;MinPoolSize=5;MaxPoolSize=100;Connection Idle Lifetime=300";
+    connectionString = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.Trim('/')};Username={username};Password={password};SSL Mode=Require;Trust Server Certificate=true";
 }
 else
 {
     // Fall back to appsettings.json for local development
     connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
         ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-
-    // Append pooling parameters if not already present
-    if (!connectionString.Contains("Pooling="))
-    {
-        connectionString += ";Pooling=true;MinPoolSize=5;MaxPoolSize=100;Connection Idle Lifetime=300";
-    }
 }
 
 // Add HttpContextAccessor for database query timing
