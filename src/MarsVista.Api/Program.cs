@@ -83,13 +83,18 @@ else
         ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 }
 
-// Add DbContext with snake_case naming convention
-builder.Services.AddDbContext<MarsVistaDbContext>(options =>
+// Add HttpContextAccessor for database query timing
+builder.Services.AddHttpContextAccessor();
+
+// Add DbContext with snake_case naming convention and query timing interceptor
+builder.Services.AddScoped<QueryTimingInterceptor>();
+builder.Services.AddDbContext<MarsVistaDbContext>((serviceProvider, options) =>
     options.UseNpgsql(
         connectionString,
         npgsqlOptions => npgsqlOptions.EnableRetryOnFailure()
     )
-    .UseSnakeCaseNamingConvention());
+    .UseSnakeCaseNamingConvention()
+    .AddInterceptors(serviceProvider.GetRequiredService<QueryTimingInterceptor>()));
 
 // HTTP client for NASA API with resilience policies
 builder.Services.AddHttpClient("NASA", client =>

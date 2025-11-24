@@ -3,10 +3,16 @@ using System.Diagnostics;
 namespace MarsVista.Api.Middleware;
 
 /// <summary>
-/// Middleware that measures server-side processing time and response size.
-/// Adds X-Response-Time and X-Response-Size headers for performance monitoring.
+/// Middleware that measures server-side processing time, database query time, and response size.
+/// Adds performance monitoring headers:
+/// - X-Response-Time: Total server processing time in seconds
+/// - X-Response-Size: Response body size in bytes
+/// - X-DB-Time: Total time spent in database queries (if any queries were executed)
+/// - X-App-Time: Application processing time (Response-Time minus DB-Time)
+/// - X-DB-Query-Count: Number of database queries executed
+///
 /// This allows clients to distinguish between network latency and server processing time,
-/// and identify bloated responses that could benefit from optimization.
+/// identify slow database queries vs slow application logic, and detect bloated responses.
 /// </summary>
 public class ResponseTimingMiddleware
 {
@@ -40,10 +46,30 @@ public class ResponseTimingMiddleware
             // Get response size in bytes
             var responseSize = responseBody.Length;
 
+            // Get database timing if available
+            var totalDbTime = context.Items["__TotalDbTime"] as TimeSpan?;
+            var dbQueryCount = context.Items["__DbQueryCount"] as int?;
+
             // Add performance headers
             var responseTimeSeconds = stopwatch.Elapsed.TotalSeconds;
             context.Response.Headers.Append("X-Response-Time", responseTimeSeconds.ToString("F6"));
             context.Response.Headers.Append("X-Response-Size", responseSize.ToString());
+
+            // Add database timing headers if queries were executed
+            if (totalDbTime.HasValue)
+            {
+                var dbTimeSeconds = totalDbTime.Value.TotalSeconds;
+                context.Response.Headers.Append("X-DB-Time", dbTimeSeconds.ToString("F6"));
+
+                // Calculate application time (total time minus database time)
+                var appTimeSeconds = responseTimeSeconds - dbTimeSeconds;
+                context.Response.Headers.Append("X-App-Time", appTimeSeconds.ToString("F6"));
+            }
+
+            if (dbQueryCount.HasValue)
+            {
+                context.Response.Headers.Append("X-DB-Query-Count", dbQueryCount.Value.ToString());
+            }
 
             // Copy the response body back to the original stream
             responseBody.Seek(0, SeekOrigin.Begin);
