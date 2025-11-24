@@ -24,6 +24,7 @@ public class Photo : ITimestamped
     // Image properties
     public int? Width { get; set; }
     public int? Height { get; set; }
+    public decimal? AspectRatio { get; set; }  // Computed column: width / height (indexed for fast queries)
     public string SampleType { get; set; } = string.Empty;  // "Full", "Thumbnail", "Subframe"
 
     // Location data (enables proximity search, panorama detection)

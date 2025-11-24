@@ -127,6 +127,12 @@ public class MarsVistaDbContext : DbContext
             entity.Property(e => e.RawData)
                 .HasColumnType("jsonb");
 
+            // Computed column for aspect ratio (stored, indexed)
+            entity.Property(e => e.AspectRatio)
+                .HasComputedColumnSql("CASE WHEN height IS NOT NULL AND height > 0 THEN ROUND((width::decimal / height), 3) ELSE NULL END", stored: true);
+
+            entity.HasIndex(e => e.AspectRatio);
+
             // Foreign keys
             entity.HasOne(e => e.Rover)
                 .WithMany(r => r.Photos)

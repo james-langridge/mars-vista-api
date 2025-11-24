@@ -74,13 +74,19 @@ if (!string.IsNullOrEmpty(databaseUrl))
     var uri = new Uri(databaseUrl);
     var password = uri.UserInfo.Split(':')[1];
     var username = uri.UserInfo.Split(':')[0];
-    connectionString = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.Trim('/')};Username={username};Password={password};SSL Mode=Require;Trust Server Certificate=true";
+    connectionString = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.Trim('/')};Username={username};Password={password};SSL Mode=Require;Trust Server Certificate=true;Pooling=true;MinPoolSize=5;MaxPoolSize=100;Connection Idle Lifetime=300";
 }
 else
 {
     // Fall back to appsettings.json for local development
     connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
         ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+
+    // Append pooling parameters if not already present
+    if (!connectionString.Contains("Pooling="))
+    {
+        connectionString += ";Pooling=true;MinPoolSize=5;MaxPoolSize=100;Connection Idle Lifetime=300";
+    }
 }
 
 // Add HttpContextAccessor for database query timing
@@ -91,9 +97,28 @@ builder.Services.AddScoped<QueryTimingInterceptor>();
 builder.Services.AddDbContext<MarsVistaDbContext>((serviceProvider, options) =>
     options.UseNpgsql(
         connectionString,
-        npgsqlOptions => npgsqlOptions.EnableRetryOnFailure()
-    )
+        npgsqlOptions =>
+        {
+            npgsqlOptions.EnableRetryOnFailure(
+                maxRetryCount: 3,
+                maxRetryDelay: TimeSpan.FromSeconds(5),
+                errorCodesToAdd: null);
+
+            // Split queries for better performance with Include()
+            npgsqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+
+            // Command timeout for long-running queries
+            npgsqlOptions.CommandTimeout(30);
+
+            // Batch multiple operations
+            npgsqlOptions.MaxBatchSize(100);
+        })
     .UseSnakeCaseNamingConvention()
+    // Default to no-tracking for read queries (60% faster)
+    .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking)
+    // Disable in production for performance
+    .EnableSensitiveDataLogging(false)
+    .EnableDetailedErrors(false)
     .AddInterceptors(serviceProvider.GetRequiredService<QueryTimingInterceptor>()));
 
 // HTTP client for NASA API with resilience policies
@@ -126,6 +151,26 @@ builder.Services.AddScoped<MarsVista.Api.Services.V2.ITimeMachineService, MarsVi
 builder.Services.AddMemoryCache(); // Required for in-memory rate limiting
 builder.Services.AddSingleton<IApiKeyService, ApiKeyService>();
 builder.Services.AddSingleton<IRateLimitService, RateLimitService>();
+
+// Response compression for 30-50% payload size reduction
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true; // Enable for HTTPS (important!)
+    options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.BrotliCompressionProvider>();
+    options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.GzipCompressionProvider>();
+    options.MimeTypes = Microsoft.AspNetCore.ResponseCompression.ResponseCompressionDefaults.MimeTypes.Concat(
+        new[] { "application/json", "text/json" });
+});
+
+builder.Services.Configure<Microsoft.AspNetCore.ResponseCompression.BrotliCompressionProviderOptions>(options =>
+{
+    options.Level = System.IO.Compression.CompressionLevel.Fastest;
+});
+
+builder.Services.Configure<Microsoft.AspNetCore.ResponseCompression.GzipCompressionProviderOptions>(options =>
+{
+    options.Level = System.IO.Compression.CompressionLevel.Fastest;
+});
 
 // Scraper services (action layer - side effects)
 // Register scrapers by rover name for dynamic resolution
@@ -331,6 +376,9 @@ app.UseSwaggerUI(options =>
 });
 
 app.UseHttpsRedirection();
+
+// Response compression (MUST come before UseCors and other middleware)
+app.UseResponseCompression();
 
 // Enable CORS middleware
 app.UseCors();

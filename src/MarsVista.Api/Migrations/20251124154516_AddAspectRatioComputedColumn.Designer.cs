@@ -4,6 +4,7 @@ using System.Text.Json;
 using MarsVista.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MarsVista.Api.Migrations
 {
     [DbContext(typeof(MarsVistaDbContext))]
-    partial class MarsVistaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251124154516_AddAspectRatioComputedColumn")]
+    partial class AddAspectRatioComputedColumn
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -147,12 +150,6 @@ namespace MarsVista.Api.Migrations
                         .HasColumnName("id");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<decimal?>("AspectRatio")
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("numeric")
-                        .HasColumnName("aspect_ratio")
-                        .HasComputedColumnSql("CASE WHEN height IS NOT NULL AND height > 0 THEN ROUND((width::decimal / height), 3) ELSE NULL END", true);
 
                     b.Property<string>("Attitude")
                         .HasMaxLength(200)
@@ -311,9 +308,6 @@ namespace MarsVista.Api.Migrations
 
                     b.HasKey("Id")
                         .HasName("pk_photos");
-
-                    b.HasIndex("AspectRatio")
-                        .HasDatabaseName("ix_photos_aspect_ratio");
 
                     b.HasIndex("CameraId")
                         .HasDatabaseName("ix_photos_camera_id");
