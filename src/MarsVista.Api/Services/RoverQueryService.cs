@@ -1,5 +1,7 @@
 using MarsVista.Api.Data;
 using MarsVista.Api.DTOs;
+using MarsVista.Api.Entities;
+using MarsVista.Api.Services.V2;
 using Microsoft.EntityFrameworkCore;
 
 namespace MarsVista.Api.Services;
@@ -7,22 +9,38 @@ namespace MarsVista.Api.Services;
 public class RoverQueryService : IRoverQueryService
 {
     private readonly MarsVistaDbContext _context;
+    private readonly ICachingServiceV2 _cachingService;
     private readonly ILogger<RoverQueryService> _logger;
 
     public RoverQueryService(
         MarsVistaDbContext context,
+        ICachingServiceV2 cachingService,
         ILogger<RoverQueryService> logger)
     {
         _context = context;
+        _cachingService = cachingService;
         _logger = logger;
     }
 
     public async Task<List<RoverDto>> GetAllRoversAsync(CancellationToken cancellationToken = default)
     {
+        var cacheKey = _cachingService.GenerateCacheKey("v1", "rovers", "list");
+
+        var result = await _cachingService.GetOrSetAsync(
+            cacheKey,
+            async () => await FetchAllRoversFromDbAsync(cancellationToken),
+            _cachingService.GetStaticResourceCacheOptions());
+
+        return result ?? new List<RoverDto>();
+    }
+
+    private async Task<List<RoverDto>> FetchAllRoversFromDbAsync(CancellationToken cancellationToken)
+    {
         // Load rovers with cameras
         var rovers = await _context.Rovers
             .Include(r => r.Cameras)
             .OrderBy(r => r.Id)
+            .AsNoTracking()
             .ToListAsync(cancellationToken);
 
         if (rovers.Count == 0)
@@ -84,9 +102,23 @@ public class RoverQueryService : IRoverQueryService
         string name,
         CancellationToken cancellationToken = default)
     {
+        var normalizedName = name.ToLowerInvariant();
+        var cacheKey = _cachingService.GenerateCacheKey("v1", "rover", normalizedName);
+
+        return await _cachingService.GetOrSetAsync(
+            cacheKey,
+            async () => await FetchRoverByNameFromDbAsync(normalizedName, cancellationToken),
+            _cachingService.GetStaticResourceCacheOptions());
+    }
+
+    private async Task<RoverDto?> FetchRoverByNameFromDbAsync(
+        string normalizedName,
+        CancellationToken cancellationToken)
+    {
         var rover = await _context.Rovers
             .Include(r => r.Cameras)
-            .FirstOrDefaultAsync(r => r.Name.ToLower() == name.ToLower(), cancellationToken);
+            .AsNoTracking()
+            .FirstOrDefaultAsync(r => r.Name.ToLower() == normalizedName, cancellationToken);
 
         if (rover == null)
         {
@@ -120,15 +152,35 @@ public class RoverQueryService : IRoverQueryService
         string roverName,
         CancellationToken cancellationToken = default)
     {
+        var normalizedName = roverName.ToLowerInvariant();
+
+        // Quick lookup for rover status and photo count (needed for cache key and TTL)
         var rover = await _context.Rovers
-            .FirstOrDefaultAsync(r => r.Name.ToLower() == roverName.ToLower(), cancellationToken);
+            .AsNoTracking()
+            .FirstOrDefaultAsync(r => r.Name.ToLower() == normalizedName, cancellationToken);
 
         if (rover == null)
         {
             return null;
         }
 
-        var stats = await GetRoverStatsAsync(rover.Id, cancellationToken);
+        // Photo count in cache key enables auto-invalidation when new photos are scraped
+        var photoCount = await _context.Photos.CountAsync(p => p.RoverId == rover.Id, cancellationToken);
+        var isActiveRover = rover.Status?.ToLowerInvariant() == "active";
+        var cacheKey = _cachingService.GenerateCacheKey("v1", "manifest", normalizedName, photoCount);
+
+        return await _cachingService.GetOrSetAsync(
+            cacheKey,
+            async () => await FetchManifestFromDbAsync(rover.Id, rover, cancellationToken),
+            _cachingService.GetManifestCacheOptions(isActiveRover));
+    }
+
+    private async Task<PhotoManifestDto> FetchManifestFromDbAsync(
+        int roverId,
+        Rover rover,
+        CancellationToken cancellationToken)
+    {
+        var stats = await GetRoverStatsAsync(roverId, cancellationToken);
 
         // Use raw SQL for efficient grouping and aggregation (10-100x faster than EF Core GroupBy)
         // This query groups photos by sol, counts them, and aggregates camera names using PostgreSQL
@@ -145,7 +197,7 @@ public class RoverQueryService : IRoverQueryService
             ORDER BY p.sol";
 
         var photosBySol = await _context.Database
-            .SqlQueryRaw<ManifestSolData>(sql, rover.Id)
+            .SqlQueryRaw<ManifestSolData>(sql, roverId)
             .ToListAsync(cancellationToken);
 
         return new PhotoManifestDto
