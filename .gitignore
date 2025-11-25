@@ -65,5 +65,6 @@ logs/
 backups/
 failed_sols.txt
 
-# Local settings
-.claude/settings.local.json
+# Local settings and Claude Code files
+.claude/
+CLAUDE.md
