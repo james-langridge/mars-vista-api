@@ -191,9 +191,9 @@ builder.Services.AddScoped<MarsVista.Api.Services.V2.IJourneyService, MarsVista.
 builder.Services.AddScoped<MarsVista.Api.Services.V2.ITimeMachineService, MarsVista.Api.Services.V2.TimeMachineService>();
 
 // API key and rate limiting services
-builder.Services.AddMemoryCache(); // Required for in-memory rate limiting
+builder.Services.AddMemoryCache(); // Required for rate limiting fallback and L1 cache
 builder.Services.AddSingleton<IApiKeyService, ApiKeyService>();
-builder.Services.AddSingleton<IRateLimitService, RateLimitService>();
+builder.Services.AddSingleton<IRateLimitService, RedisRateLimitService>();
 
 // Response compression for 30-50% payload size reduction
 builder.Services.AddResponseCompression(options =>
