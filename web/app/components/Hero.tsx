@@ -9,7 +9,7 @@ export default function Hero() {
             Mars Vista API
           </h1>
           <p className="text-xl sm:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto">
-            The complete, always-updated archive of Mars rover imagery. Over 1.9 million photos from Curiosity, Perseverance, Opportunity, and Spirit missions.
+            The complete archive of Mars rover imagery. Over 1.9 million photos from Curiosity, Perseverance, Opportunity, and Spirit missions. Updated daily.
           </p>
           <div className="flex justify-center">
             <Link
