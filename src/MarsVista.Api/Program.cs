@@ -14,6 +14,7 @@ using Polly.Extensions.Http;
 using Serilog;
 using Serilog.Context;
 using Serilog.Formatting.Compact;
+using StackExchange.Redis;
 
 // Configure Serilog before building the application
 Log.Logger = new LoggerConfiguration()
@@ -115,6 +116,47 @@ builder.Services.AddDbContext<MarsVistaDbContext>((serviceProvider, options) =>
     .EnableSensitiveDataLogging(false)
     .EnableDetailedErrors(false)
     .AddInterceptors(serviceProvider.GetRequiredService<QueryTimingInterceptor>()));
+
+// Redis configuration for two-level caching
+var redisConnectionString = Environment.GetEnvironmentVariable("REDIS_URL")
+    ?? builder.Configuration.GetConnectionString("Redis");
+
+IConnectionMultiplexer? redisMultiplexer = null;
+
+if (!string.IsNullOrEmpty(redisConnectionString))
+{
+    try
+    {
+        // Parse Railway REDIS_URL format if needed: redis://default:password@host:port
+        var redisOptions = redisConnectionString;
+        if (redisConnectionString.StartsWith("redis://"))
+        {
+            var uri = new Uri(redisConnectionString);
+            var password = uri.UserInfo.Contains(':') ? uri.UserInfo.Split(':')[1] : uri.UserInfo;
+            redisOptions = $"{uri.Host}:{uri.Port},password={password},ssl=false,abortConnect=false,connectTimeout=5000,syncTimeout=5000";
+        }
+
+        var configuration = ConfigurationOptions.Parse(redisOptions);
+        configuration.AbortOnConnectFail = false; // Graceful degradation
+        configuration.ConnectTimeout = 5000; // 5 second timeout
+        configuration.SyncTimeout = 5000;
+
+        redisMultiplexer = ConnectionMultiplexer.Connect(configuration);
+        Log.Information("Redis connected: {IsConnected}", redisMultiplexer.IsConnected);
+    }
+    catch (Exception ex)
+    {
+        Log.Warning(ex, "Redis connection failed - falling back to memory-only caching");
+        redisMultiplexer = null;
+    }
+}
+else
+{
+    Log.Warning("Redis not configured - using memory-only caching");
+}
+
+// Register Redis multiplexer (nullable for graceful degradation)
+builder.Services.AddSingleton<IConnectionMultiplexer?>(redisMultiplexer);
 
 // HTTP client for NASA API with resilience policies
 builder.Services.AddHttpClient("NASA", client =>
@@ -331,13 +373,23 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 // Add health checks
-builder.Services.AddHealthChecks()
+var healthChecksBuilder = builder.Services.AddHealthChecks()
     .AddDbContextCheck<MarsVistaDbContext>("database")
     .AddNpgSql(
         connectionString,
         name: "postgresql",
         failureStatus: HealthStatus.Unhealthy,
         tags: new[] { "db", "sql" });
+
+// Add Redis health check if configured
+if (redisMultiplexer != null)
+{
+    healthChecksBuilder.AddRedis(
+        redisMultiplexer,
+        name: "redis",
+        failureStatus: HealthStatus.Degraded, // Degraded, not Unhealthy - app works without Redis
+        tags: new[] { "cache", "redis" });
+}
 
 var app = builder.Build();
 
