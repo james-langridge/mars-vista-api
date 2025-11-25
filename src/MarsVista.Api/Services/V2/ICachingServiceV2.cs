@@ -88,4 +88,16 @@ public interface ICachingServiceV2
     /// Get cache options for panoramas
     /// </summary>
     CacheOptions GetPanoramaCacheOptions();
+
+    // Cache metrics
+
+    /// <summary>
+    /// Get current cache statistics
+    /// </summary>
+    CacheStats GetCacheStats();
+
+    /// <summary>
+    /// Check if Redis is connected
+    /// </summary>
+    bool IsRedisConnected { get; }
 }

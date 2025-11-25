@@ -15,6 +15,7 @@ public class CachingServiceV2 : ICachingServiceV2
     private readonly IMemoryCache _memoryCache;
     private readonly IConnectionMultiplexer? _redis;
     private readonly ILogger<CachingServiceV2> _logger;
+    private readonly CacheMetrics _metrics;
 
     // Cache durations by data type
     private static readonly TimeSpan ActiveRoverCacheDuration = TimeSpan.FromHours(1);
@@ -34,6 +35,7 @@ public class CachingServiceV2 : ICachingServiceV2
         _memoryCache = memoryCache;
         _redis = redis;
         _logger = logger;
+        _metrics = new CacheMetrics();
 
         if (redis == null)
         {
@@ -44,6 +46,16 @@ public class CachingServiceV2 : ICachingServiceV2
             _logger.LogInformation("Two-level caching enabled: L1 (Memory) + L2 (Redis)");
         }
     }
+
+    /// <summary>
+    /// Check if Redis is connected
+    /// </summary>
+    public bool IsRedisConnected => _redis?.IsConnected ?? false;
+
+    /// <summary>
+    /// Get current cache statistics
+    /// </summary>
+    public CacheStats GetCacheStats() => _metrics.GetStats();
 
     /// <summary>
     /// Get or set cached value with two-level caching
@@ -58,6 +70,7 @@ public class CachingServiceV2 : ICachingServiceV2
         // L1: Check memory cache first (fastest)
         if (_memoryCache.TryGetValue(key, out T? cached))
         {
+            _metrics.RecordL1Hit();
             _logger.LogDebug("L1 cache hit: {Key}", key);
             return cached;
         }
@@ -72,6 +85,7 @@ public class CachingServiceV2 : ICachingServiceV2
 
                 if (!redisValue.IsNullOrEmpty)
                 {
+                    _metrics.RecordL2Hit();
                     _logger.LogDebug("L2 cache hit: {Key}", key);
                     var deserialized = JsonSerializer.Deserialize<T>(redisValue!);
 
@@ -88,6 +102,7 @@ public class CachingServiceV2 : ICachingServiceV2
         }
 
         // Cache miss - generate value
+        _metrics.RecordMiss();
         _logger.LogDebug("Cache miss: {Key}", key);
         var value = await factory();
 
@@ -106,6 +121,7 @@ public class CachingServiceV2 : ICachingServiceV2
     public async Task SetAsync<T>(string key, T value, CacheOptions? options = null) where T : class
     {
         options ??= CacheOptions.Default;
+        _metrics.RecordSet();
 
         // Set in L1 (memory)
         _memoryCache.Set(key, value, L1CacheDuration);
@@ -137,6 +153,8 @@ public class CachingServiceV2 : ICachingServiceV2
     /// </summary>
     public async Task InvalidateAsync(string key)
     {
+        _metrics.RecordInvalidation();
+
         // Remove from L1
         _memoryCache.Remove(key);
 

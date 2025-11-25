@@ -178,6 +178,13 @@ builder.Services.AddScoped<MarsVista.Api.Services.V2.IPhotoQueryServiceV2, MarsV
 builder.Services.AddScoped<MarsVista.Api.Services.V2.IRoverQueryServiceV2, MarsVista.Api.Services.V2.RoverQueryServiceV2>();
 builder.Services.AddSingleton<MarsVista.Api.Services.V2.ICachingServiceV2, MarsVista.Api.Services.V2.CachingServiceV2>();
 
+// Cache warming and metrics services
+builder.Services.Configure<MarsVista.Api.Services.V2.CacheWarmingOptions>(
+    builder.Configuration.GetSection(MarsVista.Api.Services.V2.CacheWarmingOptions.SectionName));
+builder.Services.AddScoped<MarsVista.Api.Services.V2.ICacheWarmingService, MarsVista.Api.Services.V2.CacheWarmingService>();
+builder.Services.AddHostedService<MarsVista.Api.Services.V2.CacheWarmingBackgroundService>();
+builder.Services.AddHostedService<MarsVista.Api.Services.V2.CacheStatsLoggingService>();
+
 // v2 Phase 2 advanced features services
 builder.Services.AddScoped<MarsVista.Api.Services.V2.IPanoramaService, MarsVista.Api.Services.V2.PanoramaService>();
 builder.Services.AddScoped<MarsVista.Api.Services.V2.ILocationService, MarsVista.Api.Services.V2.LocationService>();
@@ -495,6 +502,10 @@ app.MapHealthChecks("/health", new HealthCheckOptions
     {
         context.Response.ContentType = "application/json";
 
+        // Get cache stats from the caching service
+        var cachingService = context.RequestServices.GetService<MarsVista.Api.Services.V2.ICachingServiceV2>();
+        var cacheStats = cachingService?.GetCacheStats();
+
         var result = new
         {
             status = report.Status.ToString(),
@@ -507,7 +518,17 @@ app.MapHealthChecks("/health", new HealthCheckOptions
                 duration = e.Value.Duration.TotalMilliseconds,
                 description = e.Value.Description,
                 error = e.Value.Exception?.Message
-            })
+            }),
+            cache = cacheStats == null ? null : new
+            {
+                l1_hits = cacheStats.L1Hits,
+                l2_hits = cacheStats.L2Hits,
+                misses = cacheStats.Misses,
+                hit_rate = cacheStats.HitRateFormatted,
+                sets = cacheStats.Sets,
+                invalidations = cacheStats.Invalidations,
+                redis_connected = cachingService?.IsRedisConnected ?? false
+            }
         };
 
         await context.Response.WriteAsJsonAsync(result);
