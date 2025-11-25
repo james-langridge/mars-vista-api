@@ -1,0 +1,92 @@
+# Mars Vista API
+> Unified API for NASA Mars rover photos with advanced filtering, location queries, and scientific metadata
+
+## About
+Mars Vista API provides programmatic access to 680,000+ Mars rover photos from Curiosity, Perseverance, Opportunity, and Spirit. Unlike NASA's basic API, we store 100% of NASA's metadata enabling advanced queries by location, Mars time, camera angle, and more.
+
+## Documentation
+- Human docs: https://marsvista.dev/docs
+- AI reference: https://marsvista.dev/docs/llm/reference.md
+- TypeScript types: https://marsvista.dev/docs/llm/types.ts
+- OpenAPI spec: https://marsvista.dev/docs/llm/openapi.json
+
+## Quick Start
+All requests require an API key in the X-API-Key header.
+Get your free API key at: https://marsvista.dev
+
+```bash
+curl -H "X-API-Key: YOUR_KEY" \
+  "https://api.marsvista.dev/api/v2/photos?rovers=curiosity&per_page=5&include=rover,camera"
+```
+
+## Core Endpoints (v2 API - Recommended)
+
+### Photos
+- GET /api/v2/photos - Query photos with filtering
+- GET /api/v2/photos/{id} - Get specific photo
+- GET /api/v2/photos/stats - Photo statistics (group_by=camera|rover|sol)
+- POST /api/v2/photos/batch - Batch retrieve by IDs (max 100)
+
+### Rovers
+- GET /api/v2/rovers - List all rovers
+- GET /api/v2/rovers/{slug} - Get rover details (curiosity, perseverance, opportunity, spirit)
+- GET /api/v2/rovers/{slug}/manifest - Photo history by sol
+- GET /api/v2/rovers/{slug}/cameras - Rover's cameras
+- GET /api/v2/rovers/{slug}/journey - Location tracking over time
+
+### Cameras
+- GET /api/v2/cameras - List all cameras
+
+### Advanced Features
+- GET /api/v2/panoramas - Auto-detected panorama sequences
+- GET /api/v2/locations - Unique rover locations
+- GET /api/v2/time-machine - Same location at different times
+
+## Key Parameters
+
+### Filtering
+- rovers: curiosity,perseverance,opportunity,spirit (comma-separated)
+- cameras: NAVCAM,FHAZ,MAST,etc (comma-separated)
+- sol_min, sol_max: Mars day range
+- date_min, date_max: Earth date range (YYYY-MM-DD)
+
+### Advanced Filtering
+- site, drive: Location coordinates
+- location_radius: Proximity search radius
+- min_width, min_height: Image dimensions
+- sample_type: Full, Thumbnail, Subframe
+- mars_time_min, mars_time_max: Mars local time (M06:00:00 format)
+- mars_time_golden_hour: true (sunrise/sunset photos)
+- mast_elevation_min, mast_elevation_max: Camera vertical angle
+- mast_azimuth_min, mast_azimuth_max: Camera horizontal angle
+
+### Response Control
+- include: rover,camera (RECOMMENDED - includes related resources)
+- fields: id,sol,earth_date,etc (specific fields only)
+- field_set: minimal|standard|extended|scientific|complete
+- image_sizes: small,medium,large,full
+- sort: -earth_date,camera (prefix with - for descending)
+- page: Page number (default: 1)
+- per_page: Results per page (default: 25, max: 100)
+
+## Authentication
+Header: X-API-Key: <your-api-key>
+Get key: https://marsvista.dev (free, requires email signup)
+
+## Rate Limits (Free for all users)
+- 10,000 requests/hour
+- 100,000 requests/day
+- Headers: X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset
+
+## Response Format
+JSON:API-inspired envelope with data, meta, pagination, and links.
+
+## Legacy API (v1)
+Drop-in replacement for the archived NASA Mars Rover Photos API.
+- GET /api/v1/rovers/{name}/photos?sol=1000
+- GET /api/v1/rovers
+- GET /api/v1/manifests/{name}
+
+## Support
+- GitHub: https://github.com/james-langridge/mars-vista-api
+- Status: https://status.marsvista.dev

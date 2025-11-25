@@ -1,0 +1,791 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Mars Vista API",
+    "description": "Unified API for NASA Mars rover photos with advanced filtering, location queries, and scientific metadata. Access 680,000+ photos from Curiosity, Perseverance, Opportunity, and Spirit rovers.",
+    "version": "2.0.0",
+    "contact": {
+      "name": "Mars Vista API",
+      "url": "https://github.com/james-langridge/mars-vista-api"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://api.marsvista.dev",
+      "description": "Production API"
+    }
+  ],
+  "security": [
+    {
+      "ApiKeyAuth": []
+    }
+  ],
+  "paths": {
+    "/api/v2/photos": {
+      "get": {
+        "operationId": "queryPhotos",
+        "summary": "Query photos with filtering",
+        "description": "Query Mars rover photos with powerful filtering by rover, camera, date, location, and more.",
+        "tags": ["Photos"],
+        "parameters": [
+          {
+            "name": "rovers",
+            "in": "query",
+            "description": "Comma-separated rover names: curiosity,perseverance,opportunity,spirit",
+            "schema": { "type": "string", "example": "curiosity,perseverance" }
+          },
+          {
+            "name": "cameras",
+            "in": "query",
+            "description": "Comma-separated camera names: NAVCAM,FHAZ,RHAZ,MAST",
+            "schema": { "type": "string", "example": "NAVCAM,MAST" }
+          },
+          {
+            "name": "sol_min",
+            "in": "query",
+            "description": "Minimum sol (Mars day)",
+            "schema": { "type": "integer", "example": 1000 }
+          },
+          {
+            "name": "sol_max",
+            "in": "query",
+            "description": "Maximum sol",
+            "schema": { "type": "integer", "example": 1100 }
+          },
+          {
+            "name": "date_min",
+            "in": "query",
+            "description": "Minimum Earth date (YYYY-MM-DD)",
+            "schema": { "type": "string", "format": "date", "example": "2024-01-01" }
+          },
+          {
+            "name": "date_max",
+            "in": "query",
+            "description": "Maximum Earth date (YYYY-MM-DD)",
+            "schema": { "type": "string", "format": "date", "example": "2024-12-31" }
+          },
+          {
+            "name": "site",
+            "in": "query",
+            "description": "Site number (geological location marker)",
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "drive",
+            "in": "query",
+            "description": "Drive number (rover's drive sequence)",
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "location_radius",
+            "in": "query",
+            "description": "Radius in drives for proximity search",
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "sample_type",
+            "in": "query",
+            "description": "Image sample type",
+            "schema": { "type": "string", "enum": ["Full", "Thumbnail", "Subframe"] }
+          },
+          {
+            "name": "min_width",
+            "in": "query",
+            "description": "Minimum image width in pixels",
+            "schema": { "type": "integer", "example": 1920 }
+          },
+          {
+            "name": "min_height",
+            "in": "query",
+            "description": "Minimum image height in pixels",
+            "schema": { "type": "integer", "example": 1080 }
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "description": "Related resources to include (RECOMMENDED)",
+            "schema": { "type": "string", "example": "rover,camera" }
+          },
+          {
+            "name": "fields",
+            "in": "query",
+            "description": "Specific fields to return",
+            "schema": { "type": "string", "example": "id,sol,earth_date,images" }
+          },
+          {
+            "name": "field_set",
+            "in": "query",
+            "description": "Preset field groups",
+            "schema": { "type": "string", "enum": ["minimal", "standard", "extended", "scientific", "complete"] }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "description": "Sort order (prefix with - for descending)",
+            "schema": { "type": "string", "example": "-earth_date" }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Page number (1-indexed)",
+            "schema": { "type": "integer", "default": 1 }
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "description": "Results per page (max 100)",
+            "schema": { "type": "integer", "default": 25, "maximum": 100 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PhotosResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ApiError" }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized - missing or invalid API key" },
+          "429": { "description": "Rate limit exceeded" }
+        }
+      }
+    },
+    "/api/v2/photos/{id}": {
+      "get": {
+        "operationId": "getPhoto",
+        "summary": "Get photo by ID",
+        "tags": ["Photos"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Photo ID",
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "description": "Related resources to include",
+            "schema": { "type": "string", "example": "rover,camera" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PhotoResponse" }
+              }
+            }
+          },
+          "404": { "description": "Photo not found" }
+        }
+      }
+    },
+    "/api/v2/photos/stats": {
+      "get": {
+        "operationId": "getPhotoStats",
+        "summary": "Get photo statistics",
+        "tags": ["Photos"],
+        "parameters": [
+          {
+            "name": "group_by",
+            "in": "query",
+            "required": true,
+            "description": "Grouping dimension",
+            "schema": { "type": "string", "enum": ["camera", "rover", "sol"] }
+          },
+          {
+            "name": "rovers",
+            "in": "query",
+            "description": "Filter by rovers",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "date_min",
+            "in": "query",
+            "schema": { "type": "string", "format": "date" }
+          },
+          {
+            "name": "date_max",
+            "in": "query",
+            "schema": { "type": "string", "format": "date" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StatsResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/photos/batch": {
+      "post": {
+        "operationId": "batchGetPhotos",
+        "summary": "Batch retrieve photos by IDs",
+        "tags": ["Photos"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/BatchRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PhotosResponse" }
+              }
+            }
+          },
+          "400": { "description": "Invalid request (too many IDs or empty)" }
+        }
+      }
+    },
+    "/api/v2/rovers": {
+      "get": {
+        "operationId": "getRovers",
+        "summary": "List all rovers",
+        "tags": ["Rovers"],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/RoversResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/rovers/{slug}": {
+      "get": {
+        "operationId": "getRover",
+        "summary": "Get rover details",
+        "tags": ["Rovers"],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "description": "Rover identifier",
+            "schema": { "type": "string", "enum": ["curiosity", "perseverance", "opportunity", "spirit"] }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/RoverResponse" }
+              }
+            }
+          },
+          "404": { "description": "Rover not found" }
+        }
+      }
+    },
+    "/api/v2/rovers/{slug}/manifest": {
+      "get": {
+        "operationId": "getRoverManifest",
+        "summary": "Get rover photo manifest",
+        "description": "Returns photo history by sol for the rover",
+        "tags": ["Rovers"],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "enum": ["curiosity", "perseverance", "opportunity", "spirit"] }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ManifestResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/rovers/{slug}/cameras": {
+      "get": {
+        "operationId": "getRoverCameras",
+        "summary": "Get rover cameras",
+        "tags": ["Rovers"],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "enum": ["curiosity", "perseverance", "opportunity", "spirit"] }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CamerasResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/rovers/{slug}/journey": {
+      "get": {
+        "operationId": "getRoverJourney",
+        "summary": "Get rover journey data",
+        "description": "Track rover movement over time with location coordinates",
+        "tags": ["Rovers"],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "enum": ["curiosity", "perseverance", "opportunity", "spirit"] }
+          },
+          {
+            "name": "sol_min",
+            "in": "query",
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "sol_max",
+            "in": "query",
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Successful response" }
+        }
+      }
+    },
+    "/api/v2/cameras": {
+      "get": {
+        "operationId": "getCameras",
+        "summary": "List all cameras",
+        "tags": ["Cameras"],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CamerasResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/panoramas": {
+      "get": {
+        "operationId": "getPanoramas",
+        "summary": "Get auto-detected panoramas",
+        "tags": ["Advanced"],
+        "parameters": [
+          {
+            "name": "rovers",
+            "in": "query",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "min_photos",
+            "in": "query",
+            "description": "Minimum photos in panorama",
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Successful response" }
+        }
+      }
+    },
+    "/api/v2/locations": {
+      "get": {
+        "operationId": "getLocations",
+        "summary": "Get unique rover locations",
+        "tags": ["Advanced"],
+        "parameters": [
+          {
+            "name": "rovers",
+            "in": "query",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "min_photos",
+            "in": "query",
+            "description": "Minimum photos at location",
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Successful response" }
+        }
+      }
+    },
+    "/api/v2/time-machine": {
+      "get": {
+        "operationId": "getTimeMachine",
+        "summary": "Find photos from same location at different times",
+        "tags": ["Advanced"],
+        "parameters": [
+          {
+            "name": "site",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "drive",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Successful response" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key",
+        "description": "API key obtained from https://marsvista.dev"
+      }
+    },
+    "schemas": {
+      "PhotosResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/PhotoResource" }
+          },
+          "meta": { "$ref": "#/components/schemas/ResponseMeta" },
+          "pagination": { "$ref": "#/components/schemas/PaginationInfo" },
+          "links": { "$ref": "#/components/schemas/ResponseLinks" }
+        }
+      },
+      "PhotoResponse": {
+        "type": "object",
+        "properties": {
+          "data": { "$ref": "#/components/schemas/PhotoResource" },
+          "links": { "$ref": "#/components/schemas/ResponseLinks" }
+        }
+      },
+      "RoversResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/RoverResource" }
+          },
+          "meta": { "$ref": "#/components/schemas/ResponseMeta" },
+          "links": { "$ref": "#/components/schemas/ResponseLinks" }
+        }
+      },
+      "RoverResponse": {
+        "type": "object",
+        "properties": {
+          "data": { "$ref": "#/components/schemas/RoverResource" },
+          "links": { "$ref": "#/components/schemas/ResponseLinks" }
+        }
+      },
+      "ManifestResponse": {
+        "type": "object",
+        "properties": {
+          "data": { "$ref": "#/components/schemas/ManifestResource" },
+          "links": { "$ref": "#/components/schemas/ResponseLinks" }
+        }
+      },
+      "CamerasResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/CameraResource" }
+          },
+          "meta": { "$ref": "#/components/schemas/ResponseMeta" },
+          "links": { "$ref": "#/components/schemas/ResponseLinks" }
+        }
+      },
+      "StatsResponse": {
+        "type": "object",
+        "properties": {
+          "data": { "$ref": "#/components/schemas/PhotoStatistics" },
+          "meta": { "$ref": "#/components/schemas/ResponseMeta" }
+        }
+      },
+      "PhotoResource": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "example": 123456 },
+          "type": { "type": "string", "enum": ["photo"] },
+          "attributes": { "$ref": "#/components/schemas/PhotoAttributes" },
+          "relationships": { "$ref": "#/components/schemas/PhotoRelationships" }
+        }
+      },
+      "PhotoAttributes": {
+        "type": "object",
+        "properties": {
+          "nasa_id": { "type": "string", "example": "NRF_0613MR0025780020402986C00_DXXX" },
+          "sol": { "type": "integer", "example": 1000 },
+          "earth_date": { "type": "string", "format": "date", "example": "2015-05-30" },
+          "date_taken_utc": { "type": "string", "format": "date-time" },
+          "date_taken_mars": { "type": "string", "example": "Sol-1000M14:23:45" },
+          "images": { "$ref": "#/components/schemas/PhotoImages" },
+          "dimensions": { "$ref": "#/components/schemas/PhotoDimensions" },
+          "sample_type": { "type": "string", "example": "Full" },
+          "location": { "$ref": "#/components/schemas/PhotoLocation" },
+          "telemetry": { "$ref": "#/components/schemas/PhotoTelemetry" },
+          "title": { "type": "string" },
+          "caption": { "type": "string" },
+          "credit": { "type": "string", "example": "NASA/JPL-Caltech" }
+        }
+      },
+      "PhotoImages": {
+        "type": "object",
+        "properties": {
+          "small": { "type": "string", "format": "uri", "description": "320px wide" },
+          "medium": { "type": "string", "format": "uri", "description": "800px wide" },
+          "large": { "type": "string", "format": "uri", "description": "1200px wide" },
+          "full": { "type": "string", "format": "uri", "description": "Full resolution" }
+        }
+      },
+      "PhotoDimensions": {
+        "type": "object",
+        "properties": {
+          "width": { "type": "integer", "example": 1344 },
+          "height": { "type": "integer", "example": 1200 }
+        }
+      },
+      "PhotoLocation": {
+        "type": "object",
+        "properties": {
+          "site": { "type": "integer", "example": 79 },
+          "drive": { "type": "integer", "example": 1204 },
+          "coordinates": { "$ref": "#/components/schemas/Coordinates" }
+        }
+      },
+      "Coordinates": {
+        "type": "object",
+        "properties": {
+          "x": { "type": "number", "example": 35.4362 },
+          "y": { "type": "number", "example": 22.5714 },
+          "z": { "type": "number", "example": -9.46445 }
+        }
+      },
+      "PhotoTelemetry": {
+        "type": "object",
+        "properties": {
+          "mast_azimuth": { "type": "number", "description": "Horizontal rotation in degrees" },
+          "mast_elevation": { "type": "number", "description": "Vertical tilt in degrees" }
+        }
+      },
+      "PhotoRelationships": {
+        "type": "object",
+        "properties": {
+          "rover": { "$ref": "#/components/schemas/ResourceReference" },
+          "camera": { "$ref": "#/components/schemas/CameraReference" }
+        }
+      },
+      "ResourceReference": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "type": { "type": "string" },
+          "attributes": { "type": "object" }
+        }
+      },
+      "CameraReference": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "example": "NAVCAM" },
+          "type": { "type": "string", "enum": ["camera"] },
+          "attributes": {
+            "type": "object",
+            "properties": {
+              "full_name": { "type": "string", "example": "Navigation Camera" }
+            }
+          }
+        }
+      },
+      "RoverResource": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "enum": ["curiosity", "perseverance", "opportunity", "spirit"] },
+          "type": { "type": "string", "enum": ["rover"] },
+          "attributes": { "$ref": "#/components/schemas/RoverAttributes" }
+        }
+      },
+      "RoverAttributes": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "example": "Curiosity" },
+          "landing_date": { "type": "string", "format": "date", "example": "2012-08-06" },
+          "launch_date": { "type": "string", "format": "date", "example": "2011-11-26" },
+          "status": { "type": "string", "enum": ["active", "complete"] },
+          "max_sol": { "type": "integer", "example": 4728 },
+          "max_date": { "type": "string", "format": "date" },
+          "total_photos": { "type": "integer", "example": 682660 }
+        }
+      },
+      "CameraResource": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "example": "NAVCAM" },
+          "type": { "type": "string", "enum": ["camera"] },
+          "attributes": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "full_name": { "type": "string" }
+            }
+          }
+        }
+      },
+      "ManifestResource": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "type": { "type": "string", "enum": ["manifest"] },
+          "attributes": { "$ref": "#/components/schemas/ManifestAttributes" }
+        }
+      },
+      "ManifestAttributes": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "landing_date": { "type": "string", "format": "date" },
+          "launch_date": { "type": "string", "format": "date" },
+          "status": { "type": "string" },
+          "max_sol": { "type": "integer" },
+          "max_date": { "type": "string", "format": "date" },
+          "total_photos": { "type": "integer" },
+          "photos": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/PhotosBySol" }
+          }
+        }
+      },
+      "PhotosBySol": {
+        "type": "object",
+        "properties": {
+          "sol": { "type": "integer" },
+          "earth_date": { "type": "string", "format": "date" },
+          "total_photos": { "type": "integer" },
+          "cameras": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "PhotoStatistics": {
+        "type": "object",
+        "properties": {
+          "total_photos": { "type": "integer" },
+          "groups": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": { "type": "string" },
+                "count": { "type": "integer" }
+              }
+            }
+          }
+        }
+      },
+      "BatchRequest": {
+        "type": "object",
+        "required": ["ids"],
+        "properties": {
+          "ids": {
+            "type": "array",
+            "items": { "type": "integer" },
+            "maxItems": 100,
+            "example": [123456, 123457, 123458]
+          }
+        }
+      },
+      "ResponseMeta": {
+        "type": "object",
+        "properties": {
+          "total_count": { "type": "integer" },
+          "returned_count": { "type": "integer" },
+          "timestamp": { "type": "string", "format": "date-time" }
+        }
+      },
+      "PaginationInfo": {
+        "type": "object",
+        "properties": {
+          "page": { "type": "integer" },
+          "per_page": { "type": "integer" },
+          "total_pages": { "type": "integer" }
+        }
+      },
+      "ResponseLinks": {
+        "type": "object",
+        "properties": {
+          "self": { "type": "string", "format": "uri" },
+          "next": { "type": "string", "format": "uri" },
+          "previous": { "type": "string", "format": "uri" },
+          "first": { "type": "string", "format": "uri" },
+          "last": { "type": "string", "format": "uri" }
+        }
+      },
+      "ApiError": {
+        "type": "object",
+        "properties": {
+          "type": { "type": "string", "example": "/errors/validation-error" },
+          "title": { "type": "string", "example": "Validation Error" },
+          "status": { "type": "integer", "example": 400 },
+          "detail": { "type": "string" },
+          "instance": { "type": "string" },
+          "errors": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ValidationError" }
+          }
+        }
+      },
+      "ValidationError": {
+        "type": "object",
+        "properties": {
+          "field": { "type": "string" },
+          "value": { "type": "string" },
+          "message": { "type": "string" },
+          "example": { "type": "string" }
+        }
+      }
+    }
+  }
+}
