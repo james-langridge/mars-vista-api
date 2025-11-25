@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
-using MarsVista.Api.Data;
+using MarsVista.Core.Data;
 using MarsVista.Api.DTOs.V2;
-using MarsVista.Api.Entities;
-using MarsVista.Api.Helpers;
+using MarsVista.Core.Entities;
+using MarsVista.Core.Helpers;
 using MarsVista.Api.Models.V2;
 
 namespace MarsVista.Api.Services.V2;
@@ -517,7 +517,7 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
             if (!string.IsNullOrEmpty(photo.Xyz))
             {
                 // Parse XYZ string "(35.4362,22.5714,-9.46445)" to coordinates
-                if (MarsVista.Api.Helpers.MarsTimeHelper.TryParseXYZ(photo.Xyz, out var parsed))
+                if (MarsVista.Core.Helpers.MarsTimeHelper.TryParseXYZ(photo.Xyz, out var parsed))
                 {
                     coordinates = new PhotoCoordinates
                     {

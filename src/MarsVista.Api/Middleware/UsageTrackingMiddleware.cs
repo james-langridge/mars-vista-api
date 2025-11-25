@@ -1,6 +1,6 @@
 using System.Diagnostics;
-using MarsVista.Api.Data;
-using MarsVista.Api.Entities;
+using MarsVista.Core.Data;
+using MarsVista.Core.Entities;
 
 namespace MarsVista.Api.Middleware;
 

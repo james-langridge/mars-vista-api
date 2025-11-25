@@ -1,6 +1,6 @@
-using MarsVista.Api.Data;
+using MarsVista.Core.Data;
 using MarsVista.Api.DTOs;
-using MarsVista.Api.Entities;
+using MarsVista.Core.Entities;
 using MarsVista.Api.Services.V2;
 using Microsoft.EntityFrameworkCore;
 

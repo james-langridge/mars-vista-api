@@ -3,14 +3,14 @@ FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 
 # Copy project files
-COPY ["src/MarsVista.Api/MarsVista.Api.csproj", "MarsVista.Api/"]
+COPY ["src/MarsVista.Core/MarsVista.Core.csproj", "MarsVista.Core/"]
 COPY ["src/MarsVista.Scraper/MarsVista.Scraper.csproj", "MarsVista.Scraper/"]
 
 # Restore dependencies
 RUN dotnet restore "MarsVista.Scraper/MarsVista.Scraper.csproj"
 
 # Copy source code
-COPY src/MarsVista.Api/ MarsVista.Api/
+COPY src/MarsVista.Core/ MarsVista.Core/
 COPY src/MarsVista.Scraper/ MarsVista.Scraper/
 
 # Build and publish

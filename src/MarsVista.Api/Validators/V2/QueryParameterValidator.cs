@@ -1,6 +1,6 @@
 using System.Globalization;
 using MarsVista.Api.DTOs.V2;
-using MarsVista.Api.Helpers;
+using MarsVista.Core.Helpers;
 using MarsVista.Api.Models.V2;
 
 namespace MarsVista.Api.Validators.V2;

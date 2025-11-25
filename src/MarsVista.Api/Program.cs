@@ -1,8 +1,7 @@
 using System.Threading.RateLimiting;
+using MarsVista.Core.Data;
 using MarsVista.Api.Data;
 using MarsVista.Api.Middleware;
-using MarsVista.Api.Options;
-using MarsVista.Api.Repositories;
 using MarsVista.Api.Services;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.RateLimiting;
@@ -216,32 +215,8 @@ builder.Services.Configure<Microsoft.AspNetCore.ResponseCompression.GzipCompress
     options.Level = System.IO.Compression.CompressionLevel.Fastest;
 });
 
-// Scraper services (action layer - side effects)
-// Register scrapers by rover name for dynamic resolution
-builder.Services.AddKeyedScoped<IScraperService, PerseveranceScraper>("perseverance");
-builder.Services.AddKeyedScoped<IScraperService, CuriosityScraper>("curiosity");
-builder.Services.AddKeyedScoped<IScraperService, OpportunityScraper>("opportunity");
-builder.Services.AddKeyedScoped<IScraperService, SpiritScraper>("spirit");
-
-// Also register non-keyed for IEnumerable<IScraperService> injection
-builder.Services.AddScoped<IScraperService, PerseveranceScraper>();
-builder.Services.AddScoped<IScraperService, CuriosityScraper>();
-builder.Services.AddScoped<IScraperService, OpportunityScraper>();
-builder.Services.AddScoped<IScraperService, SpiritScraper>();
-
-// Register PDS index parser (used by MER scrapers: Opportunity and Spirit)
-builder.Services.AddScoped<PdsIndexParser>();
-
 // Register database seeder
 builder.Services.AddScoped<DatabaseSeeder>();
-
-// Incremental scraper services
-builder.Services.AddScoped<IScraperStateRepository, ScraperStateRepository>();
-builder.Services.AddScoped<IIncrementalScraperService, IncrementalScraperService>();
-
-// Configure scraper schedule options
-builder.Services.Configure<ScraperScheduleOptions>(
-    builder.Configuration.GetSection(ScraperScheduleOptions.SectionName));
 
 // Enable CORS for public API access
 builder.Services.AddCors(options =>

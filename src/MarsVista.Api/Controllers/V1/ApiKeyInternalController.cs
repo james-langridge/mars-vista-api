@@ -1,5 +1,5 @@
-using MarsVista.Api.Data;
-using MarsVista.Api.Entities;
+using MarsVista.Core.Data;
+using MarsVista.Core.Entities;
 using MarsVista.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;

@@ -11,6 +11,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{B91B5A7C
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MarsVista.Api.Tests", "tests\MarsVista.Api.Tests\MarsVista.Api.Tests.csproj", "{B252DD3A-C746-42B6-A5AC-9BFAF4187D22}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MarsVista.Core", "src\MarsVista.Core\MarsVista.Core.csproj", "{5BBA5A1E-EA10-46D3-86DB-2B5C64EFDAA4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -28,9 +30,14 @@ Global
 		{B252DD3A-C746-42B6-A5AC-9BFAF4187D22}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B252DD3A-C746-42B6-A5AC-9BFAF4187D22}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B252DD3A-C746-42B6-A5AC-9BFAF4187D22}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5BBA5A1E-EA10-46D3-86DB-2B5C64EFDAA4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5BBA5A1E-EA10-46D3-86DB-2B5C64EFDAA4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5BBA5A1E-EA10-46D3-86DB-2B5C64EFDAA4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5BBA5A1E-EA10-46D3-86DB-2B5C64EFDAA4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{B47694F5-C868-4A8C-8DBC-8DF4A206BE81} = {70D98940-D676-468A-9CE1-9388F44E90AC}
 		{B252DD3A-C746-42B6-A5AC-9BFAF4187D22} = {B91B5A7C-8106-42FF-A202-8EDDD18D0FC6}
+		{5BBA5A1E-EA10-46D3-86DB-2B5C64EFDAA4} = {70D98940-D676-468A-9CE1-9388F44E90AC}
 	EndGlobalSection
 EndGlobal

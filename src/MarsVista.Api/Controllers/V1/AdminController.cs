@@ -1,4 +1,4 @@
-using MarsVista.Api.Data;
+using MarsVista.Core.Data;
 using MarsVista.Api.Filters;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;

@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using MarsVista.Api.Data;
+using MarsVista.Core.Data;
 using MarsVista.Api.DTOs.V2;
 
 namespace MarsVista.Api.Controllers.V2;

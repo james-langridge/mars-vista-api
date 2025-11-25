@@ -2,7 +2,7 @@ using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
-using MarsVista.Api.Entities;
+using MarsVista.Core.Entities;
 using MarsVista.Api.Services.V2;
 using MarsVista.Api.Tests.Integration;
 

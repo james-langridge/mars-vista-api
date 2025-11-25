@@ -1,9 +1,8 @@
-﻿using MarsVista.Api.Data;
-using MarsVista.Api.Options;
-using MarsVista.Api.Repositories;
-using MarsVista.Api.Services;
+using MarsVista.Core.Data;
+using MarsVista.Core.Options;
+using MarsVista.Core.Repositories;
+using MarsVista.Scraper.Services;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
@@ -62,12 +61,9 @@ try
     .AddPolicyHandler(GetRetryPolicy())
     .AddPolicyHandler(GetCircuitBreakerPolicy());
 
-    // Register scrapers
+    // Register scrapers (only active rovers)
     builder.Services.AddScoped<IScraperService, PerseveranceScraper>();
     builder.Services.AddScoped<IScraperService, CuriosityScraper>();
-    builder.Services.AddScoped<IScraperService, OpportunityScraper>();
-    builder.Services.AddScoped<IScraperService, SpiritScraper>();
-    builder.Services.AddScoped<PdsIndexParser>();
 
     // Register incremental scraper services
     builder.Services.AddScoped<IScraperStateRepository, ScraperStateRepository>();
@@ -82,79 +78,38 @@ try
     // Get configuration
     var config = host.Services.GetRequiredService<IOptions<ScraperScheduleOptions>>().Value;
 
-    Log.Information("Scraper configuration: Rovers={Rovers}, LookbackSols={Lookback}",
-        string.Join(", ", config.ActiveRovers), config.LookbackSols);
+    var activeRovers = config.ActiveRovers.Count > 0
+        ? config.ActiveRovers
+        : new List<string> { "perseverance", "curiosity" };
 
-    // Run incremental scrape for each active rover
+    Log.Information("Scraper configuration: Rovers={Rovers}, LookbackSols={Lookback}",
+        string.Join(", ", activeRovers), config.LookbackSols);
+
+    // Run incremental scrape for all active rovers
     using var scope = host.Services.CreateScope();
     var incrementalScraper = scope.ServiceProvider.GetRequiredService<IIncrementalScraperService>();
 
-    var jobStartTime = DateTime.UtcNow;
-    var totalPhotos = 0;
-    var successfulRovers = 0;
-    var failedRovers = new List<string>();
-
-    // Create job history record for this multi-rover scrape run
-    var jobHistory = await incrementalScraper.CreateJobHistoryAsync(config.ActiveRovers.Count);
-    Log.Information("Created job history {JobId} for multi-rover scrape", jobHistory.Id);
-
-    foreach (var roverName in config.ActiveRovers)
-    {
-        try
-        {
-            Log.Information("Starting incremental scrape for {Rover} with {Lookback}-sol lookback",
-                roverName, config.LookbackSols);
-
-            var result = await incrementalScraper.ScrapeIncrementalWithJobHistoryAsync(roverName, jobHistory.Id, config.LookbackSols);
-
-            if (result.Success)
-            {
-                successfulRovers++;
-                totalPhotos += result.PhotosAdded;
-                Log.Information(
-                    "✓ {Rover}: {Photos} photos added (sols {StartSol}-{EndSol}, {Duration}s)",
-                    roverName, result.PhotosAdded, result.StartSol, result.EndSol,
-                    (int)result.Duration.TotalSeconds);
-            }
-            else
-            {
-                failedRovers.Add(roverName);
-                Log.Error("✗ {Rover}: Scrape failed - {Error}", roverName, result.ErrorMessage);
-            }
-        }
-        catch (Exception ex)
-        {
-            failedRovers.Add(roverName);
-            Log.Error(ex, "Failed to scrape {Rover}", roverName);
-        }
-    }
-
-    // Update job history with final results
-    jobHistory.JobCompletedAt = DateTime.UtcNow;
-    jobHistory.TotalDurationSeconds = (int)(jobHistory.JobCompletedAt.Value - jobStartTime).TotalSeconds;
-    jobHistory.TotalRoversSucceeded = successfulRovers;
-    jobHistory.TotalPhotosAdded = totalPhotos;
-    jobHistory.Status = failedRovers.Count == 0 ? "success" :
-                        (successfulRovers > 0 ? "partial" : "failed");
-    jobHistory.ErrorSummary = failedRovers.Count > 0
-        ? $"Failed rovers: {string.Join(", ", failedRovers)}"
-        : null;
-
-    await incrementalScraper.UpdateJobHistoryAsync(jobHistory);
+    var result = await incrementalScraper.ScrapeAllRoversAsync();
 
     // Summary
-    Log.Information(
-        "Scraper completed: {Successful}/{Total} rovers succeeded, {Photos} photos added, {Failed} failed",
-        successfulRovers, config.ActiveRovers.Count, totalPhotos, failedRovers.Count);
-
-    if (failedRovers.Count > 0)
+    if (result.Success)
     {
-        Log.Warning("Failed rovers: {FailedRovers}", string.Join(", ", failedRovers));
-        Environment.ExitCode = 1; // Non-zero exit code for Railway monitoring
+        Log.Information(
+            "Scraper completed successfully: {Photos} photos added across {Rovers} rovers in {Duration}s",
+            result.TotalPhotosAdded, result.RoverResults.Count, result.DurationSeconds);
+        Environment.ExitCode = 0;
     }
     else
     {
-        Environment.ExitCode = 0; // Success
+        var failed = result.RoverResults.Where(r => !r.Success).Select(r => r.RoverName).ToList();
+        var succeeded = result.RoverResults.Where(r => r.Success).Select(r => r.RoverName).ToList();
+
+        Log.Warning(
+            "Scraper completed with failures: {Photos} photos added, {Succeeded} succeeded, {Failed} failed",
+            result.TotalPhotosAdded,
+            string.Join(", ", succeeded),
+            string.Join(", ", failed));
+        Environment.ExitCode = 1; // Non-zero exit code for Railway monitoring
     }
 
     Log.Information("Mars Vista Scraper finished");

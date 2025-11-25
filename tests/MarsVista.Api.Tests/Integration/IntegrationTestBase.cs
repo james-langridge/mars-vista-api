@@ -2,8 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using MarsVista.Api.Data;
-using MarsVista.Api.Entities;
+using MarsVista.Core.Data;
+using MarsVista.Core.Entities;
 using Npgsql;
 
 namespace MarsVista.Api.Tests.Integration;

@@ -4,6 +4,7 @@ WORKDIR /src
 
 # Copy solution and project files
 COPY MarsVista.sln .
+COPY src/MarsVista.Core/MarsVista.Core.csproj src/MarsVista.Core/
 COPY src/MarsVista.Api/MarsVista.Api.csproj src/MarsVista.Api/
 
 # Restore dependencies

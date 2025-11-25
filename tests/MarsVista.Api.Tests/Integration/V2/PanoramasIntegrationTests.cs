@@ -1,7 +1,7 @@
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using MarsVista.Api.DTOs.V2;
-using MarsVista.Api.Entities;
+using MarsVista.Core.Entities;
 using MarsVista.Api.Services.V2;
 
 namespace MarsVista.Api.Tests.Integration.V2;

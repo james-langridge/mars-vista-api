@@ -1,7 +1,8 @@
 using Microsoft.EntityFrameworkCore;
-using MarsVista.Api.Data;
+using MarsVista.Core.Data;
+using MarsVista.Core.Entities;
 using MarsVista.Api.DTOs.V2;
-using MarsVista.Api.Helpers;
+using MarsVista.Core.Helpers;
 using MarsVista.Api.Models.V2;
 
 namespace MarsVista.Api.Services.V2;
@@ -160,7 +161,7 @@ public class TimeMachineService : ITimeMachineService
     /// <summary>
     /// Map Photo entity to PhotoResource (simplified version of PhotoQueryServiceV2 mapping)
     /// </summary>
-    private PhotoResource MapPhotoToResource(Entities.Photo photo, PhotoQueryParameters parameters)
+    private PhotoResource MapPhotoToResource(Photo photo, PhotoQueryParameters parameters)
     {
         // Build images object
         var images = new PhotoImages

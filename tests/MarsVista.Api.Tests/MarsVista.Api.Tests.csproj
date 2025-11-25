@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\MarsVista.Api\MarsVista.Api.csproj" />
+    <ProjectReference Include="..\..\src\MarsVista.Core\MarsVista.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

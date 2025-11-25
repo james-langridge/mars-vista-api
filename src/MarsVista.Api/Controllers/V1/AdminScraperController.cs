@@ -1,4 +1,5 @@
-using MarsVista.Api.Data;
+using MarsVista.Core.Data;
+using MarsVista.Core.Entities;
 using MarsVista.Api.Filters;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -293,7 +294,7 @@ public class AdminScraperController : ControllerBase
         }
     }
 
-    private string DetermineHealthStatus(Entities.ScraperState state)
+    private string DetermineHealthStatus(ScraperState state)
     {
         // Determine health based on last scrape status and recency
         if (state.LastScrapeStatus == "failed")

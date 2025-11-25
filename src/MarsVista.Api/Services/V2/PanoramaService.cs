@@ -1,7 +1,8 @@
 using Microsoft.EntityFrameworkCore;
-using MarsVista.Api.Data;
+using MarsVista.Core.Data;
+using MarsVista.Core.Entities;
 using MarsVista.Api.DTOs.V2;
-using MarsVista.Api.Helpers;
+using MarsVista.Core.Helpers;
 
 namespace MarsVista.Api.Services.V2;
 
@@ -194,7 +195,7 @@ public class PanoramaService : IPanoramaService
     /// <summary>
     /// Optimized panorama detection that processes sol batches
     /// </summary>
-    private List<PanoramaSequence> DetectPanoramasOptimized(List<Entities.Photo> photos, int minPhotos, ref int panoramaIndex)
+    private List<PanoramaSequence> DetectPanoramasOptimized(List<Photo> photos, int minPhotos, ref int panoramaIndex)
     {
         var panoramas = new List<PanoramaSequence>();
 
@@ -216,7 +217,7 @@ public class PanoramaService : IPanoramaService
             // Sort by spacecraft clock
             var groupPhotos = group.OrderBy(p => p.SpacecraftClock).ToList();
 
-            var currentSequence = new List<Entities.Photo>();
+            var currentSequence = new List<Photo>();
             float? baseElevation = null;
 
             for (int i = 0; i < groupPhotos.Count; i++)
@@ -251,7 +252,7 @@ public class PanoramaService : IPanoramaService
                         {
                             panoramas.Add(new PanoramaSequence
                             {
-                                Photos = new List<Entities.Photo>(currentSequence),
+                                Photos = new List<Photo>(currentSequence),
                                 Index = panoramaIndex++
                             });
                         }
@@ -269,7 +270,7 @@ public class PanoramaService : IPanoramaService
             {
                 panoramas.Add(new PanoramaSequence
                 {
-                    Photos = new List<Entities.Photo>(currentSequence),
+                    Photos = new List<Photo>(currentSequence),
                     Index = panoramaIndex++
                 });
             }
@@ -281,7 +282,7 @@ public class PanoramaService : IPanoramaService
     /// <summary>
     /// Detect panorama sequences from a list of photos (legacy method for single sol)
     /// </summary>
-    private List<PanoramaSequence> DetectPanoramas(List<Entities.Photo> photos, int minPhotos)
+    private List<PanoramaSequence> DetectPanoramas(List<Photo> photos, int minPhotos)
     {
         var panoramaIndex = 0;
         return DetectPanoramasOptimized(photos, minPhotos, ref panoramaIndex);
@@ -290,7 +291,7 @@ public class PanoramaService : IPanoramaService
     /// <summary>
     /// Check if a sequence qualifies as a panorama
     /// </summary>
-    private bool IsValidPanorama(List<Entities.Photo> photos)
+    private bool IsValidPanorama(List<Photo> photos)
     {
         if (photos.Count < MinPhotosForPanorama)
             return false;
@@ -388,7 +389,7 @@ public class PanoramaService : IPanoramaService
     /// </summary>
     private class PanoramaSequence
     {
-        public List<Entities.Photo> Photos { get; set; } = new();
+        public List<Photo> Photos { get; set; } = new();
         public int Index { get; set; }
     }
 }
