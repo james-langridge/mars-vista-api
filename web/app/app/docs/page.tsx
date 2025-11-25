@@ -232,7 +232,7 @@ export default function DocsLanding() {
             </p>
           </Link>
           <a
-            href="https://github.com/jamessouth/mars-vista-api"
+            href="https://github.com/james-langridge/mars-vista-api"
             target="_blank"
             rel="noopener noreferrer"
             className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"

@@ -288,7 +288,7 @@ export async function GET(request) {
           <li>
             Report issues on{' '}
             <a
-              href="https://github.com/jamessouth/mars-vista-api/issues"
+              href="https://github.com/james-langridge/mars-vista-api/issues"
               target="_blank"
               rel="noopener noreferrer"
               className="text-orange-600 dark:text-orange-400 hover:underline"
