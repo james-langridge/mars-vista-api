@@ -74,10 +74,7 @@ export default function Statistics({ stats }: StatisticsProps) {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-      <h2 className="text-3xl sm:text-4xl font-bold text-center mb-4">Mars Vista by the Numbers</h2>
-      <p className="text-center text-gray-300 mb-12 max-w-2xl mx-auto">
-        Real-time statistics from our comprehensive Mars rover photo archive, updated daily
-      </p>
+      <h2 className="text-3xl sm:text-4xl font-bold text-center mb-12">Mars Vista by the Numbers</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {statistics.map((stat, index) => (
           <div key={index} className="bg-gray-800 rounded-lg p-6 border border-gray-700 text-center">
