@@ -2,7 +2,6 @@
 
 A modern REST API for Mars rover imagery, serving nearly 2 million photos from NASA's Perseverance, Curiosity, Opportunity, and Spirit missions.
 
-[![Status](https://img.shields.io/badge/status-operational-brightgreen)](https://status.marsvista.dev)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 ## Why Mars Vista?
