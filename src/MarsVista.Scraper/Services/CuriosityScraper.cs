@@ -74,6 +74,8 @@ public class CuriosityScraper : IScraperService
         };
     }
 
+    private const int PerPage = 200;
+
     public async Task<int> ScrapeSolAsync(int sol, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Scraping Curiosity photos for sol {Sol}", sol);
@@ -82,44 +84,77 @@ public class CuriosityScraper : IScraperService
         {
             var httpClient = _httpClientFactory.CreateClient("NASA");
 
-            var url = $"{BaseUrl}?order=sol%20desc&per_page=200&condition_1=msl:mission&condition_2={sol}:sol:in";
+            // Fetch all pages for this sol
+            var allPhotos = new List<JsonElement>();
+            var page = 0;
+            var total = int.MaxValue;  // Will be set from first response
 
-            _logger.LogDebug("Fetching {Url}", url);
+            while (page * PerPage < total)
+            {
+                var url = $"{BaseUrl}?order=sol%20desc&per_page={PerPage}&page={page}&condition_1=msl:mission&condition_2={sol}:sol:in";
+                _logger.LogDebug("Fetching page {Page} from {Url}", page, url);
 
-            var response = await httpClient.GetAsync(url, cancellationToken);
+                var response = await httpClient.GetAsync(url, cancellationToken);
 
-            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    if (page == 0)
+                    {
+                        _logger.LogInformation("No photos found for sol {Sol} (404)", sol);
+                        return 0;
+                    }
+                    break;
+                }
+
+                response.EnsureSuccessStatusCode();
+
+                var json = await response.Content.ReadAsStringAsync(cancellationToken);
+
+                // Parse JSON directly (Perseverance approach)
+                using var document = JsonDocument.Parse(json);
+                var root = document.RootElement;
+
+                // Get total from first page
+                if (page == 0 && root.TryGetProperty("total", out var totalProp) &&
+                    totalProp.ValueKind == JsonValueKind.Number)
+                {
+                    total = totalProp.GetInt32();
+                    _logger.LogInformation("Sol {Sol} has {Total} total photos from NASA (will filter thumbnails)", sol, total);
+                }
+
+                if (!root.TryGetProperty("items", out var items))
+                {
+                    _logger.LogWarning("No 'items' array in response for sol {Sol} page {Page}", sol, page);
+                    break;
+                }
+
+                var itemsArray = items.EnumerateArray().ToList();
+
+                if (itemsArray.Count == 0)
+                {
+                    break;
+                }
+
+                // Clone elements since we're disposing the document
+                foreach (var item in itemsArray)
+                {
+                    allPhotos.Add(JsonDocument.Parse(item.GetRawText()).RootElement);
+                }
+
+                _logger.LogDebug("Page {Page}: {Count} photos", page, itemsArray.Count);
+                page++;
+            }
+
+            if (allPhotos.Count == 0)
             {
                 _logger.LogInformation("No photos found for sol {Sol}", sol);
                 return 0;
             }
 
-            response.EnsureSuccessStatusCode();
+            _logger.LogInformation("Fetched {Count} photos for sol {Sol} across {Pages} pages",
+                allPhotos.Count, sol, page);
 
-            var json = await response.Content.ReadAsStringAsync(cancellationToken);
-            _logger.LogInformation("Received JSON response of length {Length}", json.Length);
-
-            // Parse JSON directly (Perseverance approach)
-            using var document = JsonDocument.Parse(json);
-            var root = document.RootElement;
-
-            if (!root.TryGetProperty("items", out var items))
-            {
-                _logger.LogWarning("No 'items' array in response for sol {Sol}", sol);
-                return 0;
-            }
-
-            var itemsArray = items.EnumerateArray().ToList();
-
-            if (itemsArray.Count == 0)
-            {
-                _logger.LogInformation("No photos found for sol {Sol}", sol);
-                return 0;
-            }
-
-            _logger.LogInformation("Found {Count} photos for sol {Sol}", itemsArray.Count, sol);
-
-            var (inserted, skipped) = await ProcessPhotosAsync(itemsArray, sol, cancellationToken);
+            var (inserted, skipped) = await ProcessPhotosAsync(allPhotos, sol, cancellationToken);
 
             return inserted;
         }
