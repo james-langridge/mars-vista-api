@@ -246,7 +246,7 @@ export default function PrivacyPolicy() {
             International Users
           </h2>
           <p className="text-slate-600 dark:text-slate-300 mb-4">
-            Mars Vista API is operated from the United Kingdom. If you are accessing our service from
+            Mars Vista API is operated from Germany. If you are accessing our service from
             the European Union, European Economic Area, or other regions with data protection laws, your
             personal data may be transferred to and processed in countries outside your region.
           </p>

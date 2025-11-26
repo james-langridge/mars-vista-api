@@ -233,8 +233,8 @@ export default function TermsOfService() {
             13. Governing Law
           </h2>
           <p className="text-slate-600 dark:text-slate-300">
-            These Terms shall be governed by and construed in accordance with the laws of England and
-            Wales, without regard to its conflict of law provisions.
+            These Terms shall be governed by and construed in accordance with the laws of the Federal
+            Republic of Germany, without regard to its conflict of law provisions.
           </p>
         </section>
 
