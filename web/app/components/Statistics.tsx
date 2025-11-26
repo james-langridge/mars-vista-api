@@ -74,13 +74,20 @@ export default function Statistics({ stats }: StatisticsProps) {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-      <h2 className="text-3xl sm:text-4xl font-bold text-center mb-12">Mars Vista by the Numbers</h2>
+      <h2 className="text-3xl sm:text-4xl font-bold text-center mb-12 text-slate-900 dark:text-white">
+        Mars Vista by the Numbers
+      </h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {statistics.map((stat, index) => (
-          <div key={index} className="bg-gray-800 rounded-lg p-6 border border-gray-700 text-center">
-            <div className={`${stat.fontSize} font-bold text-red-500 mb-2`}>{stat.value}</div>
-            <h3 className="text-xl font-semibold mb-3">{stat.title}</h3>
-            <p className="text-gray-300 text-sm">{stat.description}</p>
+          <div
+            key={index}
+            className="bg-slate-100 dark:bg-slate-800 rounded-lg p-6 border border-slate-200 dark:border-slate-700 text-center"
+          >
+            <div className={`${stat.fontSize} font-bold text-orange-600 dark:text-orange-500 mb-2`}>
+              {stat.value}
+            </div>
+            <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-3">{stat.title}</h3>
+            <p className="text-slate-600 dark:text-slate-300 text-sm">{stat.description}</p>
           </div>
         ))}
       </div>

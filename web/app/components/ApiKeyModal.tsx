@@ -41,32 +41,32 @@ export default function ApiKeyModal({ apiKey, isOpen, onClose, isRegenerate = fa
     <dialog
       ref={dialogRef}
       onClick={handleBackdropClick}
-      className="backdrop:bg-black/80 bg-gray-800 rounded-lg p-0 max-w-2xl w-full border border-gray-700 fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0"
+      className="backdrop:bg-black/80 bg-white dark:bg-slate-800 rounded-lg p-0 max-w-2xl w-full border border-slate-200 dark:border-slate-700 fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0"
     >
       <div className="p-6">
         {/* Header */}
         <div className="mb-6">
-          <h2 className="text-2xl font-bold mb-2 text-white">
+          <h2 className="text-2xl font-bold mb-2 text-slate-900 dark:text-white">
             {isRegenerate ? 'API Key Regenerated!' : 'API Key Generated!'}
           </h2>
-          <p className="text-gray-400">
+          <p className="text-slate-600 dark:text-slate-400">
             {isRegenerate
               ? 'Your old API key has been invalidated. Save your new key now.'
-              : 'Your API key has been created. Save it now - you won\'t be able to see it again.'}
+              : "Your API key has been created. Save it now - you won't be able to see it again."}
           </p>
         </div>
 
         {/* Warning Banner */}
-        <div className="bg-yellow-900/20 border border-yellow-700 rounded-lg p-4 mb-6">
+        <div className="bg-yellow-100 dark:bg-yellow-900/20 border border-yellow-300 dark:border-yellow-700 rounded-lg p-4 mb-6">
           <div className="flex items-start gap-3">
             <span className="text-yellow-500 text-xl flex-shrink-0">⚠️</span>
             <div>
-              <p className="text-yellow-400 font-semibold mb-1">
+              <p className="text-yellow-700 dark:text-yellow-400 font-semibold mb-1">
                 Save this key immediately
               </p>
-              <p className="text-yellow-400/90 text-sm">
-                For security reasons, we cannot show you this key again. If you lose it,
-                you'll need to regenerate a new one.
+              <p className="text-yellow-600 dark:text-yellow-400/90 text-sm">
+                For security reasons, we cannot show you this key again. If you lose it, you'll
+                need to regenerate a new one.
               </p>
             </div>
           </div>
@@ -74,11 +74,11 @@ export default function ApiKeyModal({ apiKey, isOpen, onClose, isRegenerate = fa
 
         {/* API Key Display */}
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-400 mb-2">
+          <label className="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-2">
             Your API Key
           </label>
           <div className="flex gap-2">
-            <code className="flex-1 bg-gray-900 p-4 rounded-lg font-mono text-sm break-all border border-gray-700 text-white">
+            <code className="flex-1 bg-slate-100 dark:bg-slate-900 p-4 rounded-lg font-mono text-sm break-all border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white">
               {apiKey}
             </code>
             <CopyButton text={apiKey} label="Copy" />
@@ -87,10 +87,12 @@ export default function ApiKeyModal({ apiKey, isOpen, onClose, isRegenerate = fa
 
         {/* Usage Example */}
         <div className="mb-6">
-          <h3 className="text-sm font-medium text-gray-400 mb-2">Usage Example</h3>
-          <div className="bg-gray-900 p-4 rounded-lg border border-gray-700">
-            <code className="text-sm text-gray-300 whitespace-pre-wrap break-all">
-{`curl -H "X-API-Key: ${apiKey}" \\
+          <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-2">
+            Usage Example
+          </h3>
+          <div className="bg-slate-100 dark:bg-slate-900 p-4 rounded-lg border border-slate-200 dark:border-slate-700">
+            <code className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap break-all">
+              {`curl -H "X-API-Key: ${apiKey}" \\
   https://api.marsvista.dev/api/v1/rovers/curiosity/photos?sol=1000`}
             </code>
           </div>
@@ -100,7 +102,7 @@ export default function ApiKeyModal({ apiKey, isOpen, onClose, isRegenerate = fa
         <div className="flex justify-end">
           <button
             onClick={handleClose}
-            className="px-6 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-medium transition-colors text-white"
+            className="px-6 py-2 bg-orange-600 hover:bg-orange-700 rounded-lg font-medium transition-colors text-white"
           >
             I've Saved My Key
           </button>

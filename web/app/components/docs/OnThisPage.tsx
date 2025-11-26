@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 
 interface Heading {
   id: string;
@@ -9,32 +10,40 @@ interface Heading {
 }
 
 export default function OnThisPage() {
+  const pathname = usePathname();
   const [headings, setHeadings] = useState<Heading[]>([]);
   const [activeId, setActiveId] = useState<string>('');
 
   useEffect(() => {
-    // Find all h2 and h3 elements in the main content
-    const elements = document.querySelectorAll('main h2, main h3');
-    const items: Heading[] = [];
+    // Small delay to ensure DOM is updated after navigation
+    const timer = setTimeout(() => {
+      // Find all h2 and h3 elements in the main content
+      const elements = document.querySelectorAll('main h2, main h3');
+      const items: Heading[] = [];
 
-    elements.forEach((element) => {
-      // Generate ID if not present
-      if (!element.id) {
-        element.id = element.textContent
-          ?.toLowerCase()
-          .replace(/[^a-z0-9]+/g, '-')
-          .replace(/(^-|-$)/g, '') || '';
-      }
+      elements.forEach((element) => {
+        // Generate ID if not present
+        if (!element.id) {
+          element.id =
+            element.textContent
+              ?.toLowerCase()
+              .replace(/[^a-z0-9]+/g, '-')
+              .replace(/(^-|-$)/g, '') || '';
+        }
 
-      items.push({
-        id: element.id,
-        text: element.textContent || '',
-        level: element.tagName === 'H2' ? 2 : 3,
+        items.push({
+          id: element.id,
+          text: element.textContent || '',
+          level: element.tagName === 'H2' ? 2 : 3,
+        });
       });
-    });
 
-    setHeadings(items);
-  }, []);
+      setHeadings(items);
+      setActiveId('');
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [pathname]);
 
   useEffect(() => {
     if (headings.length === 0) return;

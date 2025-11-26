@@ -133,33 +133,33 @@ export default function ApiKeyManager() {
 
   if (isLoading && !apiKeyInfo) {
     return (
-      <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-        <h2 className="text-xl font-bold mb-4">API Key</h2>
-        <p className="text-gray-400">Loading...</p>
+      <div className="bg-slate-100 dark:bg-slate-800 rounded-lg p-6 border border-slate-200 dark:border-slate-700">
+        <h2 className="text-xl font-bold mb-4 text-slate-900 dark:text-white">API Key</h2>
+        <p className="text-slate-500 dark:text-slate-400">Loading...</p>
       </div>
     );
   }
 
   return (
     <>
-      <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-        <h2 className="text-xl font-bold mb-4">API Key</h2>
+      <div className="bg-slate-100 dark:bg-slate-800 rounded-lg p-6 border border-slate-200 dark:border-slate-700">
+        <h2 className="text-xl font-bold mb-4 text-slate-900 dark:text-white">API Key</h2>
 
         {error && (
-          <div className="bg-red-900/20 border border-red-700 rounded-lg p-4 mb-4">
-            <p className="text-red-400">{error}</p>
+          <div className="bg-red-100 dark:bg-red-900/20 border border-red-300 dark:border-red-700 rounded-lg p-4 mb-4">
+            <p className="text-red-600 dark:text-red-400">{error}</p>
           </div>
         )}
 
         {!apiKeyInfo ? (
           <div className="space-y-4">
-            <p className="text-gray-400">
+            <p className="text-slate-600 dark:text-slate-400">
               Generate an API key to start making requests to the Mars Vista API.
             </p>
             <button
               onClick={generateKey}
               disabled={isLoading}
-              className="px-6 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-6 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? 'Generating...' : 'Generate API Key'}
             </button>
@@ -168,64 +168,68 @@ export default function ApiKeyManager() {
           <div className="space-y-4">
             {/* API Key Status */}
             <div>
-              <label className="block text-sm font-medium text-gray-400 mb-2">
+              <label className="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-2">
                 Status
               </label>
-              <div className="flex items-center gap-2 bg-gray-900 p-3 rounded-lg border border-gray-700">
+              <div className="flex items-center gap-2 bg-white dark:bg-slate-900 p-3 rounded-lg border border-slate-200 dark:border-slate-700">
                 <span className="text-green-500">✓</span>
-                <span className="font-medium">API Key Active</span>
+                <span className="font-medium text-slate-900 dark:text-white">API Key Active</span>
               </div>
-              <p className="text-sm text-gray-500 mt-2">
-                Your API key is configured and ready to use. For security, we cannot display it again.
+              <p className="text-sm text-slate-500 dark:text-slate-500 mt-2">
+                Your API key is configured and ready to use. For security, we cannot display it
+                again.
               </p>
             </div>
 
             {/* Metadata */}
             <div className="text-sm">
-              <span className="text-gray-400">Created:</span>
-              <span className="ml-2 font-medium">
-                {apiKeyInfo.createdAt ? new Date(apiKeyInfo.createdAt).toLocaleDateString() : 'N/A'}
+              <span className="text-slate-500 dark:text-slate-400">Created:</span>
+              <span className="ml-2 font-medium text-slate-900 dark:text-white">
+                {apiKeyInfo.createdAt
+                  ? new Date(apiKeyInfo.createdAt).toLocaleDateString()
+                  : 'N/A'}
               </span>
             </div>
 
             {/* Usage Example */}
-            <div className="border-t border-gray-700 pt-4">
-              <h3 className="font-semibold mb-2">Usage Example</h3>
-              <div className="bg-gray-900 p-4 rounded-lg border border-gray-700">
-                <code className="text-sm text-gray-300 whitespace-pre-wrap break-all">
-{`curl -H "X-API-Key: YOUR_API_KEY" \\
+            <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
+              <h3 className="font-semibold mb-2 text-slate-900 dark:text-white">Usage Example</h3>
+              <div className="bg-white dark:bg-slate-900 p-4 rounded-lg border border-slate-200 dark:border-slate-700">
+                <code className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap break-all">
+                  {`curl -H "X-API-Key: YOUR_API_KEY" \\
   https://api.marsvista.dev/api/v2/photos?rovers=curiosity&sol=1000`}
                 </code>
               </div>
             </div>
 
             {/* Regenerate Section */}
-            <div className="border-t border-gray-700 pt-4">
+            <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
               {!showRegenerateConfirm ? (
                 <button
                   onClick={() => setShowRegenerateConfirm(true)}
                   disabled={isLoading}
-                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-medium transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-900 dark:text-white rounded-lg font-medium transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Regenerate API Key
                 </button>
               ) : (
-                <div className="bg-yellow-900/20 border border-yellow-700 rounded-lg p-4 space-y-3">
-                  <p className="text-yellow-400 text-sm">
-                    Are you sure you want to regenerate your API key? Your old key will stop working immediately.
+                <div className="bg-yellow-100 dark:bg-yellow-900/20 border border-yellow-300 dark:border-yellow-700 rounded-lg p-4 space-y-3">
+                  <p className="text-yellow-700 dark:text-yellow-400 text-sm">
+                    Are you sure you want to regenerate your API key? Your old key will stop working
+                    immediately.
                   </p>
                   <div className="flex gap-2">
                     <button
                       onClick={regenerateKey}
                       disabled={isLoading}
-                      className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-medium transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isLoading ? 'Regenerating...' : 'Yes, Regenerate'}
                     </button>
                     <button
                       onClick={() => setShowRegenerateConfirm(false)}
                       disabled={isLoading}
-                      className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-medium transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-900 dark:text-white rounded-lg font-medium transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Cancel
                     </button>
