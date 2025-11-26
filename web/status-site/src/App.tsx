@@ -66,16 +66,16 @@ function App() {
   const overall = getOverallStatus()
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 flex flex-col">
       <Header />
 
       <main className="flex-1 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 w-full">
         {loading ? (
           <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#d14524]"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600"></div>
           </div>
         ) : error ? (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-lg">
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-6 py-4 rounded-lg">
             {error}
           </div>
         ) : (
@@ -103,7 +103,7 @@ function App() {
 
             {/* Service Status Cards */}
             <div className="space-y-4">
-              <h3 className="text-xl font-semibold text-slate-800">Services</h3>
+              <h3 className="text-xl font-semibold text-slate-800 dark:text-white">Services</h3>
               {monitors.map((monitor) => (
                 <StatusCard key={monitor.id} monitor={monitor} />
               ))}
