@@ -25,7 +25,8 @@ async function getPhotoCount(): Promise<number> {
 
 function formatPhotoCount(count: number): string {
   if (count >= 1000000) {
-    const millions = count / 1000000;
+    // Round down to nearest 0.1M since we use "+" notation
+    const millions = Math.floor((count / 1000000) * 10) / 10;
     return `${millions.toFixed(1).replace(/\.0$/, '')}M+ Photos`;
   }
   const thousands = Math.floor(count / 1000);
