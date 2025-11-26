@@ -13,13 +13,13 @@ async function getPhotoCount(): Promise<number> {
     });
 
     if (!res.ok) {
-      return 1900000; // Fallback
+      return 1200000; // Fallback
     }
 
     const data = await res.json();
-    return data.total_photos || 1900000;
+    return data.total_photos || 1200000;
   } catch {
-    return 1900000; // Fallback
+    return 1200000; // Fallback
   }
 }
 
@@ -27,10 +27,10 @@ function formatPhotoCount(count: number): string {
   if (count >= 1000000) {
     // Round down to nearest 0.1M since we use "+" notation
     const millions = Math.floor((count / 1000000) * 10) / 10;
-    return `${millions.toFixed(1).replace(/\.0$/, '')}M+ Photos`;
+    return `${millions.toFixed(1).replace(/\.0$/, '')}M+ Unique Photos`;
   }
   const thousands = Math.floor(count / 1000);
-  return `${thousands}K+ Photos`;
+  return `${thousands}K+ Unique Photos`;
 }
 
 const learningPath = [

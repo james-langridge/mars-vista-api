@@ -53,13 +53,13 @@ export default function Statistics({ stats }: StatisticsProps) {
 
   const statistics = [
     {
-      title: 'Total Photos',
+      title: 'Unique Photos',
       value: formatNumber(stats.total_photos),
       description: 'Complete archive spanning 4 Mars rovers across 20+ years of exploration',
       fontSize: 'text-4xl',
     },
     {
-      title: 'New Photos This Week',
+      title: 'New This Week',
       value: formatNumber(stats.photos_added_last_7_days),
       description: 'Fresh images fetched daily from NASA\'s latest rover transmissions',
       fontSize: 'text-4xl',
