@@ -188,6 +188,47 @@ public class ApiKeyInternalController : ControllerBase
     }
 
     /// <summary>
+    /// Delete a user's account and API key.
+    /// Called by Next.js after validating Auth.js session.
+    /// This only deletes the API key from the photos database.
+    /// The Auth.js user record is deleted separately by Next.js.
+    /// </summary>
+    /// <param name="request">Request containing user email</param>
+    /// <returns>Success confirmation</returns>
+    [HttpDelete("delete")]
+    public async Task<IActionResult> DeleteAccount([FromBody] DeleteAccountRequest request)
+    {
+        if (string.IsNullOrEmpty(request.UserEmail))
+        {
+            return BadRequest(new { error = "user_email is required" });
+        }
+
+        _logger.LogInformation("Deleting account for user {Email}", request.UserEmail);
+
+        // Find and delete API key
+        var apiKey = await _context.ApiKeys
+            .Where(k => k.UserEmail == request.UserEmail)
+            .FirstOrDefaultAsync();
+
+        if (apiKey != null)
+        {
+            _context.ApiKeys.Remove(apiKey);
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("API key deleted for user {Email}", request.UserEmail);
+        }
+        else
+        {
+            _logger.LogInformation("No API key found for user {Email}, nothing to delete", request.UserEmail);
+        }
+
+        return Ok(new
+        {
+            success = true,
+            message = "Account data deleted successfully"
+        });
+    }
+
+    /// <summary>
     /// Simple email validation
     /// </summary>
     private static bool IsValidEmail(string email)
@@ -213,3 +254,8 @@ public record GenerateApiKeyRequest(string UserEmail);
 /// Request model for regenerating an existing API key
 /// </summary>
 public record RegenerateApiKeyRequest(string UserEmail);
+
+/// <summary>
+/// Request model for deleting a user account
+/// </summary>
+public record DeleteAccountRequest(string UserEmail);

@@ -2,6 +2,7 @@ import { auth } from '@/server/auth-export';
 import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import ApiKeyManager from '@/components/ApiKeyManager';
+import AccountSettings from '@/components/AccountSettings';
 
 export const metadata: Metadata = {
   title: 'API Keys - Mars Vista API',
@@ -12,7 +13,7 @@ export default async function ApiKeys() {
   const session = await auth();
 
   // Protect this page - redirect to signin if not authenticated
-  if (!session) {
+  if (!session || !session.user?.email) {
     redirect('/signin');
   }
 
@@ -24,6 +25,8 @@ export default async function ApiKeys() {
       </div>
 
       <ApiKeyManager />
+
+      <AccountSettings userEmail={session.user.email} />
     </div>
   );
 }
