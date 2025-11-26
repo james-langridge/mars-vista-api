@@ -2,6 +2,7 @@ using System.Text.Json;
 using MarsVista.Core.Data;
 using MarsVista.Core.Entities;
 using MarsVista.Core.Helpers;
+using MarsVista.Scraper.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -194,6 +195,10 @@ public class PerseveranceScraper : IScraperService
                 var mastAz = TryGetFloatFromString(extended, "mast_az");
                 var mastEl = TryGetFloatFromString(extended, "mast_el");
 
+                // Extract dimensions correctly from extended metadata
+                // Uses dimension field "(width,height)" or falls back to subframeRect
+                var (width, height) = ScraperHelpers.ExtractPerseveranceDimensions(extended);
+
                 var photoEntity = new Photo
                 {
                     NasaId = nasaId,
@@ -209,9 +214,9 @@ public class PerseveranceScraper : IScraperService
                     ImgSrcMedium = TryGetString(photo, "image_files", "medium") ?? "",
                     ImgSrcLarge = TryGetString(photo, "image_files", "large") ?? "",
 
-                    // Image metadata
-                    Width = TryGetInt(extended, "scaleFactor"),
-                    Height = TryGetInt(extended, "subframeRect"),
+                    // Image dimensions (extracted from dimension or subframeRect fields)
+                    Width = width,
+                    Height = height,
                     SampleType = TryGetString(photo, "sample_type") ?? "unknown",
                     Title = TryGetString(photo, "title"),
                     Caption = TryGetString(photo, "caption"),
