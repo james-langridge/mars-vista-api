@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using MarsVista.Core.Data;
 using MarsVista.Core.Entities;
 using MarsVista.Core.Helpers;
@@ -172,6 +173,18 @@ public class CuriosityScraper : IScraperService
                     continue;
                 }
 
+                // Extract extended object early for sample_type check
+                JsonElement extended = default;
+                photo.TryGetProperty("extended", out extended);
+
+                // Skip thumbnails - they're too small to be useful (160x144 or smaller)
+                var sampleType = TryGetString(extended, "sample_type") ?? "unknown";
+                if (sampleType.Equals("thumbnail", StringComparison.OrdinalIgnoreCase))
+                {
+                    skipped++;
+                    continue;
+                }
+
                 // Extract instrument and map to camera
                 var instrument = TryGetString(photo, "instrument") ?? "";
                 var cameraName = MapInstrumentToCamera(instrument);
@@ -205,9 +218,10 @@ public class CuriosityScraper : IScraperService
                 var earthDate = DateTime.SpecifyKind(dateTaken.Date, DateTimeKind.Utc);
                 var dateTakenUtc = DateTime.SpecifyKind(dateTaken, DateTimeKind.Utc);
 
-                // Extract extended object
-                JsonElement extended = default;
-                photo.TryGetProperty("extended", out extended);
+                // Extract dimensions from subframe_rect or estimate from sample_type
+                var subframeRect = TryGetString(extended, "subframe_rect");
+                var (width, height) = ParseSubframeRect(subframeRect)
+                    ?? InferDimensionsFromSampleType(sampleType);
 
                 // Extract mast orientation as floats
                 var mastAz = TryGetFloatFromString(extended, "mast_az");
@@ -226,8 +240,12 @@ public class CuriosityScraper : IScraperService
                     ImgSrcFull = TryGetString(photo, "https_url") ?? "",
                     ImgSrcSmall = TryGetString(extended, "url_list"),
 
+                    // Image dimensions (extracted from subframe_rect or estimated)
+                    Width = width,
+                    Height = height,
+
                     // Sample type and metadata
-                    SampleType = TryGetString(extended, "sample_type") ?? "unknown",
+                    SampleType = sampleType,
                     Title = TryGetString(photo, "title"),
                     Caption = TryGetString(photo, "description"),
                     Credit = TryGetString(photo, "image_credit"),
@@ -284,6 +302,41 @@ public class CuriosityScraper : IScraperService
     // ============================================================================
     // HELPER METHODS
     // ============================================================================
+
+    /// <summary>
+    /// Parses dimensions from NASA's subframe_rect format: "(x, y, width, height)"
+    /// Returns null if the format is invalid or not present.
+    /// </summary>
+    private static (int? width, int? height)? ParseSubframeRect(string? rect)
+    {
+        if (string.IsNullOrEmpty(rect))
+            return null;
+
+        // Format: "(x, y, width, height)" - we want the 3rd and 4th values
+        var match = Regex.Match(rect, @"\((\d+),(\d+),(\d+),(\d+)\)");
+        if (!match.Success)
+            return null;
+
+        return (int.Parse(match.Groups[3].Value), int.Parse(match.Groups[4].Value));
+    }
+
+    /// <summary>
+    /// Infers dimensions from sample_type when subframe_rect is not available.
+    /// These are conservative estimates based on typical NASA image sizes.
+    /// </summary>
+    private static (int? width, int? height) InferDimensionsFromSampleType(string sampleType)
+    {
+        return sampleType.ToLowerInvariant() switch
+        {
+            "thumbnail" => (160, 144),
+            "subframe" => (1024, 1024),
+            "full" => (1024, 1024),
+            "downsampled" => (800, 600),
+            "chemcam prc" => (1024, 1024),
+            "mixed" => (1024, 1024),
+            _ => (512, 512)  // Conservative fallback
+        };
+    }
 
     private static string? TryGetString(JsonElement element, string property)
     {
