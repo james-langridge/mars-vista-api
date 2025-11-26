@@ -4,18 +4,86 @@ export default function Footer() {
   return (
     <footer className="border-t border-slate-200 dark:border-slate-700 mt-16 bg-slate-50 dark:bg-slate-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          {/* Brand */}
+          <div className="md:col-span-2 lg:col-span-1">
+            <Link
+              href="/"
+              className="text-xl font-bold text-slate-900 dark:text-white hover:text-orange-600 dark:hover:text-orange-400 transition-colors"
+            >
+              Mars Vista
+            </Link>
+            <p className="mt-2 text-slate-600 dark:text-slate-400 text-sm">
+              Mars rover imagery API with photos from Curiosity, Perseverance, Opportunity, and
+              Spirit.
+            </p>
+            <Link
+              href="/signin"
+              className="inline-block mt-4 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              Get API Key
+            </Link>
+          </div>
+
+          {/* Documentation */}
           <div>
-            <h3 className="font-semibold text-slate-900 dark:text-white mb-4">Resources</h3>
+            <h3 className="font-semibold text-slate-900 dark:text-white mb-4">Documentation</h3>
             <ul className="space-y-2">
               <li>
-                <Link href="/" className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
-                  Home
+                <Link
+                  href="/docs/quickstart"
+                  className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors text-sm"
+                >
+                  Quick Start
                 </Link>
               </li>
               <li>
-                <Link href="/docs" className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
-                  Documentation
+                <Link
+                  href="/docs/guides/mars-time"
+                  className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors text-sm"
+                >
+                  Guides
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/docs/reference/photos"
+                  className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors text-sm"
+                >
+                  API Reference
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/docs/troubleshooting"
+                  className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors text-sm"
+                >
+                  Troubleshooting
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* API */}
+          <div>
+            <h3 className="font-semibold text-slate-900 dark:text-white mb-4">API</h3>
+            <ul className="space-y-2">
+              <li>
+                <a
+                  href="https://api.marsvista.dev/swagger"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors text-sm"
+                >
+                  Swagger UI
+                </a>
+              </li>
+              <li>
+                <Link
+                  href="/docs/llm/openapi.json"
+                  className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors text-sm"
+                >
+                  OpenAPI Spec
                 </Link>
               </li>
               <li>
@@ -23,51 +91,56 @@ export default function Footer() {
                   href="https://status.marsvista.dev"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+                  className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors text-sm"
                 >
                   Status
                 </a>
               </li>
             </ul>
           </div>
+
+          {/* Connect */}
           <div>
-            <h3 className="font-semibold text-slate-900 dark:text-white mb-4">Rovers</h3>
-            <ul className="space-y-2 text-slate-600 dark:text-slate-400">
-              <li>Curiosity (2012-present)</li>
-              <li>Perseverance (2021-present)</li>
-              <li>Opportunity (2004-2018)</li>
-              <li>Spirit (2004-2010)</li>
+            <h3 className="font-semibold text-slate-900 dark:text-white mb-4">Connect</h3>
+            <ul className="space-y-2">
+              <li>
+                <a
+                  href="https://github.com/james-langridge/mars-vista-api"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors text-sm"
+                >
+                  GitHub
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://github.com/james-langridge/mars-vista-api/issues"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors text-sm"
+                >
+                  Report an Issue
+                </a>
+              </li>
             </ul>
           </div>
-          <div>
-            <h3 className="font-semibold text-slate-900 dark:text-white mb-4">About</h3>
-            <p className="text-slate-600 dark:text-slate-400">
-              Advanced Mars rover imagery API with location search, Mars time filtering, and complete NASA metadata from all four rovers.
-            </p>
-          </div>
         </div>
-        <div className="mt-8 pt-8 border-t border-slate-200 dark:border-slate-700 text-center text-slate-600 dark:text-slate-400">
+
+        {/* Bottom bar */}
+        <div className="mt-10 pt-8 border-t border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-slate-500 dark:text-slate-400">
           <p>
             Built by{' '}
             <a
               href="https://langridge.dev"
-              className="text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors"
+              className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors"
               target="_blank"
               rel="noopener noreferrer"
             >
               James Langridge
             </a>
-            . The source code is available on{' '}
-            <a
-              href="https://github.com/james-langridge/mars-vista-api"
-              className="text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              GitHub
-            </a>
-            .
           </p>
+          <p>NASA imagery courtesy of JPL-Caltech</p>
         </div>
       </div>
     </footer>
