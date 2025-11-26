@@ -2,8 +2,6 @@
 
 A modern REST API for Mars rover imagery, serving nearly 2 million photos from NASA's Perseverance, Curiosity, Opportunity, and Spirit missions.
 
-[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
-
 ## Why Mars Vista?
 
 NASA's raw image APIs are undocumented and inconsistent across missions. Mars Vista provides:
