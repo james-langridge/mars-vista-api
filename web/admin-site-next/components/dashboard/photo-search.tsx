@@ -29,6 +29,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { searchPhotos } from '@/lib/api'
 import type { PhotoSearchParams, PhotoSearchResponse, PhotoResource } from '@/lib/types'
+import { JsonViewer } from '@/components/ui/json-viewer'
 import {
   Search,
   Download,
@@ -41,6 +42,8 @@ import {
   ChevronsRight,
   Copy,
   Check,
+  TableIcon,
+  Code,
 } from 'lucide-react'
 
 const ROVERS = ['curiosity', 'perseverance', 'opportunity', 'spirit']
@@ -84,6 +87,7 @@ export function PhotoSearch() {
   const [error, setError] = useState<string | null>(null)
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useState<'table' | 'json'>('table')
 
   const handleSearch = useCallback(
     async (newParams?: Partial<PhotoSearchParams>) => {
@@ -405,82 +409,110 @@ export function PhotoSearch() {
       {results && (
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-4">
               <CardTitle>
                 Results: {results.meta.total_count.toLocaleString()} photos
                 <span className="text-sm font-normal text-muted-foreground ml-2">
                   (returned {results.meta.returned_count})
                 </span>
               </CardTitle>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleSearch({ page: 1 })}
-                  disabled={results.pagination.page === 1 || loading}
-                >
-                  <ChevronsLeft className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleSearch({ page: results.pagination.page - 1 })}
-                  disabled={!results.links?.previous || loading}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <span className="text-sm px-2">
-                  Page {results.pagination.page} of {results.pagination.total_pages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleSearch({ page: results.pagination.page + 1 })}
-                  disabled={!results.links?.next || loading}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleSearch({ page: results.pagination.total_pages })}
-                  disabled={results.pagination.page === results.pagination.total_pages || loading}
-                >
-                  <ChevronsRight className="h-4 w-4" />
-                </Button>
+              <div className="flex items-center gap-4">
+                {/* View Toggle */}
+                <div className="flex items-center border rounded-md">
+                  <Button
+                    variant={viewMode === 'table' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    onClick={() => setViewMode('table')}
+                    className="rounded-r-none"
+                  >
+                    <TableIcon className="h-4 w-4 mr-1" />
+                    Table
+                  </Button>
+                  <Button
+                    variant={viewMode === 'json' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    onClick={() => setViewMode('json')}
+                    className="rounded-l-none"
+                  >
+                    <Code className="h-4 w-4 mr-1" />
+                    JSON
+                  </Button>
+                </div>
+                {/* Pagination */}
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleSearch({ page: 1 })}
+                    disabled={results.pagination.page === 1 || loading}
+                  >
+                    <ChevronsLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleSearch({ page: results.pagination.page - 1 })}
+                    disabled={!results.links?.previous || loading}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span className="text-sm px-2">
+                    Page {results.pagination.page} of {results.pagination.total_pages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleSearch({ page: results.pagination.page + 1 })}
+                    disabled={!results.links?.next || loading}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleSearch({ page: results.pagination.total_pages })}
+                    disabled={results.pagination.page === results.pagination.total_pages || loading}
+                  >
+                    <ChevronsRight className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[50px]"></TableHead>
-                    <TableHead>Sol</TableHead>
-                    <TableHead>Earth Date</TableHead>
-                    <TableHead>Rover</TableHead>
-                    <TableHead>Camera</TableHead>
-                    <TableHead>NASA ID</TableHead>
-                    <TableHead>Dimensions</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead className="w-[100px]">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {results.data.map((photo) => (
-                    <PhotoRow
-                      key={photo.id}
-                      photo={photo}
-                      isExpanded={expandedRows.has(photo.id)}
-                      onToggle={() => toggleRow(photo.id)}
-                      onCopy={(text) => copyToClipboard(text, photo.id)}
-                      copied={copiedId === photo.id}
-                    />
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            {viewMode === 'json' ? (
+              <JsonViewer data={results} maxHeight="600px" />
+            ) : (
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[50px]"></TableHead>
+                      <TableHead>Sol</TableHead>
+                      <TableHead>Earth Date</TableHead>
+                      <TableHead>Rover</TableHead>
+                      <TableHead>Camera</TableHead>
+                      <TableHead>NASA ID</TableHead>
+                      <TableHead>Dimensions</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead className="w-[100px]">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {results.data.map((photo) => (
+                      <PhotoRow
+                        key={photo.id}
+                        photo={photo}
+                        isExpanded={expandedRows.has(photo.id)}
+                        onToggle={() => toggleRow(photo.id)}
+                        onCopy={(text) => copyToClipboard(text, photo.id)}
+                        copied={copiedId === photo.id}
+                      />
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
