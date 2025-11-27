@@ -6,6 +6,7 @@ WORKDIR /src
 COPY MarsVista.sln .
 COPY src/MarsVista.Core/MarsVista.Core.csproj src/MarsVista.Core/
 COPY src/MarsVista.Api/MarsVista.Api.csproj src/MarsVista.Api/
+COPY src/MarsVista.Scraper/MarsVista.Scraper.csproj src/MarsVista.Scraper/
 
 # Restore dependencies
 RUN dotnet restore src/MarsVista.Api/MarsVista.Api.csproj
