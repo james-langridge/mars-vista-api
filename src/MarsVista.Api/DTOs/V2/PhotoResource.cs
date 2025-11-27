@@ -204,6 +204,15 @@ public record PhotoAttributes
     [JsonPropertyName("img_src")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? ImgSrc { get; init; }
+
+    // Raw NASA data (only included when field_set=complete)
+    /// <summary>
+    /// Raw NASA API response data (JSONB). Only included when field_set=complete.
+    /// Contains all original NASA fields for data validation and debugging.
+    /// </summary>
+    [JsonPropertyName("raw_data")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public object? RawData { get; init; }
 }
 
 /// <summary>

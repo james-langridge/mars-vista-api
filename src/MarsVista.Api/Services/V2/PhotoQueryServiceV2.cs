@@ -259,6 +259,13 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
     {
         var query = _context.Photos.AsNoTracking().AsQueryable();
 
+        // Filter by NASA ID (partial match, case-insensitive)
+        if (!string.IsNullOrWhiteSpace(parameters.NasaId))
+        {
+            var nasaIdPattern = parameters.NasaId.Trim();
+            query = query.Where(p => EF.Functions.ILike(p.NasaId, $"%{nasaIdPattern}%"));
+        }
+
         // Filter by rovers
         if (parameters.RoverList.Count > 0)
         {
@@ -551,6 +558,14 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
             }
         }
 
+        // Include raw_data only for "complete" field set
+        object? rawData = null;
+        if (parameters.FieldSetParsed == FieldSetType.Complete && photo.RawData != null)
+        {
+            // Convert JsonDocument to object for serialization
+            rawData = System.Text.Json.JsonSerializer.Deserialize<object>(photo.RawData.RootElement.GetRawText());
+        }
+
         var attributes = new PhotoAttributes
         {
             NasaId = ShouldInclude("nasa_id") ? photo.NasaId : null,
@@ -568,7 +583,9 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
             Credit = ShouldInclude("credit") ? photo.Credit : null,
             CreatedAt = ShouldInclude("created_at") ? photo.CreatedAt : null,
             // Legacy field for backwards compatibility
-            ImgSrc = ShouldInclude("img_src") ? photo.ImgSrcLarge : null
+            ImgSrc = ShouldInclude("img_src") ? photo.ImgSrcLarge : null,
+            // Raw NASA data (only for complete field set)
+            RawData = rawData
         };
 
         PhotoRelationships? relationships = null;

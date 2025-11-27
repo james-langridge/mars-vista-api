@@ -195,6 +195,19 @@ builder.Services.AddMemoryCache(); // Required for rate limiting fallback and L1
 builder.Services.AddSingleton<IApiKeyService, ApiKeyService>();
 builder.Services.AddSingleton<IRateLimitService, RedisRateLimitService>();
 
+// Scraper configuration and services (for admin trigger endpoints)
+builder.Services.Configure<MarsVista.Core.Options.ScraperScheduleOptions>(
+    builder.Configuration.GetSection(MarsVista.Core.Options.ScraperScheduleOptions.SectionName));
+
+// Scraper services from MarsVista.Scraper project
+builder.Services.AddScoped<MarsVista.Core.Repositories.IScraperStateRepository, MarsVista.Core.Repositories.ScraperStateRepository>();
+builder.Services.AddScoped<MarsVista.Scraper.Services.IScraperService, MarsVista.Scraper.Services.PerseveranceScraper>();
+builder.Services.AddScoped<MarsVista.Scraper.Services.IScraperService, MarsVista.Scraper.Services.CuriosityScraper>();
+
+// Admin scraper job tracking and trigger services
+builder.Services.AddSingleton<IScraperJobTracker, ScraperJobTracker>();
+builder.Services.AddScoped<IAdminScraperTriggerService, AdminScraperTriggerService>();
+
 // Response compression for 30-50% payload size reduction
 builder.Services.AddResponseCompression(options =>
 {

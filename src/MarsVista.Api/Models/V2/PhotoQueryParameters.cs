@@ -10,6 +10,13 @@ namespace MarsVista.Api.Models.V2;
 public class PhotoQueryParameters
 {
     /// <summary>
+    /// Search by NASA ID (partial match, case-insensitive)
+    /// Example: nasa_id=NLB_780234
+    /// </summary>
+    [FromQuery(Name = "nasa_id")]
+    public string? NasaId { get; set; }
+
+    /// <summary>
     /// Filter by one or more rovers (comma-separated)
     /// Example: rovers=curiosity,perseverance
     /// </summary>
