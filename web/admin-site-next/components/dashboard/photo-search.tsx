@@ -80,6 +80,7 @@ export function PhotoSearch() {
     per_page: 25,
     page: 1,
     field_set: 'extended',
+    include: 'rover,camera',
     sort: '-sol',
   })
   const [results, setResults] = useState<PhotoSearchResponse | null>(null)
@@ -151,11 +152,11 @@ export function PhotoSearch() {
         attrs.nasa_id,
         attrs.sol,
         attrs.earth_date,
-        attrs.rover?.name || '',
-        attrs.camera?.name || '',
+        getRoverName(photo),
+        getCameraName(photo),
         attrs.dimensions?.width || '',
         attrs.dimensions?.height || '',
-        attrs.meta?.sample_type || '',
+        attrs.sample_type || '',
         attrs.location?.site || '',
         attrs.location?.drive || '',
         attrs.images?.full || '',
@@ -374,7 +375,7 @@ export function PhotoSearch() {
             <Button
               variant="outline"
               onClick={() => {
-                setParams({ per_page: 25, page: 1, field_set: 'extended', sort: '-sol' })
+                setParams({ per_page: 25, page: 1, field_set: 'extended', include: 'rover,camera', sort: '-sol' })
                 setResults(null)
                 setError(null)
               }}
@@ -499,16 +500,19 @@ export function PhotoSearch() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {results.data.map((photo) => (
-                      <PhotoRow
-                        key={photo.id}
-                        photo={photo}
-                        isExpanded={expandedRows.has(photo.id)}
-                        onToggle={() => toggleRow(photo.id)}
-                        onCopy={(text) => copyToClipboard(text, photo.id)}
-                        copied={copiedId === photo.id}
-                      />
-                    ))}
+                    {results.data.map((photo) => {
+                      const photoId = String(photo.id)
+                      return (
+                        <PhotoRow
+                          key={photoId}
+                          photo={photo}
+                          isExpanded={expandedRows.has(photoId)}
+                          onToggle={() => toggleRow(photoId)}
+                          onCopy={(text) => copyToClipboard(text, photoId)}
+                          copied={copiedId === photoId}
+                        />
+                      )
+                    })}
                   </TableBody>
                 </Table>
               </div>
@@ -528,6 +532,38 @@ interface PhotoRowProps {
   copied: boolean
 }
 
+// Helper to get rover name from relationships
+function getRoverName(photo: PhotoResource): string {
+  return photo.relationships?.rover?.attributes?.name || photo.relationships?.rover?.id || '-'
+}
+
+// Helper to get camera name from relationships or title fallback
+function getCameraName(photo: PhotoResource): string {
+  // Use camera relationship if available
+  if (photo.relationships?.camera?.attributes?.full_name) {
+    return photo.relationships.camera.attributes.full_name
+  }
+  if (photo.relationships?.camera?.id) {
+    return photo.relationships.camera.id
+  }
+  // Fallback: try to extract from title like "Sol 4729: Right Navigation Camera"
+  if (photo.attributes.title) {
+    const match = photo.attributes.title.match(/:\s*(.+)$/)
+    if (match) return match[1]
+  }
+  return '-'
+}
+
+// Helper to get sample type
+function getSampleType(attrs: PhotoResource['attributes']): string {
+  return attrs.sample_type || '-'
+}
+
+// Helper to get credit
+function getCredit(attrs: PhotoResource['attributes']): string {
+  return attrs.credit || '-'
+}
+
 function PhotoRow({ photo, isExpanded, onToggle, onCopy, copied }: PhotoRowProps) {
   const attrs = photo.attributes
 
@@ -544,9 +580,9 @@ function PhotoRow({ photo, isExpanded, onToggle, onCopy, copied }: PhotoRowProps
         <TableCell className="font-medium">{attrs.sol}</TableCell>
         <TableCell>{attrs.earth_date}</TableCell>
         <TableCell>
-          <Badge variant="outline">{attrs.rover?.name}</Badge>
+          <Badge variant="outline">{getRoverName(photo)}</Badge>
         </TableCell>
-        <TableCell>{attrs.camera?.name}</TableCell>
+        <TableCell>{getCameraName(photo)}</TableCell>
         <TableCell className="font-mono text-xs">{attrs.nasa_id}</TableCell>
         <TableCell>
           {attrs.dimensions?.width && attrs.dimensions?.height
@@ -554,7 +590,7 @@ function PhotoRow({ photo, isExpanded, onToggle, onCopy, copied }: PhotoRowProps
             : '-'}
         </TableCell>
         <TableCell>
-          <Badge variant="secondary">{attrs.meta?.sample_type || '-'}</Badge>
+          <Badge variant="secondary">{getSampleType(attrs)}</Badge>
         </TableCell>
         <TableCell onClick={(e) => e.stopPropagation()}>
           <div className="flex gap-1">
@@ -596,6 +632,12 @@ function ExpandedPhotoDetails({ photo }: { photo: PhotoResource }) {
   const attrs = photo.attributes
   const [showRawData, setShowRawData] = useState(false)
 
+  // Calculate aspect ratio if dimensions exist but aspect_ratio doesn't
+  const aspectRatio = attrs.dimensions?.aspect_ratio
+    ?? (attrs.dimensions?.width && attrs.dimensions?.height
+        ? attrs.dimensions.width / attrs.dimensions.height
+        : null)
+
   return (
     <div className="p-4 space-y-4">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
@@ -617,23 +659,23 @@ function ExpandedPhotoDetails({ photo }: { photo: PhotoResource }) {
         </div>
         <div>
           <span className="text-muted-foreground">Rover:</span>
-          <span className="ml-2">{attrs.rover?.name}</span>
+          <span className="ml-2">{getRoverName(photo)}</span>
         </div>
         <div>
           <span className="text-muted-foreground">Camera:</span>
-          <span className="ml-2">
-            {attrs.camera?.name} ({attrs.camera?.full_name})
-          </span>
+          <span className="ml-2">{getCameraName(photo)}</span>
         </div>
         <div>
           <span className="text-muted-foreground">Dimensions:</span>
           <span className="ml-2">
-            {attrs.dimensions?.width}x{attrs.dimensions?.height}
+            {attrs.dimensions?.width && attrs.dimensions?.height
+              ? `${attrs.dimensions.width}x${attrs.dimensions.height}`
+              : '-'}
           </span>
         </div>
         <div>
           <span className="text-muted-foreground">Aspect Ratio:</span>
-          <span className="ml-2">{attrs.dimensions?.aspect_ratio?.toFixed(2) || '-'}</span>
+          <span className="ml-2">{aspectRatio?.toFixed(2) || '-'}</span>
         </div>
         {attrs.location && (
           <>
@@ -647,15 +689,15 @@ function ExpandedPhotoDetails({ photo }: { photo: PhotoResource }) {
             </div>
           </>
         )}
-        {attrs.mars_time && (
+        {(attrs.mars_time || attrs.date_taken_mars) && (
           <>
             <div>
               <span className="text-muted-foreground">Mars Time:</span>
-              <span className="ml-2">{attrs.mars_time.date_taken_mars || '-'}</span>
+              <span className="ml-2">{attrs.mars_time?.date_taken_mars || attrs.date_taken_mars || '-'}</span>
             </div>
             <div>
               <span className="text-muted-foreground">Local Time:</span>
-              <span className="ml-2">{attrs.mars_time.local_time || '-'}</span>
+              <span className="ml-2">{attrs.mars_time?.local_time || '-'}</span>
             </div>
           </>
         )}
@@ -673,12 +715,24 @@ function ExpandedPhotoDetails({ photo }: { photo: PhotoResource }) {
         )}
         <div>
           <span className="text-muted-foreground">Sample Type:</span>
-          <span className="ml-2">{attrs.meta?.sample_type || '-'}</span>
+          <span className="ml-2">{getSampleType(attrs)}</span>
         </div>
         <div>
           <span className="text-muted-foreground">Credit:</span>
-          <span className="ml-2">{attrs.meta?.credit || '-'}</span>
+          <span className="ml-2">{getCredit(attrs)}</span>
         </div>
+        {attrs.title && (
+          <div className="col-span-2">
+            <span className="text-muted-foreground">Title:</span>
+            <span className="ml-2">{attrs.title}</span>
+          </div>
+        )}
+        {attrs.caption && (
+          <div className="col-span-2 md:col-span-4">
+            <span className="text-muted-foreground">Caption:</span>
+            <span className="ml-2">{attrs.caption}</span>
+          </div>
+        )}
       </div>
 
       {attrs.images && (

@@ -182,26 +182,21 @@ export interface PhotoSearchParams {
   site?: number
   drive?: number
   field_set?: string
+  include?: string // 'rover', 'camera', or 'rover,camera'
   page?: number
   per_page?: number
   sort?: string
 }
 
 export interface PhotoResource {
-  id: string
+  id: string | number
   type: string
   attributes: {
     nasa_id: string
     sol: number
     earth_date: string
-    camera: {
-      name: string
-      full_name: string
-    }
-    rover: {
-      name: string
-      status: string
-    }
+    date_taken_utc?: string
+    date_taken_mars?: string
     images?: {
       small?: string
       medium?: string
@@ -211,11 +206,16 @@ export interface PhotoResource {
     dimensions?: {
       width: number | null
       height: number | null
-      aspect_ratio: number | null
+      aspect_ratio?: number | null
     }
     location?: {
       site: number | null
       drive: number | null
+      coordinates?: {
+        x: number
+        y: number
+        z: number
+      }
     }
     mars_time?: {
       date_taken_mars: string | null
@@ -225,17 +225,39 @@ export interface PhotoResource {
     telemetry?: {
       mast_azimuth: number | null
       mast_elevation: number | null
+      spacecraft_clock?: number
     }
-    meta?: {
-      sample_type: string | null
-      credit: string | null
-      caption: string | null
-    }
+    // Top-level metadata fields
+    sample_type?: string | null
+    credit?: string | null
+    title?: string | null
+    caption?: string | null
+    created_at?: string
+    img_src?: string
     raw_data?: Record<string, unknown>
+  }
+  // Relationships only included when using ?include=rover,camera
+  relationships?: {
+    rover?: {
+      id: string
+      type: 'rover'
+      attributes?: {
+        name: string
+        status: 'active' | 'complete'
+      }
+    }
+    camera?: {
+      id: string
+      type: 'camera'
+      attributes?: {
+        full_name: string
+        photo_count?: number
+      }
+    }
   }
   links?: {
     self: string
-    nasa: string
+    nasa?: string
   }
 }
 
