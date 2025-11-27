@@ -17,6 +17,7 @@ const navigation: NavItem[] = [
       { title: 'Introduction', href: '/docs' },
       { title: 'Quick Start', href: '/docs/quickstart' },
       { title: 'Authentication', href: '/docs/authentication' },
+      { title: 'API Explorer', href: '/docs/explorer' },
     ],
   },
   {
