@@ -30,6 +30,7 @@ import {
   PhotoSearch,
   NasaCompare,
 } from '@/components/dashboard'
+import { ErrorBoundary } from '@/components/error-boundary'
 import type {
   Stats,
   User,
@@ -183,35 +184,61 @@ export default function DashboardPage() {
           </TabsList>
 
           <TabsContent value="overview" className="space-y-8">
-            {stats && <StatsOverview stats={stats} />}
-            {violations.length > 0 && <RateLimitViolations violations={violations} />}
+            <ErrorBoundary>
+              {stats && <StatsOverview stats={stats} />}
+              {violations.length > 0 && <RateLimitViolations violations={violations} />}
+            </ErrorBoundary>
           </TabsContent>
 
           <TabsContent value="search">
-            <PhotoSearch />
+            <ErrorBoundary>
+              <PhotoSearch />
+            </ErrorBoundary>
           </TabsContent>
 
           <TabsContent value="nasa-compare">
-            <NasaCompare />
+            <ErrorBoundary>
+              <NasaCompare />
+            </ErrorBoundary>
           </TabsContent>
 
           <TabsContent value="scraper">
-            {scraperStatus && scraperMetrics && (
-              <ScraperMonitoring status={scraperStatus} metrics={scraperMetrics} />
-            )}
+            <ErrorBoundary>
+              {scraperStatus && scraperMetrics && (
+                <ScraperMonitoring status={scraperStatus} metrics={scraperMetrics} />
+              )}
+            </ErrorBoundary>
           </TabsContent>
 
           <TabsContent value="performance">
-            {performanceMetrics && <PerformanceMetrics metrics={performanceMetrics} />}
+            <ErrorBoundary>
+              {performanceMetrics && <PerformanceMetrics metrics={performanceMetrics} />}
+            </ErrorBoundary>
           </TabsContent>
 
-          <TabsContent value="endpoints">{endpointUsage && <EndpointUsage data={endpointUsage} />}</TabsContent>
+          <TabsContent value="endpoints">
+            <ErrorBoundary>
+              {endpointUsage && <EndpointUsage data={endpointUsage} />}
+            </ErrorBoundary>
+          </TabsContent>
 
-          <TabsContent value="errors">{errorData && <ErrorTracking data={errorData} />}</TabsContent>
+          <TabsContent value="errors">
+            <ErrorBoundary>
+              {errorData && <ErrorTracking data={errorData} />}
+            </ErrorBoundary>
+          </TabsContent>
 
-          <TabsContent value="users">{users.length > 0 && <UserList users={users} />}</TabsContent>
+          <TabsContent value="users">
+            <ErrorBoundary>
+              {users.length > 0 && <UserList users={users} />}
+            </ErrorBoundary>
+          </TabsContent>
 
-          <TabsContent value="activity">{activities.length > 0 && <ActivityLog activities={activities} />}</TabsContent>
+          <TabsContent value="activity">
+            <ErrorBoundary>
+              {activities.length > 0 && <ActivityLog activities={activities} />}
+            </ErrorBoundary>
+          </TabsContent>
         </Tabs>
       </main>
     </div>
