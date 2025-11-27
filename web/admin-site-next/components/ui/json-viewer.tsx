@@ -21,15 +21,25 @@ export function JsonViewer({ data, maxHeight = '500px' }: JsonViewerProps) {
   return (
     <div className="relative">
       <Button
-        variant="ghost"
+        variant="secondary"
         size="sm"
-        className="absolute top-2 right-2 z-10"
+        className="absolute top-2 right-2 z-10 bg-slate-700 hover:bg-slate-600 text-slate-100"
         onClick={copyToClipboard}
       >
-        {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+        {copied ? (
+          <>
+            <Check className="h-4 w-4 mr-1" />
+            Copied!
+          </>
+        ) : (
+          <>
+            <Copy className="h-4 w-4 mr-1" />
+            Copy JSON
+          </>
+        )}
       </Button>
       <pre
-        className="bg-slate-950 text-slate-50 p-4 rounded-md overflow-auto text-xs font-mono"
+        className="bg-slate-950 text-slate-50 p-4 pt-12 rounded-md overflow-auto text-xs font-mono"
         style={{ maxHeight }}
       >
         <JsonSyntaxHighlight data={data} />
