@@ -34,16 +34,19 @@ jobs:
         dotnet-version: '9.0.x'
 
     - name: Restore dependencies
-      run: dotnet restore
+      run: dotnet restore MarsVista.sln
 
     - name: Build
-      run: dotnet build --no-restore --configuration Release
+      run: dotnet build MarsVista.sln --no-restore --configuration Release
 
-    - name: Run tests
+    - name: Run API tests
       env:
         ASPNETCORE_ENVIRONMENT: Test
         ConnectionStrings__DefaultConnection: "Host=localhost;Port=5432;Database=marsvista_dev;Username=marsvista;Password=marsvista_dev_password"
-      run: dotnet test MarsVista.sln --configuration Release --verbosity normal --logger "trx;LogFileName=test-results.trx" --results-directory ./TestResults
+      run: dotnet test tests/MarsVista.Api.Tests/MarsVista.Api.Tests.csproj --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=api-test-results.trx" --results-directory ./TestResults
+
+    - name: Run Scraper tests
+      run: dotnet test tests/MarsVista.Scraper.Tests/MarsVista.Scraper.Tests.csproj --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=scraper-test-results.trx" --results-directory ./TestResults
 
     - name: Upload test results
       if: always()
