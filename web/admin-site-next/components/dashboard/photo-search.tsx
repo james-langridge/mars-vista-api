@@ -74,6 +74,15 @@ const CAMERAS = [
 ]
 const SAMPLE_TYPES = ['Full', 'Subframe', 'Thumbnail', 'Sub-frame', 'Downsampled']
 const PAGE_SIZES = [10, 25, 50, 100]
+const FIELD_SETS = ['minimal', 'standard', 'extended', 'scientific', 'complete'] as const
+const SORT_OPTIONS = [
+  { value: '-sol', label: 'Sol (newest first)' },
+  { value: 'sol', label: 'Sol (oldest first)' },
+  { value: '-earth_date', label: 'Date (newest first)' },
+  { value: 'earth_date', label: 'Date (oldest first)' },
+  { value: '-created_at', label: 'Added (newest first)' },
+  { value: 'created_at', label: 'Added (oldest first)' },
+]
 
 export function PhotoSearch() {
   const [params, setParams] = useState<PhotoSearchParams>({
@@ -89,6 +98,7 @@ export function PhotoSearch() {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'table' | 'json'>('table')
+  const [showAdvanced, setShowAdvanced] = useState(false)
 
   const handleSearch = useCallback(
     async (newParams?: Partial<PhotoSearchParams>) => {
@@ -130,6 +140,16 @@ export function PhotoSearch() {
   const exportToCsv = () => {
     if (!results?.data.length) return
 
+    // Helper to escape CSV values (handles commas, quotes, newlines)
+    const escapeCsvValue = (value: string | number | null | undefined): string => {
+      if (value === null || value === undefined) return ''
+      const str = String(value)
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return `"${str.replace(/"/g, '""')}"`
+      }
+      return str
+    }
+
     const headers = [
       'ID',
       'NASA ID',
@@ -148,18 +168,18 @@ export function PhotoSearch() {
     const rows = results.data.map((photo) => {
       const attrs = photo.attributes
       return [
-        photo.id,
-        attrs.nasa_id,
-        attrs.sol,
-        attrs.earth_date,
-        getRoverName(photo),
-        getCameraName(photo),
-        attrs.dimensions?.width || '',
-        attrs.dimensions?.height || '',
-        attrs.sample_type || '',
-        attrs.location?.site || '',
-        attrs.location?.drive || '',
-        attrs.images?.full || '',
+        escapeCsvValue(photo.id),
+        escapeCsvValue(attrs.nasa_id),
+        escapeCsvValue(attrs.sol),
+        escapeCsvValue(attrs.earth_date),
+        escapeCsvValue(getRoverName(photo)),
+        escapeCsvValue(getCameraId(photo)),
+        escapeCsvValue(attrs.dimensions?.width),
+        escapeCsvValue(attrs.dimensions?.height),
+        escapeCsvValue(attrs.sample_type),
+        escapeCsvValue(attrs.location?.site),
+        escapeCsvValue(attrs.location?.drive),
+        escapeCsvValue(attrs.images?.full),
       ].join(',')
     })
 
@@ -367,6 +387,224 @@ export function PhotoSearch() {
             </div>
           </div>
 
+          {/* Advanced Filters Toggle */}
+          <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced} className="mt-4">
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" size="sm" className="w-full justify-between">
+                Advanced Filters
+                {showAdvanced ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-4 space-y-6">
+              {/* Location Filters */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-muted-foreground">Location Filters</Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="space-y-2">
+                    <Label>Site Min</Label>
+                    <Input
+                      type="number"
+                      placeholder="e.g., 1"
+                      value={params.site_min ?? ''}
+                      onChange={(e) =>
+                        setParams({ ...params, site_min: e.target.value ? parseInt(e.target.value) : undefined })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Site Max</Label>
+                    <Input
+                      type="number"
+                      placeholder="e.g., 100"
+                      value={params.site_max ?? ''}
+                      onChange={(e) =>
+                        setParams({ ...params, site_max: e.target.value ? parseInt(e.target.value) : undefined })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Location Radius</Label>
+                    <Input
+                      type="number"
+                      placeholder="meters"
+                      value={params.location_radius ?? ''}
+                      onChange={(e) =>
+                        setParams({ ...params, location_radius: e.target.value ? parseFloat(e.target.value) : undefined })
+                      }
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Image Quality Filters */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-muted-foreground">Image Quality Filters</Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="space-y-2">
+                    <Label>Min Width (px)</Label>
+                    <Input
+                      type="number"
+                      placeholder="e.g., 1024"
+                      value={params.min_width ?? ''}
+                      onChange={(e) =>
+                        setParams({ ...params, min_width: e.target.value ? parseInt(e.target.value) : undefined })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Min Height (px)</Label>
+                    <Input
+                      type="number"
+                      placeholder="e.g., 1024"
+                      value={params.min_height ?? ''}
+                      onChange={(e) =>
+                        setParams({ ...params, min_height: e.target.value ? parseInt(e.target.value) : undefined })
+                      }
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Mars Time Filters */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-muted-foreground">Mars Time Filters</Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="space-y-2">
+                    <Label>Mars Time Min</Label>
+                    <Input
+                      placeholder="e.g., M06:00:00"
+                      value={params.mars_time_min ?? ''}
+                      onChange={(e) => setParams({ ...params, mars_time_min: e.target.value || undefined })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Mars Time Max</Label>
+                    <Input
+                      placeholder="e.g., M18:00:00"
+                      value={params.mars_time_max ?? ''}
+                      onChange={(e) => setParams({ ...params, mars_time_max: e.target.value || undefined })}
+                    />
+                  </div>
+                  <div className="space-y-2 flex items-end">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={params.mars_time_golden_hour ?? false}
+                        onChange={(e) =>
+                          setParams({ ...params, mars_time_golden_hour: e.target.checked || undefined })
+                        }
+                        className="rounded border-gray-300"
+                      />
+                      <span>Golden Hour Only</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Camera Angle Filters */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-muted-foreground">Camera Angle Filters (Telemetry)</Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="space-y-2">
+                    <Label>Mast Elevation Min (°)</Label>
+                    <Input
+                      type="number"
+                      placeholder="-90 to 90"
+                      value={params.mast_elevation_min ?? ''}
+                      onChange={(e) =>
+                        setParams({ ...params, mast_elevation_min: e.target.value ? parseFloat(e.target.value) : undefined })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Mast Elevation Max (°)</Label>
+                    <Input
+                      type="number"
+                      placeholder="-90 to 90"
+                      value={params.mast_elevation_max ?? ''}
+                      onChange={(e) =>
+                        setParams({ ...params, mast_elevation_max: e.target.value ? parseFloat(e.target.value) : undefined })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Mast Azimuth Min (°)</Label>
+                    <Input
+                      type="number"
+                      placeholder="0 to 360"
+                      value={params.mast_azimuth_min ?? ''}
+                      onChange={(e) =>
+                        setParams({ ...params, mast_azimuth_min: e.target.value ? parseFloat(e.target.value) : undefined })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Mast Azimuth Max (°)</Label>
+                    <Input
+                      type="number"
+                      placeholder="0 to 360"
+                      value={params.mast_azimuth_max ?? ''}
+                      onChange={(e) =>
+                        setParams({ ...params, mast_azimuth_max: e.target.value ? parseFloat(e.target.value) : undefined })
+                      }
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Response Control */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-muted-foreground">Response Control</Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="space-y-2">
+                    <Label>Field Set</Label>
+                    <Select
+                      value={params.field_set || 'extended'}
+                      onValueChange={(v) => setParams({ ...params, field_set: v as PhotoSearchParams['field_set'] })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {FIELD_SETS.map((fs) => (
+                          <SelectItem key={fs} value={fs}>
+                            {fs.charAt(0).toUpperCase() + fs.slice(1)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Sort By</Label>
+                    <Select
+                      value={params.sort || '-sol'}
+                      onValueChange={(v) => setParams({ ...params, sort: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SORT_OPTIONS.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>Custom Fields (comma-separated)</Label>
+                    <Input
+                      placeholder="e.g., id,nasa_id,sol,images"
+                      value={params.fields ?? ''}
+                      onChange={(e) => setParams({ ...params, fields: e.target.value || undefined })}
+                    />
+                  </div>
+                </div>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+
           <div className="mt-6 flex gap-4">
             <Button onClick={() => handleSearch({ page: 1 })} disabled={loading}>
               <Search className="h-4 w-4 mr-2" />
@@ -378,6 +616,7 @@ export function PhotoSearch() {
                 setParams({ per_page: 25, page: 1, field_set: 'extended', include: 'rover,camera', sort: '-sol' })
                 setResults(null)
                 setError(null)
+                setShowAdvanced(false)
               }}
             >
               Clear
@@ -537,21 +776,22 @@ function getRoverName(photo: PhotoResource): string {
   return photo.relationships?.rover?.attributes?.name || photo.relationships?.rover?.id || '-'
 }
 
-// Helper to get camera name from relationships or title fallback
-function getCameraName(photo: PhotoResource): string {
-  // Use camera relationship if available
+// Helper to get short camera ID (for table/CSV)
+function getCameraId(photo: PhotoResource): string {
+  return photo.relationships?.camera?.id || '-'
+}
+
+// Helper to get full camera name (for expanded details)
+function getCameraFullName(photo: PhotoResource): string {
   if (photo.relationships?.camera?.attributes?.full_name) {
     return photo.relationships.camera.attributes.full_name
-  }
-  if (photo.relationships?.camera?.id) {
-    return photo.relationships.camera.id
   }
   // Fallback: try to extract from title like "Sol 4729: Right Navigation Camera"
   if (photo.attributes.title) {
     const match = photo.attributes.title.match(/:\s*(.+)$/)
     if (match) return match[1]
   }
-  return '-'
+  return photo.relationships?.camera?.id || '-'
 }
 
 // Helper to get sample type
@@ -562,6 +802,12 @@ function getSampleType(attrs: PhotoResource['attributes']): string {
 // Helper to get credit
 function getCredit(attrs: PhotoResource['attributes']): string {
   return attrs.credit || '-'
+}
+
+// Helper to format coordinates
+function formatCoordinates(coords: { x: number; y: number; z: number } | undefined): string {
+  if (!coords) return '-'
+  return `(${coords.x.toFixed(3)}, ${coords.y.toFixed(3)}, ${coords.z.toFixed(3)})`
 }
 
 function PhotoRow({ photo, isExpanded, onToggle, onCopy, copied }: PhotoRowProps) {
@@ -582,7 +828,9 @@ function PhotoRow({ photo, isExpanded, onToggle, onCopy, copied }: PhotoRowProps
         <TableCell>
           <Badge variant="outline">{getRoverName(photo)}</Badge>
         </TableCell>
-        <TableCell>{getCameraName(photo)}</TableCell>
+        <TableCell>
+          <span title={getCameraFullName(photo)}>{getCameraId(photo)}</span>
+        </TableCell>
         <TableCell className="font-mono text-xs">{attrs.nasa_id}</TableCell>
         <TableCell>
           {attrs.dimensions?.width && attrs.dimensions?.height
@@ -663,7 +911,7 @@ function ExpandedPhotoDetails({ photo }: { photo: PhotoResource }) {
         </div>
         <div>
           <span className="text-muted-foreground">Camera:</span>
-          <span className="ml-2">{getCameraName(photo)}</span>
+          <span className="ml-2">{getCameraFullName(photo)}</span>
         </div>
         <div>
           <span className="text-muted-foreground">Dimensions:</span>
@@ -687,30 +935,42 @@ function ExpandedPhotoDetails({ photo }: { photo: PhotoResource }) {
               <span className="text-muted-foreground">Drive:</span>
               <span className="ml-2">{attrs.location.drive ?? '-'}</span>
             </div>
+            {attrs.location.coordinates && (
+              <div className="col-span-2">
+                <span className="text-muted-foreground">Coordinates (x,y,z):</span>
+                <span className="ml-2 font-mono text-xs">{formatCoordinates(attrs.location.coordinates)}</span>
+              </div>
+            )}
           </>
         )}
-        {(attrs.mars_time || attrs.date_taken_mars) && (
-          <>
-            <div>
-              <span className="text-muted-foreground">Mars Time:</span>
-              <span className="ml-2">{attrs.mars_time?.date_taken_mars || attrs.date_taken_mars || '-'}</span>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Local Time:</span>
-              <span className="ml-2">{attrs.mars_time?.local_time || '-'}</span>
-            </div>
-          </>
+        {attrs.date_taken_utc && (
+          <div>
+            <span className="text-muted-foreground">Date Taken (UTC):</span>
+            <span className="ml-2">{new Date(attrs.date_taken_utc).toLocaleString()}</span>
+          </div>
+        )}
+        {attrs.date_taken_mars && (
+          <div>
+            <span className="text-muted-foreground">Mars Time:</span>
+            <span className="ml-2">{attrs.date_taken_mars}</span>
+          </div>
         )}
         {attrs.telemetry && (
           <>
             <div>
               <span className="text-muted-foreground">Mast Azimuth:</span>
-              <span className="ml-2">{attrs.telemetry.mast_azimuth?.toFixed(1) ?? '-'}</span>
+              <span className="ml-2">{attrs.telemetry.mast_azimuth?.toFixed(1) ?? '-'}°</span>
             </div>
             <div>
               <span className="text-muted-foreground">Mast Elevation:</span>
-              <span className="ml-2">{attrs.telemetry.mast_elevation?.toFixed(1) ?? '-'}</span>
+              <span className="ml-2">{attrs.telemetry.mast_elevation?.toFixed(1) ?? '-'}°</span>
             </div>
+            {attrs.telemetry.spacecraft_clock && (
+              <div>
+                <span className="text-muted-foreground">Spacecraft Clock:</span>
+                <span className="ml-2 font-mono">{attrs.telemetry.spacecraft_clock}</span>
+              </div>
+            )}
           </>
         )}
         <div>
@@ -721,6 +981,12 @@ function ExpandedPhotoDetails({ photo }: { photo: PhotoResource }) {
           <span className="text-muted-foreground">Credit:</span>
           <span className="ml-2">{getCredit(attrs)}</span>
         </div>
+        {attrs.created_at && (
+          <div>
+            <span className="text-muted-foreground">Added to DB:</span>
+            <span className="ml-2">{new Date(attrs.created_at).toLocaleString()}</span>
+          </div>
+        )}
         {attrs.title && (
           <div className="col-span-2">
             <span className="text-muted-foreground">Title:</span>

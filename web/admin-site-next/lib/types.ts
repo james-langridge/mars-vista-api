@@ -167,25 +167,55 @@ export interface ScraperJob {
 }
 
 // Photo Search Types (v2 API)
+// See /web/app/public/docs/llm/types.ts for canonical definition
 export interface PhotoSearchParams {
+  // Basic filters
   nasa_id?: string
   rovers?: string
   cameras?: string
+
+  // Sol range
   sol?: number
   sol_min?: number
   sol_max?: number
+
+  // Date range
   date_min?: string
   date_max?: string
-  sample_type?: string
-  min_width?: number
-  min_height?: number
+
+  // Location filters
   site?: number
   drive?: number
-  field_set?: string
-  include?: string // 'rover', 'camera', or 'rover,camera'
+  site_min?: number
+  site_max?: number
+  location_radius?: number
+
+  // Image quality filters
+  min_width?: number
+  min_height?: number
+  sample_type?: string
+
+  // Mars time filters
+  mars_time_min?: string
+  mars_time_max?: string
+  mars_time_golden_hour?: boolean
+
+  // Camera angle filters (telemetry)
+  mast_elevation_min?: number
+  mast_elevation_max?: number
+  mast_azimuth_min?: number
+  mast_azimuth_max?: number
+
+  // Response control
+  field_set?: 'minimal' | 'standard' | 'extended' | 'scientific' | 'complete'
+  fields?: string
+  include?: string
+  image_sizes?: string
+  sort?: string
+
+  // Pagination
   page?: number
   per_page?: number
-  sort?: string
 }
 
 export interface PhotoResource {
