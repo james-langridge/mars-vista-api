@@ -407,9 +407,9 @@ export function PhotoSearch() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>
-                Results: {results.meta.total.toLocaleString()} photos
+                Results: {results.meta.total_count.toLocaleString()} photos
                 <span className="text-sm font-normal text-muted-foreground ml-2">
-                  (Query: {results.meta.timing.query_ms}ms, Total: {results.meta.timing.total_ms}ms)
+                  (returned {results.meta.returned_count})
                 </span>
               </CardTitle>
               <div className="flex items-center gap-2">
@@ -417,34 +417,34 @@ export function PhotoSearch() {
                   variant="outline"
                   size="sm"
                   onClick={() => handleSearch({ page: 1 })}
-                  disabled={results.meta.page === 1 || loading}
+                  disabled={results.pagination.page === 1 || loading}
                 >
                   <ChevronsLeft className="h-4 w-4" />
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handleSearch({ page: results.meta.page - 1 })}
-                  disabled={!results.links.prev || loading}
+                  onClick={() => handleSearch({ page: results.pagination.page - 1 })}
+                  disabled={!results.links?.previous || loading}
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
                 <span className="text-sm px-2">
-                  Page {results.meta.page} of {results.meta.total_pages}
+                  Page {results.pagination.page} of {results.pagination.total_pages}
                 </span>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handleSearch({ page: results.meta.page + 1 })}
-                  disabled={!results.links.next || loading}
+                  onClick={() => handleSearch({ page: results.pagination.page + 1 })}
+                  disabled={!results.links?.next || loading}
                 >
                   <ChevronRight className="h-4 w-4" />
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handleSearch({ page: results.meta.total_pages })}
-                  disabled={results.meta.page === results.meta.total_pages || loading}
+                  onClick={() => handleSearch({ page: results.pagination.total_pages })}
+                  disabled={results.pagination.page === results.pagination.total_pages || loading}
                 >
                   <ChevronsRight className="h-4 w-4" />
                 </Button>

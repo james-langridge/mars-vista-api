@@ -242,22 +242,22 @@ export interface PhotoResource {
 export interface PhotoSearchResponse {
   data: PhotoResource[]
   meta: {
-    total: number
+    total_count: number
+    returned_count: number
+    query?: Record<string, unknown>
+    timestamp: string
+  }
+  pagination: {
     page: number
     per_page: number
     total_pages: number
-    query: Record<string, unknown>
-    timing: {
-      query_ms: number
-      total_ms: number
-    }
   }
-  links: {
+  links?: {
     self: string
-    first: string
-    prev: string | null
-    next: string | null
-    last: string
+    first?: string
+    previous?: string | null
+    next?: string | null
+    last?: string
   }
 }
 
