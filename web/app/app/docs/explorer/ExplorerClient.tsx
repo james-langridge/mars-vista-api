@@ -73,6 +73,7 @@ interface RateLimitInfo {
 }
 
 interface SearchParams {
+  // Basic filters
   rovers: string;
   cameras: string;
   solMin: string;
@@ -80,9 +81,29 @@ interface SearchParams {
   dateMin: string;
   dateMax: string;
   sampleType: string;
+  nasaId: string;
+  // Location filters
   site: string;
   drive: string;
-  nasaId: string;
+  siteMin: string;
+  siteMax: string;
+  locationRadius: string;
+  // Image quality filters
+  minWidth: string;
+  minHeight: string;
+  // Mars time filters
+  marsTimeMin: string;
+  marsTimeMax: string;
+  marsTimeGoldenHour: boolean;
+  // Camera angle filters
+  mastElevationMin: string;
+  mastElevationMax: string;
+  mastAzimuthMin: string;
+  mastAzimuthMax: string;
+  // Response control
+  fieldSet: string;
+  sort: string;
+  perPage: string;
 }
 
 const API_BASE_URL = 'https://api.marsvista.dev';
@@ -110,13 +131,24 @@ const CAMERAS: Record<string, string[]> = {
   opportunity: ['FHAZ', 'RHAZ', 'NAVCAM', 'PANCAM', 'MINITES'],
   spirit: ['FHAZ', 'RHAZ', 'NAVCAM', 'PANCAM', 'MINITES'],
 };
-const SAMPLE_TYPES = ['Full', 'Thumbnail', 'Subframe'];
+const SAMPLE_TYPES = ['Full', 'Thumbnail', 'Subframe', 'Sub-frame', 'Downsampled'];
+const FIELD_SETS = ['minimal', 'standard', 'extended', 'scientific', 'complete'];
+const PAGE_SIZES = [10, 25, 50, 100];
+const SORT_OPTIONS = [
+  { value: '-sol', label: 'Sol (newest first)' },
+  { value: 'sol', label: 'Sol (oldest first)' },
+  { value: '-earth_date', label: 'Date (newest first)' },
+  { value: 'earth_date', label: 'Date (oldest first)' },
+  { value: '-created_at', label: 'Added (newest first)' },
+  { value: 'created_at', label: 'Added (oldest first)' },
+];
 
 export default function ExplorerClient() {
   const [apiKey, setApiKey] = useState('');
   const [savedKey, setSavedKey] = useState(false);
 
   const [searchParams, setSearchParams] = useState<SearchParams>({
+    // Basic filters
     rovers: '',
     cameras: '',
     solMin: '',
@@ -124,9 +156,29 @@ export default function ExplorerClient() {
     dateMin: '',
     dateMax: '',
     sampleType: '',
+    nasaId: '',
+    // Location filters
     site: '',
     drive: '',
-    nasaId: '',
+    siteMin: '',
+    siteMax: '',
+    locationRadius: '',
+    // Image quality filters
+    minWidth: '',
+    minHeight: '',
+    // Mars time filters
+    marsTimeMin: '',
+    marsTimeMax: '',
+    marsTimeGoldenHour: false,
+    // Camera angle filters
+    mastElevationMin: '',
+    mastElevationMax: '',
+    mastAzimuthMin: '',
+    mastAzimuthMax: '',
+    // Response control
+    fieldSet: 'extended',
+    sort: '-sol',
+    perPage: '25',
   });
 
   const [results, setResults] = useState<PhotosResponse | null>(null);
@@ -167,6 +219,7 @@ export default function ExplorerClient() {
     (page = 1) => {
       const params = new URLSearchParams();
 
+      // Basic filters
       if (searchParams.rovers) params.set('rovers', searchParams.rovers);
       if (searchParams.cameras) params.set('cameras', searchParams.cameras);
       if (searchParams.solMin) params.set('sol_min', searchParams.solMin);
@@ -174,14 +227,36 @@ export default function ExplorerClient() {
       if (searchParams.dateMin) params.set('date_min', searchParams.dateMin);
       if (searchParams.dateMax) params.set('date_max', searchParams.dateMax);
       if (searchParams.sampleType) params.set('sample_type', searchParams.sampleType);
-      if (searchParams.site) params.set('site', searchParams.site);
-      if (searchParams.drive) params.set('drive', searchParams.drive);
       if (searchParams.nasaId) params.set('nasa_id', searchParams.nasaId);
 
+      // Location filters
+      if (searchParams.site) params.set('site', searchParams.site);
+      if (searchParams.drive) params.set('drive', searchParams.drive);
+      if (searchParams.siteMin) params.set('site_min', searchParams.siteMin);
+      if (searchParams.siteMax) params.set('site_max', searchParams.siteMax);
+      if (searchParams.locationRadius) params.set('location_radius', searchParams.locationRadius);
+
+      // Image quality filters
+      if (searchParams.minWidth) params.set('min_width', searchParams.minWidth);
+      if (searchParams.minHeight) params.set('min_height', searchParams.minHeight);
+
+      // Mars time filters
+      if (searchParams.marsTimeMin) params.set('mars_time_min', searchParams.marsTimeMin);
+      if (searchParams.marsTimeMax) params.set('mars_time_max', searchParams.marsTimeMax);
+      if (searchParams.marsTimeGoldenHour) params.set('mars_time_golden_hour', 'true');
+
+      // Camera angle filters
+      if (searchParams.mastElevationMin) params.set('mast_elevation_min', searchParams.mastElevationMin);
+      if (searchParams.mastElevationMax) params.set('mast_elevation_max', searchParams.mastElevationMax);
+      if (searchParams.mastAzimuthMin) params.set('mast_azimuth_min', searchParams.mastAzimuthMin);
+      if (searchParams.mastAzimuthMax) params.set('mast_azimuth_max', searchParams.mastAzimuthMax);
+
+      // Response control
       params.set('include', 'rover,camera');
-      params.set('field_set', 'extended');
+      params.set('field_set', searchParams.fieldSet || 'extended');
+      if (searchParams.sort) params.set('sort', searchParams.sort);
       params.set('page', page.toString());
-      params.set('per_page', '25');
+      params.set('per_page', searchParams.perPage || '25');
 
       return params.toString();
     },
@@ -294,13 +369,29 @@ print(data)`;
       dateMin: '',
       dateMax: '',
       sampleType: '',
+      nasaId: '',
       site: '',
       drive: '',
-      nasaId: '',
+      siteMin: '',
+      siteMax: '',
+      locationRadius: '',
+      minWidth: '',
+      minHeight: '',
+      marsTimeMin: '',
+      marsTimeMax: '',
+      marsTimeGoldenHour: false,
+      mastElevationMin: '',
+      mastElevationMax: '',
+      mastAzimuthMin: '',
+      mastAzimuthMax: '',
+      fieldSet: 'extended',
+      sort: '-sol',
+      perPage: '25',
     });
     setResults(null);
     setCurrentPage(1);
     setError(null);
+    setShowAdvanced(false);
   };
 
   const handleCopyCode = async () => {
@@ -479,83 +570,349 @@ print(data)`;
 
         {/* Advanced Filters */}
         {showAdvanced && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4 pt-4 border-t border-slate-200 dark:border-slate-700">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Date From
-              </label>
-              <input
-                type="date"
-                value={searchParams.dateMin}
-                onChange={(e) => setSearchParams({ ...searchParams, dateMin: e.target.value })}
-                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-              />
+          <div className="space-y-6 pt-4 border-t border-slate-200 dark:border-slate-700">
+            {/* Basic Advanced Filters */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Date From
+                </label>
+                <input
+                  type="date"
+                  value={searchParams.dateMin}
+                  onChange={(e) => setSearchParams({ ...searchParams, dateMin: e.target.value })}
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Date To
+                </label>
+                <input
+                  type="date"
+                  value={searchParams.dateMax}
+                  onChange={(e) => setSearchParams({ ...searchParams, dateMax: e.target.value })}
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Sample Type
+                </label>
+                <select
+                  value={searchParams.sampleType}
+                  onChange={(e) =>
+                    setSearchParams({ ...searchParams, sampleType: e.target.value })
+                  }
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                >
+                  <option value="">All Types</option>
+                  {SAMPLE_TYPES.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  NASA ID
+                </label>
+                <input
+                  type="text"
+                  value={searchParams.nasaId}
+                  onChange={(e) => setSearchParams({ ...searchParams, nasaId: e.target.value })}
+                  placeholder="e.g. NLB_1234"
+                  className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                />
+              </div>
             </div>
+
+            {/* Location Filters */}
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Date To
-              </label>
-              <input
-                type="date"
-                value={searchParams.dateMax}
-                onChange={(e) => setSearchParams({ ...searchParams, dateMax: e.target.value })}
-                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-              />
+              <h4 className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-3">
+                Location Filters
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Site
+                  </label>
+                  <input
+                    type="number"
+                    value={searchParams.site}
+                    onChange={(e) => setSearchParams({ ...searchParams, site: e.target.value })}
+                    placeholder="Exact"
+                    min="0"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Site Min
+                  </label>
+                  <input
+                    type="number"
+                    value={searchParams.siteMin}
+                    onChange={(e) => setSearchParams({ ...searchParams, siteMin: e.target.value })}
+                    placeholder="e.g. 1"
+                    min="0"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Site Max
+                  </label>
+                  <input
+                    type="number"
+                    value={searchParams.siteMax}
+                    onChange={(e) => setSearchParams({ ...searchParams, siteMax: e.target.value })}
+                    placeholder="e.g. 100"
+                    min="0"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Drive
+                  </label>
+                  <input
+                    type="number"
+                    value={searchParams.drive}
+                    onChange={(e) => setSearchParams({ ...searchParams, drive: e.target.value })}
+                    placeholder="e.g. 500"
+                    min="0"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Radius (m)
+                  </label>
+                  <input
+                    type="number"
+                    value={searchParams.locationRadius}
+                    onChange={(e) =>
+                      setSearchParams({ ...searchParams, locationRadius: e.target.value })
+                    }
+                    placeholder="meters"
+                    min="0"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  />
+                </div>
+              </div>
             </div>
+
+            {/* Image Quality Filters */}
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Sample Type
-              </label>
-              <select
-                value={searchParams.sampleType}
-                onChange={(e) => setSearchParams({ ...searchParams, sampleType: e.target.value })}
-                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-              >
-                <option value="">All Types</option>
-                {SAMPLE_TYPES.map((type) => (
-                  <option key={type} value={type}>
-                    {type}
-                  </option>
-                ))}
-              </select>
+              <h4 className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-3">
+                Image Quality Filters
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Min Width (px)
+                  </label>
+                  <input
+                    type="number"
+                    value={searchParams.minWidth}
+                    onChange={(e) => setSearchParams({ ...searchParams, minWidth: e.target.value })}
+                    placeholder="e.g. 1024"
+                    min="0"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Min Height (px)
+                  </label>
+                  <input
+                    type="number"
+                    value={searchParams.minHeight}
+                    onChange={(e) =>
+                      setSearchParams({ ...searchParams, minHeight: e.target.value })
+                    }
+                    placeholder="e.g. 1024"
+                    min="0"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  />
+                </div>
+              </div>
             </div>
+
+            {/* Mars Time Filters */}
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                NASA ID
-              </label>
-              <input
-                type="text"
-                value={searchParams.nasaId}
-                onChange={(e) => setSearchParams({ ...searchParams, nasaId: e.target.value })}
-                placeholder="e.g. NLB_1234"
-                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-              />
+              <h4 className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-3">
+                Mars Time Filters
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Mars Time Min
+                  </label>
+                  <input
+                    type="text"
+                    value={searchParams.marsTimeMin}
+                    onChange={(e) =>
+                      setSearchParams({ ...searchParams, marsTimeMin: e.target.value })
+                    }
+                    placeholder="e.g. M06:00:00"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Mars Time Max
+                  </label>
+                  <input
+                    type="text"
+                    value={searchParams.marsTimeMax}
+                    onChange={(e) =>
+                      setSearchParams({ ...searchParams, marsTimeMax: e.target.value })
+                    }
+                    placeholder="e.g. M18:00:00"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  />
+                </div>
+                <div className="flex items-end">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={searchParams.marsTimeGoldenHour}
+                      onChange={(e) =>
+                        setSearchParams({ ...searchParams, marsTimeGoldenHour: e.target.checked })
+                      }
+                      className="w-4 h-4 rounded border-slate-300 text-orange-600 focus:ring-orange-500"
+                    />
+                    <span className="text-sm text-slate-700 dark:text-slate-300">
+                      Golden Hour Only
+                    </span>
+                  </label>
+                </div>
+              </div>
             </div>
+
+            {/* Camera Angle Filters */}
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Site
-              </label>
-              <input
-                type="number"
-                value={searchParams.site}
-                onChange={(e) => setSearchParams({ ...searchParams, site: e.target.value })}
-                placeholder="e.g. 100"
-                min="0"
-                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-              />
+              <h4 className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-3">
+                Camera Angle Filters (Telemetry)
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Mast Elevation Min (°)
+                  </label>
+                  <input
+                    type="number"
+                    value={searchParams.mastElevationMin}
+                    onChange={(e) =>
+                      setSearchParams({ ...searchParams, mastElevationMin: e.target.value })
+                    }
+                    placeholder="-90 to 90"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Mast Elevation Max (°)
+                  </label>
+                  <input
+                    type="number"
+                    value={searchParams.mastElevationMax}
+                    onChange={(e) =>
+                      setSearchParams({ ...searchParams, mastElevationMax: e.target.value })
+                    }
+                    placeholder="-90 to 90"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Mast Azimuth Min (°)
+                  </label>
+                  <input
+                    type="number"
+                    value={searchParams.mastAzimuthMin}
+                    onChange={(e) =>
+                      setSearchParams({ ...searchParams, mastAzimuthMin: e.target.value })
+                    }
+                    placeholder="0 to 360"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Mast Azimuth Max (°)
+                  </label>
+                  <input
+                    type="number"
+                    value={searchParams.mastAzimuthMax}
+                    onChange={(e) =>
+                      setSearchParams({ ...searchParams, mastAzimuthMax: e.target.value })
+                    }
+                    placeholder="0 to 360"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  />
+                </div>
+              </div>
             </div>
+
+            {/* Response Control */}
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Drive
-              </label>
-              <input
-                type="number"
-                value={searchParams.drive}
-                onChange={(e) => setSearchParams({ ...searchParams, drive: e.target.value })}
-                placeholder="e.g. 500"
-                min="0"
-                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-              />
+              <h4 className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-3">
+                Response Control
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Field Set
+                  </label>
+                  <select
+                    value={searchParams.fieldSet}
+                    onChange={(e) => setSearchParams({ ...searchParams, fieldSet: e.target.value })}
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  >
+                    {FIELD_SETS.map((fs) => (
+                      <option key={fs} value={fs}>
+                        {fs.charAt(0).toUpperCase() + fs.slice(1)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Sort By
+                  </label>
+                  <select
+                    value={searchParams.sort}
+                    onChange={(e) => setSearchParams({ ...searchParams, sort: e.target.value })}
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  >
+                    {SORT_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Per Page
+                  </label>
+                  <select
+                    value={searchParams.perPage}
+                    onChange={(e) => setSearchParams({ ...searchParams, perPage: e.target.value })}
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  >
+                    {PAGE_SIZES.map((size) => (
+                      <option key={size} value={size.toString()}>
+                        {size} per page
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </div>
           </div>
         )}
