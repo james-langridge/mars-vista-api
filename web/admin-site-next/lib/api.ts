@@ -139,6 +139,7 @@ export async function searchPhotos(params: PhotoSearchParams): Promise<PhotoSear
   if (params.site !== undefined) queryParams.set('site', params.site.toString())
   if (params.drive !== undefined) queryParams.set('drive', params.drive.toString())
   if (params.field_set) queryParams.set('field_set', params.field_set)
+  if (params.include) queryParams.set('include', params.include)
   if (params.page !== undefined) queryParams.set('page', params.page.toString())
   if (params.per_page !== undefined) queryParams.set('per_page', params.per_page.toString())
   if (params.sort) queryParams.set('sort', params.sort)
