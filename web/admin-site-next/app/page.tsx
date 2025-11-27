@@ -27,6 +27,8 @@ import {
   EndpointUsage,
   ErrorTracking,
   ScraperMonitoring,
+  PhotoSearch,
+  NasaCompare,
 } from '@/components/dashboard'
 import type {
   Stats,
@@ -170,7 +172,9 @@ export default function DashboardPage() {
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList className="flex-wrap">
             <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="search">Search</TabsTrigger>
             <TabsTrigger value="scraper">Scraper</TabsTrigger>
+            <TabsTrigger value="nasa-compare">NASA Compare</TabsTrigger>
             <TabsTrigger value="performance">Performance</TabsTrigger>
             <TabsTrigger value="endpoints">Endpoints</TabsTrigger>
             <TabsTrigger value="errors">Errors</TabsTrigger>
@@ -181,6 +185,14 @@ export default function DashboardPage() {
           <TabsContent value="overview" className="space-y-8">
             {stats && <StatsOverview stats={stats} />}
             {violations.length > 0 && <RateLimitViolations violations={violations} />}
+          </TabsContent>
+
+          <TabsContent value="search">
+            <PhotoSearch />
+          </TabsContent>
+
+          <TabsContent value="nasa-compare">
+            <NasaCompare />
           </TabsContent>
 
           <TabsContent value="scraper">

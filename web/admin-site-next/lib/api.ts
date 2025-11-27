@@ -9,6 +9,10 @@ import type {
   ScraperStatus,
   ScraperMetrics,
   ScraperJob,
+  PhotoSearchParams,
+  PhotoSearchResponse,
+  NasaComparisonResult,
+  PhotoComparisonResult,
 } from './types'
 
 // All API calls go through our Next.js proxy which adds the API key server-side
@@ -115,4 +119,79 @@ export async function fetchScraperHistory(params: {
 
 export async function fetchScraperMetrics(period: '24h' | '7d' | '30d' = '7d'): Promise<ScraperMetrics> {
   return fetchFromProxy<ScraperMetrics>(`scraper/metrics?period=${period}`)
+}
+
+// Photo Search (v2 API)
+export async function searchPhotos(params: PhotoSearchParams): Promise<PhotoSearchResponse> {
+  const queryParams = new URLSearchParams()
+
+  if (params.nasa_id) queryParams.set('nasa_id', params.nasa_id)
+  if (params.rovers) queryParams.set('rovers', params.rovers)
+  if (params.cameras) queryParams.set('cameras', params.cameras)
+  if (params.sol !== undefined) queryParams.set('sol', params.sol.toString())
+  if (params.sol_min !== undefined) queryParams.set('sol_min', params.sol_min.toString())
+  if (params.sol_max !== undefined) queryParams.set('sol_max', params.sol_max.toString())
+  if (params.date_min) queryParams.set('date_min', params.date_min)
+  if (params.date_max) queryParams.set('date_max', params.date_max)
+  if (params.sample_type) queryParams.set('sample_type', params.sample_type)
+  if (params.min_width !== undefined) queryParams.set('min_width', params.min_width.toString())
+  if (params.min_height !== undefined) queryParams.set('min_height', params.min_height.toString())
+  if (params.site !== undefined) queryParams.set('site', params.site.toString())
+  if (params.drive !== undefined) queryParams.set('drive', params.drive.toString())
+  if (params.field_set) queryParams.set('field_set', params.field_set)
+  if (params.page !== undefined) queryParams.set('page', params.page.toString())
+  if (params.per_page !== undefined) queryParams.set('per_page', params.per_page.toString())
+  if (params.sort) queryParams.set('sort', params.sort)
+
+  const query = queryParams.toString()
+  const response = await fetch(`/api/photos${query ? `?${query}` : ''}`, {
+    credentials: 'include',
+  })
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error('Authentication failed')
+    }
+    const errorData = await response.json().catch(() => ({}))
+    throw new Error(errorData.error || `API request failed: ${response.statusText}`)
+  }
+
+  return response.json()
+}
+
+// NASA Compare endpoints
+export async function compareNasaSol(rover: string, sol: number): Promise<NasaComparisonResult> {
+  return fetchFromProxy<NasaComparisonResult>(`nasa/sol/${rover}/${sol}`)
+}
+
+export async function compareNasaPhoto(nasaId: string): Promise<PhotoComparisonResult> {
+  return fetchFromProxy<PhotoComparisonResult>(`nasa/photo/${nasaId}`)
+}
+
+export async function compareNasaRange(
+  rover: string,
+  startSol: number,
+  endSol: number
+): Promise<{
+  rover: string
+  startSol: number
+  endSol: number
+  solsCompared: number
+  summary: {
+    totalNasaPhotos: number
+    totalOurPhotos: number
+    totalMissing: number
+    totalExtra: number
+    matchPercent: number
+  }
+  sols: Array<{
+    sol: number
+    nasaCount: number
+    ourCount: number
+    missing: number
+    extra: number
+    status: string
+  }>
+}> {
+  return fetchFromProxy(`nasa/range/${rover}?startSol=${startSol}&endSol=${endSol}`)
 }
