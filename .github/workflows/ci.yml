@@ -43,11 +43,11 @@ jobs:
       env:
         ASPNETCORE_ENVIRONMENT: Test
         ConnectionStrings__DefaultConnection: "Host=localhost;Port=5432;Database=marsvista_dev;Username=marsvista;Password=marsvista_dev_password"
-      run: dotnet test --configuration Release --verbosity normal --logger "trx;LogFileName=test-results.trx"
+      run: dotnet test MarsVista.sln --configuration Release --verbosity normal --logger "trx;LogFileName=test-results.trx" --results-directory ./TestResults
 
     - name: Upload test results
       if: always()
       uses: actions/upload-artifact@v4
       with:
         name: test-results
-        path: '**/TestResults/*.trx'
+        path: './TestResults/*.trx'
