@@ -195,8 +195,9 @@ public class PerseveranceScraper : IScraperService
                 photo.TryGetProperty("extended", out extended);
 
                 // Extract mast orientation as floats
-                var mastAz = TryGetFloatFromString(extended, "mast_az");
-                var mastEl = TryGetFloatFromString(extended, "mast_el");
+                // NASA Perseverance API uses camelCase: mastAz, mastEl (not snake_case)
+                var mastAz = TryGetFloatFromString(extended, "mastAz");
+                var mastEl = TryGetFloatFromString(extended, "mastEl");
 
                 // Extract dimensions correctly from extended metadata
                 // Uses dimension field "(width,height)" or falls back to subframeRect
@@ -227,7 +228,8 @@ public class PerseveranceScraper : IScraperService
 
                     // Location data
                     Site = TryGetInt(photo, "site"),
-                    Drive = TryGetInt(photo, "drive"),
+                    // NASA changed drive to string format (e.g., "4488")
+                    Drive = TryGetIntOrParseString(photo, "drive"),
                     Xyz = TryGetString(photo, "xyz"),
 
                     // Camera telemetry
@@ -237,9 +239,9 @@ public class PerseveranceScraper : IScraperService
                     CameraPosition = TryGetString(photo, "camera_position"),
                     CameraModelType = TryGetString(photo, "camera_model_type"),
 
-                    // Mars time
-                    DateTakenMars = TryGetString(extended, "lmst") ?? "",
-                    MarsTimeHour = MarsTimeHelper.ExtractHour(TryGetString(extended, "lmst")),
+                    // Mars time - Perseverance uses date_taken_mars at root (not lmst in extended)
+                    DateTakenMars = TryGetString(photo, "date_taken_mars") ?? "",
+                    MarsTimeHour = MarsTimeHelper.ExtractHour(TryGetString(photo, "date_taken_mars")),
                     Attitude = TryGetString(photo, "attitude"),
                     SpacecraftClock = TryGetFloat(photo, "spacecraft_clock"),
 
@@ -308,6 +310,30 @@ public class PerseveranceScraper : IScraperService
             value.ValueKind == JsonValueKind.Number)
         {
             return value.GetInt32();
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Gets an integer value, handling both numeric and string representations.
+    /// NASA changed some fields (like drive) from int to string format.
+    /// </summary>
+    private static int? TryGetIntOrParseString(JsonElement element, string property)
+    {
+        if (element.ValueKind == JsonValueKind.Undefined)
+            return null;
+
+        if (!element.TryGetProperty(property, out var value))
+            return null;
+
+        if (value.ValueKind == JsonValueKind.Number)
+            return value.GetInt32();
+
+        if (value.ValueKind == JsonValueKind.String &&
+            int.TryParse(value.GetString(), out var intValue))
+        {
+            return intValue;
         }
 
         return null;
