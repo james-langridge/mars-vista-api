@@ -177,10 +177,12 @@ public class PerseveranceScraper : IScraperService
                 }
 
                 // Extract dates with proper UTC handling
-                var dateTaken = TryGetDateTime(photo, "date_taken");
+                // NASA changed API: date_taken is now null, use date_taken_utc instead
+                var dateTaken = TryGetDateTime(photo, "date_taken")
+                    ?? TryGetDateTime(photo, "date_taken_utc");
                 if (!dateTaken.HasValue)
                 {
-                    _logger.LogWarning("Photo {PhotoId} has no date_taken, skipping", nasaId);
+                    _logger.LogWarning("Photo {PhotoId} has no date_taken or date_taken_utc, skipping", nasaId);
                     skipped++;
                     continue;
                 }
