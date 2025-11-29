@@ -4,6 +4,6 @@ public class ScraperScheduleOptions
 {
     public const string SectionName = "ScraperSchedule";
 
-    public int LookbackSols { get; set; } = 7;
+    public int LookbackSols { get; set; } = 14;
     public List<string> ActiveRovers { get; set; } = [];
 }
