@@ -10,15 +10,17 @@ namespace MarsVista.Core.Data.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            // Clear img_src_small for Curiosity photos
-            // NASA only provides one URL per photo for Curiosity (unlike Perseverance).
-            // Previously we stored the same URL in both small and full, which was confusing.
-            // Now we only store in full, consistent with Spirit/Opportunity.
-            migrationBuilder.Sql(@"
-                UPDATE photos
-                SET img_src_small = '', updated_at = NOW()
-                WHERE rover_id = 2 AND img_src_small != '';
-            ");
+            // DISABLED: This migration times out on Railway (~730K rows).
+            // Run manually in batches after deployment:
+            //
+            // UPDATE photos
+            // SET img_src_small = '', img_src_medium = '', img_src_large = '', updated_at = NOW()
+            // WHERE rover_id = 2 AND img_src_small != ''
+            // LIMIT 50000;
+            //
+            // Repeat until 0 rows affected.
+
+            // No-op - migration marked as applied without running
         }
 
         /// <inheritdoc />
