@@ -269,9 +269,9 @@ public class CuriosityScraper : IScraperService
                     RoverId = CuriosityRoverId,
                     CameraId = camera.Id,
 
-                    // Image URLs - NASA provides full and thumbnail
+                    // Image URL - NASA only provides one size per record for Curiosity
+                    // (unlike Perseverance which has small/medium/large/full)
                     ImgSrcFull = TryGetString(photo, "https_url") ?? "",
-                    ImgSrcSmall = TryGetString(extended, "url_list"),
 
                     // Image dimensions (extracted from subframe_rect or estimated)
                     Width = width,

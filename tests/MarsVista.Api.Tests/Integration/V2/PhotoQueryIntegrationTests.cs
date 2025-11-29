@@ -409,13 +409,13 @@ public class PhotoQueryIntegrationTests : IntegrationTestBase
         // Assert
         result.Should().NotBeNull();
         result.TotalPhotos.Should().Be(50);
-        result.ByCamera.Should().NotBeEmpty();
-        result.ByCamera.Should().Contain(c => c.Camera == "FHAZ");
-        result.ByCamera.Should().Contain(c => c.Camera == "MAST");
+        result.Groups.Should().NotBeEmpty();
+        result.Groups.Should().Contain(c => c.Key == "FHAZ");
+        result.Groups.Should().Contain(c => c.Key == "MAST");
 
         // Each camera should have 25 photos (50 photos alternating between 2 cameras)
-        var fhazStats = result.ByCamera.First(c => c.Camera == "FHAZ");
-        var mastStats = result.ByCamera.First(c => c.Camera == "MAST");
+        var fhazStats = result.Groups.First(c => c.Key == "FHAZ");
+        var mastStats = result.Groups.First(c => c.Key == "MAST");
         fhazStats.Count.Should().Be(25);
         mastStats.Count.Should().Be(25);
     }

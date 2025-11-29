@@ -577,11 +577,12 @@
       },
       "PhotoImages": {
         "type": "object",
+        "description": "Image URLs. Available sizes vary by rover: Perseverance has all 4 sizes, Curiosity/Spirit/Opportunity have only 'full'.",
         "properties": {
-          "small": { "type": "string", "format": "uri", "description": "320px wide" },
-          "medium": { "type": "string", "format": "uri", "description": "800px wide" },
-          "large": { "type": "string", "format": "uri", "description": "1200px wide" },
-          "full": { "type": "string", "format": "uri", "description": "Full resolution" }
+          "small": { "type": "string", "format": "uri", "description": "320px wide (Perseverance only)", "nullable": true },
+          "medium": { "type": "string", "format": "uri", "description": "800px wide (Perseverance only)", "nullable": true },
+          "large": { "type": "string", "format": "uri", "description": "1200px wide (Perseverance only)", "nullable": true },
+          "full": { "type": "string", "format": "uri", "description": "Full resolution (all rovers)" }
         }
       },
       "PhotoDimensions": {
@@ -670,8 +671,17 @@
           "attributes": {
             "type": "object",
             "properties": {
-              "name": { "type": "string" },
-              "full_name": { "type": "string" }
+              "name": { "type": "string", "example": "NAVCAM" },
+              "full_name": { "type": "string", "example": "Navigation Camera" },
+              "photo_count": { "type": "integer", "description": "Total photos from this camera" },
+              "first_photo_sol": { "type": "integer", "description": "First sol with photos from this camera" },
+              "last_photo_sol": { "type": "integer", "description": "Most recent sol with photos from this camera" }
+            }
+          },
+          "relationships": {
+            "type": "object",
+            "properties": {
+              "rover": { "$ref": "#/components/schemas/ResourceReference" }
             }
           }
         }
@@ -712,14 +722,26 @@
       "PhotoStatistics": {
         "type": "object",
         "properties": {
-          "total_photos": { "type": "integer" },
+          "total_photos": { "type": "integer", "description": "Total photos matching the query" },
+          "period": {
+            "type": "object",
+            "description": "Date range of photos",
+            "properties": {
+              "from": { "type": "string", "format": "date", "description": "Earliest photo date" },
+              "to": { "type": "string", "format": "date", "description": "Latest photo date" }
+            }
+          },
           "groups": {
             "type": "array",
+            "description": "Statistics grouped by the requested dimension",
             "items": {
               "type": "object",
               "properties": {
-                "key": { "type": "string" },
-                "count": { "type": "integer" }
+                "key": { "type": "string", "description": "Camera name, rover name, or sol number" },
+                "count": { "type": "integer", "description": "Number of photos in this group" },
+                "percentage": { "type": "number", "description": "Percentage of total photos (0-100)" },
+                "avg_per_sol": { "type": "number", "description": "Average photos per sol (rover grouping only)" },
+                "earth_date": { "type": "string", "format": "date", "description": "Earth date (sol grouping only)" }
               }
             }
           }

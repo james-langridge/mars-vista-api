@@ -310,11 +310,11 @@ public class PhotosControllerTests
         var expectedStats = new PhotoStatisticsResponse
         {
             TotalPhotos = 1000,
-            ByCamera = new List<CameraStatistics>
+            Groups = new List<StatisticsGroup>
             {
-                new CameraStatistics
+                new StatisticsGroup
                 {
-                    Camera = "MAST",
+                    Key = "MAST",
                     Count = 500,
                     Percentage = 50.0
                 }
@@ -345,7 +345,7 @@ public class PhotosControllerTests
         var okResult = result as OkObjectResult;
         var response = okResult!.Value as ApiResponse<PhotoStatisticsResponse>;
         response!.Data.TotalPhotos.Should().Be(1000);
-        response.Data.ByCamera.Should().HaveCount(1);
+        response.Data.Groups.Should().HaveCount(1);
     }
 
     [Fact]

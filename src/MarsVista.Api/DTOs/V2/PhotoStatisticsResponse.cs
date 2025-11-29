@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace MarsVista.Api.DTOs.V2;
 
 /// <summary>
@@ -6,29 +8,22 @@ namespace MarsVista.Api.DTOs.V2;
 public class PhotoStatisticsResponse
 {
     /// <summary>
-    /// Time period for the statistics
-    /// </summary>
-    public PeriodInfo Period { get; set; } = new();
-
-    /// <summary>
     /// Total count of photos in the period
     /// </summary>
+    [JsonPropertyName("total_photos")]
     public int TotalPhotos { get; set; }
 
     /// <summary>
-    /// Statistics grouped by camera (if requested)
+    /// Time period for the statistics
     /// </summary>
-    public List<CameraStatistics>? ByCamera { get; set; }
+    [JsonPropertyName("period")]
+    public PeriodInfo Period { get; set; } = new();
 
     /// <summary>
-    /// Statistics grouped by rover (if requested)
+    /// Statistics grouped by the requested dimension (camera, rover, or sol)
     /// </summary>
-    public List<RoverStatistics>? ByRover { get; set; }
-
-    /// <summary>
-    /// Statistics grouped by sol (if requested)
-    /// </summary>
-    public List<SolStatistics>? BySol { get; set; }
+    [JsonPropertyName("groups")]
+    public List<StatisticsGroup> Groups { get; set; } = new();
 }
 
 /// <summary>
@@ -37,80 +32,53 @@ public class PhotoStatisticsResponse
 public class PeriodInfo
 {
     /// <summary>
-    /// Start date of the period
+    /// Start date of the period (YYYY-MM-DD)
     /// </summary>
+    [JsonPropertyName("from")]
     public string? From { get; set; }
 
     /// <summary>
-    /// End date of the period
+    /// End date of the period (YYYY-MM-DD)
     /// </summary>
+    [JsonPropertyName("to")]
     public string? To { get; set; }
 }
 
 /// <summary>
-/// Camera-level statistics
+/// A single group in the statistics response
 /// </summary>
-public class CameraStatistics
+public class StatisticsGroup
 {
     /// <summary>
-    /// Camera name
+    /// The grouping key (camera name, rover name, or sol number as string)
     /// </summary>
-    public string Camera { get; set; } = string.Empty;
+    [JsonPropertyName("key")]
+    public string Key { get; set; } = string.Empty;
 
     /// <summary>
-    /// Number of photos
+    /// Number of photos in this group
     /// </summary>
+    [JsonPropertyName("count")]
     public int Count { get; set; }
 
     /// <summary>
-    /// Percentage of total photos
+    /// Percentage of total photos (0-100)
     /// </summary>
-    public double Percentage { get; set; }
-}
-
-/// <summary>
-/// Rover-level statistics
-/// </summary>
-public class RoverStatistics
-{
-    /// <summary>
-    /// Rover name
-    /// </summary>
-    public string Rover { get; set; } = string.Empty;
+    [JsonPropertyName("percentage")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? Percentage { get; set; }
 
     /// <summary>
-    /// Number of photos
+    /// Average photos per sol (only for rover grouping)
     /// </summary>
-    public int Count { get; set; }
+    [JsonPropertyName("avg_per_sol")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? AvgPerSol { get; set; }
 
     /// <summary>
-    /// Percentage of total photos
+    /// Earth date for this sol (only for sol grouping)
     /// </summary>
-    public double Percentage { get; set; }
-
-    /// <summary>
-    /// Average photos per sol
-    /// </summary>
-    public double AvgPerSol { get; set; }
-}
-
-/// <summary>
-/// Sol-level statistics
-/// </summary>
-public class SolStatistics
-{
-    /// <summary>
-    /// Sol number
-    /// </summary>
-    public int Sol { get; set; }
-
-    /// <summary>
-    /// Number of photos taken on this sol
-    /// </summary>
-    public int Count { get; set; }
-
-    /// <summary>
-    /// Earth date for this sol
-    /// </summary>
+    [JsonPropertyName("earth_date")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? EarthDate { get; set; }
 }

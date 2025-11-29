@@ -151,21 +151,14 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
             }
         };
 
-        // Group by the requested dimension
-        switch (groupBy.ToLower())
+        // Group by the requested dimension - all return unified StatisticsGroup list
+        response.Groups = groupBy.ToLower() switch
         {
-            case "camera":
-                response.ByCamera = await GetCameraStatistics(query, totalCount, cancellationToken);
-                break;
-
-            case "rover":
-                response.ByRover = await GetRoverStatistics(query, totalCount, cancellationToken);
-                break;
-
-            case "sol":
-                response.BySol = await GetSolStatistics(query, cancellationToken);
-                break;
-        }
+            "camera" => await GetCameraStatistics(query, totalCount, cancellationToken),
+            "rover" => await GetRoverStatistics(query, totalCount, cancellationToken),
+            "sol" => await GetSolStatistics(query, totalCount, cancellationToken),
+            _ => new List<StatisticsGroup>()
+        };
 
         return response;
     }
@@ -173,7 +166,7 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
     /// <summary>
     /// Get statistics grouped by camera
     /// </summary>
-    private async Task<List<CameraStatistics>> GetCameraStatistics(
+    private async Task<List<StatisticsGroup>> GetCameraStatistics(
         IQueryable<Photo> query,
         int totalCount,
         CancellationToken cancellationToken)
@@ -182,15 +175,15 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
             .GroupBy(p => p.Camera.Name)
             .Select(g => new
             {
-                Camera = g.Key,
+                Key = g.Key,
                 Count = g.Count()
             })
             .OrderByDescending(x => x.Count)
             .ToListAsync(cancellationToken);
 
-        return stats.Select(s => new CameraStatistics
+        return stats.Select(s => new StatisticsGroup
         {
-            Camera = s.Camera,
+            Key = s.Key,
             Count = s.Count,
             Percentage = totalCount > 0 ? Math.Round((s.Count / (double)totalCount) * 100, 1) : 0
         }).ToList();
@@ -199,7 +192,7 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
     /// <summary>
     /// Get statistics grouped by rover
     /// </summary>
-    private async Task<List<RoverStatistics>> GetRoverStatistics(
+    private async Task<List<StatisticsGroup>> GetRoverStatistics(
         IQueryable<Photo> query,
         int totalCount,
         CancellationToken cancellationToken)
@@ -208,7 +201,7 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
             .GroupBy(p => p.Rover.Name)
             .Select(g => new
             {
-                Rover = g.Key,
+                Key = g.Key,
                 Count = g.Count(),
                 MinSol = g.Min(p => p.Sol),
                 MaxSol = g.Max(p => p.Sol)
@@ -216,9 +209,9 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
             .OrderByDescending(x => x.Count)
             .ToListAsync(cancellationToken);
 
-        return stats.Select(s => new RoverStatistics
+        return stats.Select(s => new StatisticsGroup
         {
-            Rover = s.Rover,
+            Key = s.Key,
             Count = s.Count,
             Percentage = totalCount > 0 ? Math.Round((s.Count / (double)totalCount) * 100, 1) : 0,
             AvgPerSol = s.MaxSol > s.MinSol ? Math.Round(s.Count / (double)(s.MaxSol - s.MinSol + 1), 1) : 0
@@ -228,8 +221,9 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
     /// <summary>
     /// Get statistics grouped by sol (limited to top 100 sols)
     /// </summary>
-    private async Task<List<SolStatistics>> GetSolStatistics(
+    private async Task<List<StatisticsGroup>> GetSolStatistics(
         IQueryable<Photo> query,
+        int totalCount,
         CancellationToken cancellationToken)
     {
         var stats = await query
@@ -244,10 +238,11 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
             .Take(100) // Limit to top 100 sols to avoid huge responses
             .ToListAsync(cancellationToken);
 
-        return stats.Select(s => new SolStatistics
+        return stats.Select(s => new StatisticsGroup
         {
-            Sol = s.Sol,
+            Key = s.Sol.ToString(),
             Count = s.Count,
+            Percentage = totalCount > 0 ? Math.Round((s.Count / (double)totalCount) * 100, 1) : 0,
             EarthDate = s.EarthDate?.ToString("yyyy-MM-dd")
         }).ToList();
     }
@@ -516,31 +511,35 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
             };
         }
 
-        // Build location object with coordinates
+        // Build location object with coordinates (only if there's actual location data)
         PhotoLocation? location = null;
         if (ShouldIncludeAny("location", "site", "drive", "xyz"))
         {
-            PhotoCoordinates? coordinates = null;
-            if (!string.IsNullOrEmpty(photo.Xyz))
+            // Only create location if we have site, drive, or XYZ coordinates
+            if (photo.Site.HasValue || photo.Drive.HasValue || !string.IsNullOrEmpty(photo.Xyz))
             {
-                // Parse XYZ string "(35.4362,22.5714,-9.46445)" to coordinates
-                if (MarsVista.Core.Helpers.MarsTimeHelper.TryParseXYZ(photo.Xyz, out var parsed))
+                PhotoCoordinates? coordinates = null;
+                if (!string.IsNullOrEmpty(photo.Xyz))
                 {
-                    coordinates = new PhotoCoordinates
+                    // Parse XYZ string "(35.4362,22.5714,-9.46445)" to coordinates
+                    if (MarsVista.Core.Helpers.MarsTimeHelper.TryParseXYZ(photo.Xyz, out var parsed))
                     {
-                        X = parsed.X,
-                        Y = parsed.Y,
-                        Z = parsed.Z
-                    };
+                        coordinates = new PhotoCoordinates
+                        {
+                            X = parsed.X,
+                            Y = parsed.Y,
+                            Z = parsed.Z
+                        };
+                    }
                 }
-            }
 
-            location = new PhotoLocation
-            {
-                Site = photo.Site,
-                Drive = photo.Drive,
-                Coordinates = coordinates
-            };
+                location = new PhotoLocation
+                {
+                    Site = photo.Site,
+                    Drive = photo.Drive,
+                    Coordinates = coordinates
+                };
+            }
         }
 
         // Build telemetry object

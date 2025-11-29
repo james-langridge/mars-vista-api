@@ -34,22 +34,32 @@ public class RoverQueryServiceV2 : IRoverQueryServiceV2
                 var dbRovers = await _context.Rovers
                     .Include(r => r.Cameras)
                     .OrderBy(r => r.Name)
+                    .AsNoTracking()
                     .ToListAsync(cancellationToken);
 
-                return dbRovers.Select(r => new RoverResource
+                // Batch fetch stats for all rovers in a single query (matching V1 approach)
+                var roverIds = dbRovers.Select(r => r.Id).ToArray();
+                var allStats = await GetBatchRoverStatsAsync(roverIds, cancellationToken);
+                var statsLookup = allStats.ToDictionary(s => s.RoverId);
+
+                return dbRovers.Select(r =>
                 {
-                    Id = r.Name.ToLowerInvariant(),
-                    Type = "rover",
-                    Attributes = new RoverAttributes
+                    var stats = statsLookup.GetValueOrDefault(r.Id);
+                    return new RoverResource
                     {
-                        Name = r.Name,
-                        LandingDate = r.LandingDate?.ToString("yyyy-MM-dd") ?? string.Empty,
-                        LaunchDate = r.LaunchDate?.ToString("yyyy-MM-dd") ?? string.Empty,
-                        Status = r.Status,
-                        MaxSol = r.MaxSol ?? 0,
-                        MaxDate = r.MaxDate?.ToString("yyyy-MM-dd") ?? string.Empty,
-                        TotalPhotos = r.TotalPhotos ?? 0
-                    }
+                        Id = r.Name.ToLowerInvariant(),
+                        Type = "rover",
+                        Attributes = new RoverAttributes
+                        {
+                            Name = r.Name,
+                            LandingDate = r.LandingDate?.ToString("yyyy-MM-dd") ?? string.Empty,
+                            LaunchDate = r.LaunchDate?.ToString("yyyy-MM-dd") ?? string.Empty,
+                            Status = r.Status,
+                            MaxSol = stats?.MaxSol ?? 0,
+                            MaxDate = stats?.MaxEarthDate.ToString("yyyy-MM-dd") ?? string.Empty,
+                            TotalPhotos = stats?.TotalPhotos ?? 0
+                        }
+                    };
                 }).ToList();
             },
             _cachingService.GetStaticResourceCacheOptions());
@@ -67,10 +77,14 @@ public class RoverQueryServiceV2 : IRoverQueryServiceV2
             {
                 var dbRover = await _context.Rovers
                     .Include(r => r.Cameras)
+                    .AsNoTracking()
                     .FirstOrDefaultAsync(r => r.Name.ToLower() == slug.ToLower(), cancellationToken);
 
                 if (dbRover == null)
                     return null;
+
+                // Get computed stats from photos table
+                var stats = await GetRoverStatsAsync(dbRover.Id, cancellationToken);
 
                 var cameras = dbRover.Cameras.Select(c => new CameraResource
                 {
@@ -93,9 +107,9 @@ public class RoverQueryServiceV2 : IRoverQueryServiceV2
                         LandingDate = dbRover.LandingDate?.ToString("yyyy-MM-dd") ?? string.Empty,
                         LaunchDate = dbRover.LaunchDate?.ToString("yyyy-MM-dd") ?? string.Empty,
                         Status = dbRover.Status,
-                        MaxSol = dbRover.MaxSol ?? 0,
-                        MaxDate = dbRover.MaxDate?.ToString("yyyy-MM-dd") ?? string.Empty,
-                        TotalPhotos = dbRover.TotalPhotos ?? 0
+                        MaxSol = stats.MaxSol,
+                        MaxDate = stats.MaxDate,
+                        TotalPhotos = stats.TotalPhotos
                     },
                     Relationships = new RoverRelationships
                     {
@@ -111,6 +125,7 @@ public class RoverQueryServiceV2 : IRoverQueryServiceV2
     public async Task<RoverManifest?> GetRoverManifestAsync(string slug, CancellationToken cancellationToken = default)
     {
         var rover = await _context.Rovers
+            .AsNoTracking()
             .FirstOrDefaultAsync(r => r.Name.ToLower() == slug.ToLower(), cancellationToken);
 
         if (rover == null)
@@ -127,6 +142,9 @@ public class RoverQueryServiceV2 : IRoverQueryServiceV2
             cacheKey,
             async () =>
             {
+                // Get computed stats from photos table
+                var stats = await GetRoverStatsAsync(rover.Id, cancellationToken);
+
                 // Get photos grouped by sol
                 var photosBySol = await _context.Photos
                     .Where(p => p.RoverId == rover.Id)
@@ -159,9 +177,9 @@ public class RoverQueryServiceV2 : IRoverQueryServiceV2
                         LandingDate = rover.LandingDate?.ToString("yyyy-MM-dd") ?? string.Empty,
                         LaunchDate = rover.LaunchDate?.ToString("yyyy-MM-dd") ?? string.Empty,
                         Status = rover.Status,
-                        MaxSol = rover.MaxSol ?? 0,
-                        MaxDate = rover.MaxDate?.ToString("yyyy-MM-dd") ?? string.Empty,
-                        TotalPhotos = rover.TotalPhotos ?? 0,
+                        MaxSol = stats.MaxSol,
+                        MaxDate = stats.MaxDate,
+                        TotalPhotos = stats.TotalPhotos,
                         Photos = photos
                     }
                 };
@@ -226,5 +244,72 @@ public class RoverQueryServiceV2 : IRoverQueryServiceV2
             _cachingService.GetStaticResourceCacheOptions());
 
         return cameras ?? new List<CameraResource>();
+    }
+
+    /// <summary>
+    /// Get computed stats for a single rover from the photos table
+    /// </summary>
+    private async Task<(int MaxSol, string MaxDate, int TotalPhotos)> GetRoverStatsAsync(
+        int roverId,
+        CancellationToken cancellationToken)
+    {
+        var sql = @"
+            SELECT
+                COALESCE(COUNT(*), 0)::int as total_photos,
+                COALESCE(MAX(sol), 0)::int as max_sol,
+                COALESCE(MAX(earth_date), CURRENT_DATE) as max_earth_date
+            FROM photos
+            WHERE rover_id = {0}";
+
+        var stats = await _context.Database
+            .SqlQueryRaw<RoverStatsData>(sql, roverId)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (stats == null || stats.TotalPhotos == 0)
+        {
+            return (0, "", 0);
+        }
+
+        var maxDate = stats.MaxEarthDate.ToString("yyyy-MM-dd");
+        return (stats.MaxSol, maxDate, stats.TotalPhotos);
+    }
+
+    /// <summary>
+    /// Batch fetch stats for multiple rovers in a single query
+    /// </summary>
+    private async Task<List<BatchRoverStatsData>> GetBatchRoverStatsAsync(
+        int[] roverIds,
+        CancellationToken cancellationToken)
+    {
+        var sql = @"
+            SELECT
+                rover_id,
+                COALESCE(COUNT(*), 0)::int as total_photos,
+                COALESCE(MAX(sol), 0)::int as max_sol,
+                COALESCE(MAX(earth_date), CURRENT_DATE) as max_earth_date
+            FROM photos
+            WHERE rover_id = ANY({0})
+            GROUP BY rover_id";
+
+        return await _context.Database
+            .SqlQueryRaw<BatchRoverStatsData>(sql, roverIds)
+            .ToListAsync(cancellationToken);
+    }
+
+    // Helper class for single rover stats query
+    private class RoverStatsData
+    {
+        public int TotalPhotos { get; set; }
+        public int MaxSol { get; set; }
+        public DateTime MaxEarthDate { get; set; }
+    }
+
+    // Helper class for batch rover stats query
+    private class BatchRoverStatsData
+    {
+        public int RoverId { get; set; }
+        public int TotalPhotos { get; set; }
+        public int MaxSol { get; set; }
+        public DateTime MaxEarthDate { get; set; }
     }
 }

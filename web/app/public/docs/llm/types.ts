@@ -125,16 +125,22 @@ export interface PhotoAttributes {
 }
 
 /**
- * Multiple image URLs for different sizes
+ * Multiple image URLs for different sizes.
+ *
+ * IMPORTANT: Available sizes vary by rover:
+ * - Perseverance: All 4 sizes (small, medium, large, full)
+ * - Curiosity, Spirit, Opportunity: Only 'full' (NASA provides one URL per photo)
+ *
+ * Always check if a size exists before using it, or use 'full' as fallback.
  */
 export interface PhotoImages {
-  /** Small size (320px wide) - for thumbnails */
+  /** Small size (320px wide) - for thumbnails. Only available for Perseverance. */
   small?: string;
-  /** Medium size (800px wide) - for galleries */
+  /** Medium size (800px wide) - for galleries. Only available for Perseverance. */
   medium?: string;
-  /** Large size (1200px wide) - for detailed viewing */
+  /** Large size (1200px wide) - for detailed viewing. Only available for Perseverance. */
   large?: string;
-  /** Full resolution - for download and analysis */
+  /** Full resolution - for download and analysis. Available for all rovers. */
   full?: string;
 }
 
@@ -317,6 +323,12 @@ export interface CameraAttributes {
   name: string;
   /** Full camera name */
   full_name: string;
+  /** Total photos from this camera */
+  photo_count?: number;
+  /** First sol with photos from this camera */
+  first_photo_sol?: number;
+  /** Most recent sol with photos from this camera */
+  last_photo_sol?: number;
 }
 
 // ============================================================================
@@ -381,7 +393,14 @@ export interface PhotosBySol {
 export interface PhotoStatisticsResponse {
   /** Total photos matching the query */
   total_photos: number;
-  /** Grouped statistics */
+  /** Date range of photos */
+  period: {
+    /** Earliest photo date (YYYY-MM-DD) */
+    from?: string;
+    /** Latest photo date (YYYY-MM-DD) */
+    to?: string;
+  };
+  /** Grouped statistics by the requested dimension (camera, rover, or sol) */
   groups: StatisticsGroup[];
 }
 
@@ -389,10 +408,16 @@ export interface PhotoStatisticsResponse {
  * Statistics group
  */
 export interface StatisticsGroup {
-  /** Group key (camera name, rover slug, or sol number) */
+  /** Group key (camera name, rover slug, or sol number as string) */
   key: string;
   /** Count of photos in this group */
   count: number;
+  /** Percentage of total photos (0-100) */
+  percentage?: number;
+  /** Average photos per sol (only included for rover grouping) */
+  avg_per_sol?: number;
+  /** Earth date (only included for sol grouping) */
+  earth_date?: string;
 }
 
 // ============================================================================
