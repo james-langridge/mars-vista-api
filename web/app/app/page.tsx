@@ -11,6 +11,7 @@ interface DatabaseStatistics {
   last_scrape_at: string;
 }
 
+// Component interfaces (what LatestPhotos expects)
 interface Camera {
   id: number;
   name: string;
@@ -34,8 +35,40 @@ interface Photo {
   rover: Rover;
 }
 
-interface PhotosResponse {
-  photos: Photo[];
+// v2 API response interfaces
+interface V2PhotoResource {
+  id: number;
+  attributes: {
+    sol: number;
+    earth_date: string;
+    images?: {
+      medium?: string;
+      large?: string;
+      full?: string;
+    };
+    img_src?: string;
+  };
+  relationships?: {
+    rover?: {
+      id: string;
+      attributes?: {
+        name?: string;
+        landing_date?: string;
+        launch_date?: string;
+        status?: string;
+      };
+    };
+    camera?: {
+      id: string;
+      attributes?: {
+        full_name?: string;
+      };
+    };
+  };
+}
+
+interface V2PhotosResponse {
+  data: V2PhotoResource[];
 }
 
 async function getStatistics(): Promise<DatabaseStatistics | null> {
@@ -58,8 +91,9 @@ async function getStatistics(): Promise<DatabaseStatistics | null> {
 
 async function getLatestPhotos(): Promise<Photo[]> {
   try {
+    // Fetch latest photos across all active rovers, sorted by date descending
     const res = await fetch(
-      'https://api.marsvista.dev/api/v1/rovers/perseverance/latest?per_page=12&format=camelCase',
+      'https://api.marsvista.dev/api/v2/photos?rovers=curiosity,perseverance&sort=-earth_date&per_page=12&include=rover,camera',
       {
         headers: {
           'X-API-Key': process.env.MARSVISTA_API_KEY || '',
@@ -73,8 +107,28 @@ async function getLatestPhotos(): Promise<Photo[]> {
       return [];
     }
 
-    const data: PhotosResponse = await res.json();
-    return data.photos;
+    const data: V2PhotosResponse = await res.json();
+
+    // Transform v2 API response to component format
+    return data.data.map((photo): Photo => ({
+      id: photo.id,
+      sol: photo.attributes.sol,
+      earthDate: photo.attributes.earth_date,
+      imgSrc: photo.attributes.images?.medium || photo.attributes.images?.large || photo.attributes.img_src || '',
+      camera: {
+        id: 0,
+        name: photo.relationships?.camera?.id || '',
+        fullName: photo.relationships?.camera?.attributes?.full_name || photo.relationships?.camera?.id || '',
+      },
+      rover: {
+        id: 0,
+        // Capitalize rover name (v2 returns lowercase slug like "curiosity")
+        name: (photo.relationships?.rover?.id || '').charAt(0).toUpperCase() + (photo.relationships?.rover?.id || '').slice(1),
+        landingDate: photo.relationships?.rover?.attributes?.landing_date || '',
+        launchDate: photo.relationships?.rover?.attributes?.launch_date || '',
+        status: photo.relationships?.rover?.attributes?.status || '',
+      },
+    }));
   } catch (error) {
     console.error('Error fetching latest photos:', error);
     return [];
