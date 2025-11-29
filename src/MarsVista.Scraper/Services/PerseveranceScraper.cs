@@ -129,8 +129,9 @@ public class PerseveranceScraper : IScraperService
         var skipped = 0;
 
         // Build list of NASA IDs for duplicate checking
+        // NASA changed imageid from int to string format (e.g., "ZL0_1694_...")
         var nasaIds = photos
-            .Select(p => TryGetInt(p, "imageid")?.ToString() ?? "")
+            .Select(p => TryGetString(p, "imageid") ?? "")
             .Where(id => !string.IsNullOrEmpty(id))
             .ToList();
 
@@ -143,7 +144,7 @@ public class PerseveranceScraper : IScraperService
         {
             try
             {
-                var nasaId = TryGetInt(photo, "imageid")?.ToString() ?? "";
+                var nasaId = TryGetString(photo, "imageid") ?? "";
 
                 if (string.IsNullOrEmpty(nasaId))
                 {
@@ -258,7 +259,7 @@ public class PerseveranceScraper : IScraperService
             }
             catch (Exception ex)
             {
-                var photoId = TryGetInt(photo, "imageid")?.ToString() ?? "unknown";
+                var photoId = TryGetString(photo, "imageid") ?? "unknown";
                 _logger.LogError(ex, "Error processing photo {PhotoId}", photoId);
                 skipped++;
             }
