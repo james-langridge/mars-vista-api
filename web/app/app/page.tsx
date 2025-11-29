@@ -114,7 +114,8 @@ async function getLatestPhotos(): Promise<Photo[]> {
       id: photo.id,
       sol: photo.attributes.sol,
       earthDate: photo.attributes.earth_date,
-      imgSrc: photo.attributes.images?.medium || photo.attributes.images?.large || photo.attributes.img_src || '',
+      // Prefer medium for gallery display, fall back through sizes (Curiosity only has full)
+      imgSrc: photo.attributes.images?.medium || photo.attributes.images?.large || photo.attributes.images?.full || photo.attributes.img_src || '',
       camera: {
         id: 0,
         name: photo.relationships?.camera?.id || '',
