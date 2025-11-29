@@ -100,7 +100,7 @@ data = response.json()`,
   attributes: {
     sol: number;
     earth_date: string;
-    images: { small: string; medium: string; large: string; full: string };
+    images: { small: string | null; medium: string | null; large: string | null; full: string };
   };
 }
 
@@ -178,13 +178,15 @@ const data = await response.json() as { data: Photo[] };`,
           </div>
           <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
             <h3 className="font-semibold text-slate-900 dark:text-white mb-2">
-              Multiple Image Sizes
+              Image Sizes (Vary by Rover)
             </h3>
             <p className="text-sm text-slate-600 dark:text-slate-400">
-              Each photo includes 4 sizes: <code className="bg-slate-200 dark:bg-slate-700 px-1 rounded">small</code> (320px),
-              <code className="bg-slate-200 dark:bg-slate-700 px-1 rounded">medium</code> (800px),
-              <code className="bg-slate-200 dark:bg-slate-700 px-1 rounded">large</code> (1200px), and
-              <code className="bg-slate-200 dark:bg-slate-700 px-1 rounded">full</code> (original).
+              <strong>Perseverance:</strong> All 4 sizes (<code className="bg-slate-200 dark:bg-slate-700 px-1 rounded">small</code>,
+              <code className="bg-slate-200 dark:bg-slate-700 px-1 rounded">medium</code>,
+              <code className="bg-slate-200 dark:bg-slate-700 px-1 rounded">large</code>,
+              <code className="bg-slate-200 dark:bg-slate-700 px-1 rounded">full</code>).
+              <strong> Other rovers:</strong> Only <code className="bg-slate-200 dark:bg-slate-700 px-1 rounded">full</code>.
+              Always use <code className="bg-slate-200 dark:bg-slate-700 px-1 rounded">full</code> as fallback.
             </p>
           </div>
           <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">

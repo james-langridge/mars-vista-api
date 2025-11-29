@@ -17,13 +17,24 @@ export default function ImageSizesPage() {
         Each Mars photo is available in multiple sizes for different use cases.
       </p>
 
-      {/* Available Sizes */}
+      {/* Rover-Specific Availability */}
       <section className="mb-10">
+        <div className="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 p-4 mb-6">
+          <p className="text-blue-800 dark:text-blue-200 font-medium">Important: Size Availability Varies by Rover</p>
+          <ul className="text-blue-700 dark:text-blue-300 text-sm mt-2 space-y-1">
+            <li><strong>Perseverance:</strong> All 4 sizes (small, medium, large, full)</li>
+            <li><strong>Curiosity, Spirit, Opportunity:</strong> Only <code className="bg-blue-100 dark:bg-blue-900/30 px-1 rounded">full</code> (NASA provides one URL per photo)</li>
+          </ul>
+          <p className="text-blue-700 dark:text-blue-300 text-sm mt-2">
+            Always use <code className="bg-blue-100 dark:bg-blue-900/30 px-1 rounded">full</code> as your fallback size.
+          </p>
+        </div>
+
         <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">
           Available Sizes
         </h2>
         <p className="text-slate-700 dark:text-slate-300 mb-4">
-          The API provides 4 image sizes for each photo:
+          The API provides up to 4 image sizes, depending on the rover:
         </p>
         <div className="overflow-x-auto">
           <table className="min-w-full border border-slate-200 dark:border-slate-700 rounded-lg">
@@ -32,6 +43,7 @@ export default function ImageSizesPage() {
                 <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900 dark:text-white">Size</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900 dark:text-white">Max Width</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900 dark:text-white">Typical File Size</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900 dark:text-white">Availability</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900 dark:text-white">Best For</th>
               </tr>
             </thead>
@@ -40,24 +52,28 @@ export default function ImageSizesPage() {
                 <td className="px-4 py-3 text-slate-700 dark:text-slate-300 font-mono">small</td>
                 <td className="px-4 py-3 text-slate-700 dark:text-slate-300">320px</td>
                 <td className="px-4 py-3 text-slate-700 dark:text-slate-300">~10-30 KB</td>
+                <td className="px-4 py-3 text-slate-700 dark:text-slate-300">Perseverance only</td>
                 <td className="px-4 py-3 text-slate-700 dark:text-slate-300">Thumbnails, lists</td>
               </tr>
               <tr>
                 <td className="px-4 py-3 text-slate-700 dark:text-slate-300 font-mono">medium</td>
                 <td className="px-4 py-3 text-slate-700 dark:text-slate-300">800px</td>
                 <td className="px-4 py-3 text-slate-700 dark:text-slate-300">~50-150 KB</td>
+                <td className="px-4 py-3 text-slate-700 dark:text-slate-300">Perseverance only</td>
                 <td className="px-4 py-3 text-slate-700 dark:text-slate-300">Previews, galleries</td>
               </tr>
               <tr>
                 <td className="px-4 py-3 text-slate-700 dark:text-slate-300 font-mono">large</td>
                 <td className="px-4 py-3 text-slate-700 dark:text-slate-300">1200px</td>
                 <td className="px-4 py-3 text-slate-700 dark:text-slate-300">~100-300 KB</td>
+                <td className="px-4 py-3 text-slate-700 dark:text-slate-300">Perseverance only</td>
                 <td className="px-4 py-3 text-slate-700 dark:text-slate-300">Full-screen views</td>
               </tr>
               <tr>
                 <td className="px-4 py-3 text-slate-700 dark:text-slate-300 font-mono">full</td>
                 <td className="px-4 py-3 text-slate-700 dark:text-slate-300">Original</td>
                 <td className="px-4 py-3 text-slate-700 dark:text-slate-300">~200 KB - 2 MB</td>
+                <td className="px-4 py-3 text-slate-700 dark:text-slate-300"><span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded text-xs">All rovers</span></td>
                 <td className="px-4 py-3 text-slate-700 dark:text-slate-300">Downloads, analysis</td>
               </tr>
             </tbody>
@@ -73,15 +89,38 @@ export default function ImageSizesPage() {
         <p className="text-slate-700 dark:text-slate-300 mb-4">
           Image URLs are returned in the <code className="bg-slate-100 dark:bg-slate-800 text-orange-600 dark:text-orange-400 px-1.5 py-0.5 rounded">images</code> object:
         </p>
+
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-white mt-4 mb-3">
+          Perseverance (All 4 Sizes)
+        </h3>
         <CodeBlock
           code={`{
   "data": [{
     "attributes": {
       "images": {
-        "small": "https://mars.nasa.gov/msl-raw-images/..._320.jpg",
-        "medium": "https://mars.nasa.gov/msl-raw-images/..._800.jpg",
-        "large": "https://mars.nasa.gov/msl-raw-images/..._1200.jpg",
-        "full": "https://mars.nasa.gov/msl-raw-images/..._full.jpg"
+        "small": "https://mars.nasa.gov/..._320.jpg",
+        "medium": "https://mars.nasa.gov/..._800.jpg",
+        "large": "https://mars.nasa.gov/..._1200.jpg",
+        "full": "https://mars.nasa.gov/..._full.jpg"
+      }
+    }
+  }]
+}`}
+          language="json"
+        />
+
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-white mt-6 mb-3">
+          Curiosity, Spirit, Opportunity (Full Only)
+        </h3>
+        <CodeBlock
+          code={`{
+  "data": [{
+    "attributes": {
+      "images": {
+        "small": null,
+        "medium": null,
+        "large": null,
+        "full": "https://mars.nasa.gov/msl-raw-images/.../1000MR0044631340603692E01_DXXX.jpg"
       }
     }
   }]
@@ -195,23 +234,30 @@ export default function ImageSizesPage() {
           Progressive Loading Pattern
         </h2>
         <p className="text-slate-700 dark:text-slate-300 mb-4">
-          For the best user experience, implement progressive loading: show a small image first, then load larger sizes on demand.
+          For the best user experience, implement progressive loading. Always fall back to <code className="bg-slate-100 dark:bg-slate-800 text-orange-600 dark:text-orange-400 px-1 rounded">full</code> when smaller sizes are unavailable:
         </p>
         <CodeBlock
-          code={`// React progressive loading example
+          code={`// React progressive loading with fallback
 function MarsPhoto({ photo }) {
-  const [src, setSrc] = useState(photo.attributes.images.small);
+  const { images } = photo.attributes;
+
+  // Always use full as fallback (available for all rovers)
+  const initialSrc = images.small ?? images.full;
+  const targetSrc = images.large ?? images.full;
+
+  const [src, setSrc] = useState(initialSrc);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    // Preload large image
-    const img = new Image();
-    img.src = photo.attributes.images.large;
-    img.onload = () => {
-      setSrc(photo.attributes.images.large);
-      setLoaded(true);
-    };
-  }, [photo]);
+    if (targetSrc && targetSrc !== src) {
+      const img = new Image();
+      img.src = targetSrc;
+      img.onload = () => {
+        setSrc(targetSrc);
+        setLoaded(true);
+      };
+    }
+  }, [photo, targetSrc, src]);
 
   return (
     <img

@@ -364,6 +364,144 @@ export default function PhotosReferencePage() {
 }`}
           language="json"
         />
+        <div className="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 p-4 mt-4">
+          <p className="text-blue-800 dark:text-blue-200 font-medium">Note: Image Availability</p>
+          <p className="text-blue-700 dark:text-blue-300 text-sm">
+            The <code className="bg-blue-100 dark:bg-blue-900/30 px-1 rounded">small</code>, <code className="bg-blue-100 dark:bg-blue-900/30 px-1 rounded">medium</code>, and <code className="bg-blue-100 dark:bg-blue-900/30 px-1 rounded">large</code> image sizes are only available for Perseverance.
+            For Curiosity, Spirit, and Opportunity, only <code className="bg-blue-100 dark:bg-blue-900/30 px-1 rounded">full</code> is available.
+          </p>
+        </div>
+      </section>
+
+      {/* Stats Endpoint */}
+      <section className="mb-10">
+        <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">
+          Photo Statistics
+        </h2>
+        <p className="text-slate-700 dark:text-slate-300 mb-4">
+          <code className="bg-slate-100 dark:bg-slate-800 text-orange-600 dark:text-orange-400 px-2 py-1 rounded">GET /api/v2/photos/stats</code>
+        </p>
+        <p className="text-slate-700 dark:text-slate-300 mb-4">
+          Get aggregate statistics about photos, grouped by camera, rover, or sol.
+        </p>
+        <CodeBlock
+          code={`curl -H "X-API-Key: YOUR_KEY" \\
+  "https://api.marsvista.dev/api/v2/photos/stats?group_by=camera&rovers=curiosity"`}
+          language="bash"
+        />
+
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-white mt-6 mb-3">
+          Query Parameters
+        </h3>
+        <div className="overflow-x-auto">
+          <table className="min-w-full border border-slate-200 dark:border-slate-700 rounded-lg">
+            <thead className="bg-slate-100 dark:bg-slate-800">
+              <tr>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900 dark:text-white">Parameter</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900 dark:text-white">Type</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900 dark:text-white">Description</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+              <tr>
+                <td className="px-4 py-3 text-slate-700 dark:text-slate-300 font-mono text-sm">group_by</td>
+                <td className="px-4 py-3 text-slate-700 dark:text-slate-300">string</td>
+                <td className="px-4 py-3 text-slate-700 dark:text-slate-300">Grouping dimension: camera, rover, or sol</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 text-slate-700 dark:text-slate-300 font-mono text-sm">rovers</td>
+                <td className="px-4 py-3 text-slate-700 dark:text-slate-300">string</td>
+                <td className="px-4 py-3 text-slate-700 dark:text-slate-300">Filter by rover(s)</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 text-slate-700 dark:text-slate-300 font-mono text-sm">cameras</td>
+                <td className="px-4 py-3 text-slate-700 dark:text-slate-300">string</td>
+                <td className="px-4 py-3 text-slate-700 dark:text-slate-300">Filter by camera(s)</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 text-slate-700 dark:text-slate-300 font-mono text-sm">sol_min / sol_max</td>
+                <td className="px-4 py-3 text-slate-700 dark:text-slate-300">integer</td>
+                <td className="px-4 py-3 text-slate-700 dark:text-slate-300">Filter by sol range</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-white mt-6 mb-3">
+          Response Format
+        </h3>
+        <CodeBlock
+          code={`{
+  "data": {
+    "total_photos": 682660,
+    "period": {
+      "from": "2012-08-06",
+      "to": "2025-11-24"
+    },
+    "groups": [
+      {
+        "key": "NAVCAM",
+        "count": 89234,
+        "percentage": 13.07,
+        "avg_per_sol": 18.9
+      },
+      {
+        "key": "MAST",
+        "count": 156789,
+        "percentage": 22.96,
+        "avg_per_sol": 33.2
+      }
+    ]
+  },
+  "meta": {
+    "returned_count": 7,
+    "timestamp": "2025-11-25T12:00:00Z"
+  }
+}`}
+          language="json"
+        />
+
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-white mt-6 mb-3">
+          Group Fields
+        </h3>
+        <div className="overflow-x-auto">
+          <table className="min-w-full border border-slate-200 dark:border-slate-700 rounded-lg">
+            <thead className="bg-slate-100 dark:bg-slate-800">
+              <tr>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900 dark:text-white">Field</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900 dark:text-white">Type</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-900 dark:text-white">Description</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+              <tr>
+                <td className="px-4 py-3 text-slate-700 dark:text-slate-300 font-mono text-sm">key</td>
+                <td className="px-4 py-3 text-slate-700 dark:text-slate-300">string</td>
+                <td className="px-4 py-3 text-slate-700 dark:text-slate-300">Group identifier (camera name, rover slug, or sol number)</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 text-slate-700 dark:text-slate-300 font-mono text-sm">count</td>
+                <td className="px-4 py-3 text-slate-700 dark:text-slate-300">integer</td>
+                <td className="px-4 py-3 text-slate-700 dark:text-slate-300">Number of photos in this group</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 text-slate-700 dark:text-slate-300 font-mono text-sm">percentage</td>
+                <td className="px-4 py-3 text-slate-700 dark:text-slate-300">number</td>
+                <td className="px-4 py-3 text-slate-700 dark:text-slate-300">Percentage of total photos (0-100)</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 text-slate-700 dark:text-slate-300 font-mono text-sm">avg_per_sol</td>
+                <td className="px-4 py-3 text-slate-700 dark:text-slate-300">number</td>
+                <td className="px-4 py-3 text-slate-700 dark:text-slate-300">Average photos per sol (only for rover grouping)</td>
+              </tr>
+              <tr>
+                <td className="px-4 py-3 text-slate-700 dark:text-slate-300 font-mono text-sm">earth_date</td>
+                <td className="px-4 py-3 text-slate-700 dark:text-slate-300">string</td>
+                <td className="px-4 py-3 text-slate-700 dark:text-slate-300">Earth date (only for sol grouping)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </section>
 
       {/* Related Endpoints */}
