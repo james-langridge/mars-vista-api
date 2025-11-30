@@ -3,7 +3,11 @@
 Complete API reference for AI agents and automated tools.
 Human-friendly docs: https://marsvista.dev/docs
 
-Base URL: `https://api.marsvista.dev`
+## Quick Links
+
+- **TypeScript Types**: [types.ts](./types.ts) - Copy into your project for full type safety
+- **OpenAPI Spec**: [openapi.json](./openapi.json) - For code generation tools
+- **Base URL**: `https://api.marsvista.dev`
 
 ---
 

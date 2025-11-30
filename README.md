@@ -32,6 +32,17 @@ curl -H "X-API-Key: YOUR_KEY" \
 | Status Page | [status.marsvista.dev](https://status.marsvista.dev) |
 | OpenAPI Spec | [marsvista.dev/docs/llm/openapi.json](https://marsvista.dev/docs/llm/openapi.json) |
 
+## For AI Agents
+
+LLM-optimized documentation is available at:
+
+| Resource | Path |
+|----------|------|
+| Discovery file | [marsvista.dev/llms.txt](https://marsvista.dev/llms.txt) |
+| TypeScript types | [web/app/public/docs/llm/types.ts](web/app/public/docs/llm/types.ts) |
+| API reference | [web/app/public/docs/llm/reference.md](web/app/public/docs/llm/reference.md) |
+| OpenAPI spec | [web/app/public/docs/llm/openapi.json](web/app/public/docs/llm/openapi.json) |
+
 ## Project Structure
 
 ```

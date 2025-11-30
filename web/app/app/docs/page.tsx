@@ -283,6 +283,17 @@ export default async function DocsLanding() {
               Plain markdown for LLMs
             </p>
           </Link>
+          <Link
+            href="/docs/llm/types.ts"
+            className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+          >
+            <h3 className="font-semibold text-slate-900 dark:text-white mb-1">
+              TypeScript Types
+            </h3>
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Copy-paste type definitions
+            </p>
+          </Link>
           <a
             href="https://github.com/james-langridge/mars-vista-api"
             target="_blank"
