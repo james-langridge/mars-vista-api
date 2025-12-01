@@ -419,4 +419,232 @@ public class PhotoQueryIntegrationTests : IntegrationTestBase
         fhazStats.Count.Should().Be(25);
         mastStats.Count.Should().Be(25);
     }
+
+    [Fact]
+    public async Task QueryPhotos_WithMarsTimeFilter_AppliesMinutePrecision()
+    {
+        // Arrange - Add photos with different Mars times for this test
+        var now = DateTime.UtcNow;
+        var testPhotos = new List<Photo>
+        {
+            new Photo
+            {
+                NasaId = "TIME_TEST_1",
+                ImgSrcFull = "https://test.com/photo1.jpg",
+                ImgSrcLarge = "https://test.com/photo1.jpg",
+                ImgSrcMedium = "https://test.com/photo1.jpg",
+                ImgSrcSmall = "https://test.com/photo1.jpg",
+                Sol = 1000,
+                EarthDate = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                DateTakenUtc = new DateTime(2020, 1, 1, 10, 0, 0, DateTimeKind.Utc),
+                DateTakenMars = "Sol-01000M10:00:00.000", // 10:00 - should be excluded
+                RoverId = 1,
+                CameraId = 1,
+                CreatedAt = now,
+                UpdatedAt = now
+            },
+            new Photo
+            {
+                NasaId = "TIME_TEST_2",
+                ImgSrcFull = "https://test.com/photo2.jpg",
+                ImgSrcLarge = "https://test.com/photo2.jpg",
+                ImgSrcMedium = "https://test.com/photo2.jpg",
+                ImgSrcSmall = "https://test.com/photo2.jpg",
+                Sol = 1000,
+                EarthDate = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                DateTakenUtc = new DateTime(2020, 1, 1, 12, 28, 0, DateTimeKind.Utc),
+                DateTakenMars = "Sol-01000M12:28:00.000", // 12:28 - should be included
+                RoverId = 1,
+                CameraId = 1,
+                CreatedAt = now,
+                UpdatedAt = now
+            },
+            new Photo
+            {
+                NasaId = "TIME_TEST_3",
+                ImgSrcFull = "https://test.com/photo3.jpg",
+                ImgSrcLarge = "https://test.com/photo3.jpg",
+                ImgSrcMedium = "https://test.com/photo3.jpg",
+                ImgSrcSmall = "https://test.com/photo3.jpg",
+                Sol = 1000,
+                EarthDate = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                DateTakenUtc = new DateTime(2020, 1, 1, 12, 30, 0, DateTimeKind.Utc),
+                DateTakenMars = "Sol-01000M12:30:00.000", // 12:30 - should be included
+                RoverId = 1,
+                CameraId = 1,
+                CreatedAt = now,
+                UpdatedAt = now
+            },
+            new Photo
+            {
+                NasaId = "TIME_TEST_4",
+                ImgSrcFull = "https://test.com/photo4.jpg",
+                ImgSrcLarge = "https://test.com/photo4.jpg",
+                ImgSrcMedium = "https://test.com/photo4.jpg",
+                ImgSrcSmall = "https://test.com/photo4.jpg",
+                Sol = 1000,
+                EarthDate = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                DateTakenUtc = new DateTime(2020, 1, 1, 12, 35, 0, DateTimeKind.Utc),
+                DateTakenMars = "Sol-01000M12:35:00.000", // 12:35 - should be excluded
+                RoverId = 1,
+                CameraId = 1,
+                CreatedAt = now,
+                UpdatedAt = now
+            }
+        };
+
+        DbContext.Photos.AddRange(testPhotos);
+        await DbContext.SaveChangesAsync();
+
+        var parameters = new PhotoQueryParameters
+        {
+            SolMin = 1000,
+            SolMax = 1000,
+            MarsTimeMin = "M12:28:00",
+            MarsTimeMax = "M12:31:00",
+            MarsTimeMinParsed = TimeSpan.FromHours(12) + TimeSpan.FromMinutes(28),
+            MarsTimeMaxParsed = TimeSpan.FromHours(12) + TimeSpan.FromMinutes(31),
+            Page = 1,
+            PerPage = 100
+        };
+
+        // Act
+        var response = await _photoQueryService.QueryPhotosAsync(parameters, default);
+
+        // Assert - Should only return photos within 12:28 to 12:31
+        response.Data.Should().HaveCount(2);
+        response.Data.Should().Contain(p => p.Attributes!.NasaId == "TIME_TEST_2");
+        response.Data.Should().Contain(p => p.Attributes!.NasaId == "TIME_TEST_3");
+        response.Data.Should().NotContain(p => p.Attributes!.NasaId == "TIME_TEST_1");
+        response.Data.Should().NotContain(p => p.Attributes!.NasaId == "TIME_TEST_4");
+    }
+
+    [Fact]
+    public async Task QueryPhotos_WithMarsTimeAndLocationFilters_AppliesBothFilters()
+    {
+        // Arrange - Add photos with times and locations for this test
+        var now = DateTime.UtcNow;
+        var testPhotos = new List<Photo>
+        {
+            new Photo
+            {
+                NasaId = "LOC_TIME_1",
+                ImgSrcFull = "https://test.com/loc1.jpg",
+                ImgSrcLarge = "https://test.com/loc1.jpg",
+                ImgSrcMedium = "https://test.com/loc1.jpg",
+                ImgSrcSmall = "https://test.com/loc1.jpg",
+                Sol = 2000,
+                EarthDate = new DateTime(2022, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                DateTakenUtc = new DateTime(2022, 1, 1, 12, 29, 0, DateTimeKind.Utc),
+                DateTakenMars = "Sol-02000M12:29:00.000", // 12:29 - in time range
+                Site = 100,
+                Drive = 500,
+                RoverId = 1,
+                CameraId = 1,
+                CreatedAt = now,
+                UpdatedAt = now
+            },
+            new Photo
+            {
+                NasaId = "LOC_TIME_2",
+                ImgSrcFull = "https://test.com/loc2.jpg",
+                ImgSrcLarge = "https://test.com/loc2.jpg",
+                ImgSrcMedium = "https://test.com/loc2.jpg",
+                ImgSrcSmall = "https://test.com/loc2.jpg",
+                Sol = 2000,
+                EarthDate = new DateTime(2022, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                DateTakenUtc = new DateTime(2022, 1, 1, 12, 29, 0, DateTimeKind.Utc),
+                DateTakenMars = "Sol-02000M12:29:00.000", // 12:29 - in time range
+                Site = 200, // Different site - should be excluded
+                Drive = 500,
+                RoverId = 1,
+                CameraId = 1,
+                CreatedAt = now,
+                UpdatedAt = now
+            },
+            new Photo
+            {
+                NasaId = "LOC_TIME_3",
+                ImgSrcFull = "https://test.com/loc3.jpg",
+                ImgSrcLarge = "https://test.com/loc3.jpg",
+                ImgSrcMedium = "https://test.com/loc3.jpg",
+                ImgSrcSmall = "https://test.com/loc3.jpg",
+                Sol = 2000,
+                EarthDate = new DateTime(2022, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                DateTakenUtc = new DateTime(2022, 1, 1, 10, 0, 0, DateTimeKind.Utc),
+                DateTakenMars = "Sol-02000M10:00:00.000", // 10:00 - outside time range
+                Site = 100, // Correct site
+                Drive = 500,
+                RoverId = 1,
+                CameraId = 1,
+                CreatedAt = now,
+                UpdatedAt = now
+            }
+        };
+
+        DbContext.Photos.AddRange(testPhotos);
+        await DbContext.SaveChangesAsync();
+
+        var parameters = new PhotoQueryParameters
+        {
+            SolMin = 2000,
+            SolMax = 2000,
+            Site = 100,
+            SiteMin = 100,
+            SiteMax = 100,
+            Drive = 500,
+            DriveMin = 500,
+            DriveMax = 500,
+            MarsTimeMin = "M12:28:00",
+            MarsTimeMax = "M12:31:00",
+            MarsTimeMinParsed = TimeSpan.FromHours(12) + TimeSpan.FromMinutes(28),
+            MarsTimeMaxParsed = TimeSpan.FromHours(12) + TimeSpan.FromMinutes(31),
+            Page = 1,
+            PerPage = 100
+        };
+
+        // Act
+        var response = await _photoQueryService.QueryPhotosAsync(parameters, default);
+
+        // Assert - Should only return photo that matches BOTH location AND time
+        response.Data.Should().HaveCount(1);
+        response.Data.Should().Contain(p => p.Attributes!.NasaId == "LOC_TIME_1");
+    }
+
+    [Fact]
+    public async Task QueryPhotos_QueryMetadataIncludesMarsTimeAndLocation()
+    {
+        // Arrange
+        var parameters = new PhotoQueryParameters
+        {
+            Rovers = "curiosity",
+            RoverList = new List<string> { "curiosity" },
+            Site = 100,
+            SiteMin = 100,
+            SiteMax = 100,
+            Drive = 500,
+            DriveMin = 500,
+            DriveMax = 500,
+            MarsTimeMin = "M12:00:00",
+            MarsTimeMax = "M14:00:00",
+            MarsTimeMinParsed = TimeSpan.FromHours(12),
+            MarsTimeMaxParsed = TimeSpan.FromHours(14),
+            Page = 1,
+            PerPage = 10
+        };
+
+        // Act
+        var response = await _photoQueryService.QueryPhotosAsync(parameters, default);
+
+        // Assert - Query metadata should include all filters
+        response.Meta!.Query.Should().ContainKey("rovers");
+        response.Meta.Query.Should().ContainKey("site");
+        response.Meta.Query.Should().ContainKey("drive");
+        response.Meta.Query.Should().ContainKey("mars_time_min");
+        response.Meta.Query.Should().ContainKey("mars_time_max");
+        response.Meta.Query["mars_time_min"].Should().Be("M12:00:00");
+        response.Meta.Query["mars_time_max"].Should().Be("M14:00:00");
+        response.Meta.Query["site"].Should().Be(100);
+        response.Meta.Query["drive"].Should().Be(500);
+    }
 }

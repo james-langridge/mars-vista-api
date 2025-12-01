@@ -295,27 +295,36 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
             query = query.Where(p => p.EarthDate <= parameters.DateMaxParsed.Value);
         }
 
-        // Mars time filtering (database-level using indexed mars_time_hour column)
+        // Mars time filtering (database-level)
         if (parameters.MarsTimeGoldenHour == true)
         {
             // Golden hour: hours 5-7 (morning) and 17-19 (evening)
+            // Use indexed MarsTimeHour column for efficient golden hour queries
             query = query.Where(p => p.MarsTimeHour.HasValue &&
                 (p.MarsTimeHour.Value >= 5 && p.MarsTimeHour.Value <= 7 ||
                  p.MarsTimeHour.Value >= 17 && p.MarsTimeHour.Value <= 19));
         }
         else if (parameters.MarsTimeMinParsed.HasValue || parameters.MarsTimeMaxParsed.HasValue)
         {
-            // Range-based Mars time filtering by hour
+            // Minute-level precision filtering using DateTakenMars string comparison
+            // DateTakenMars format: "Sol-04287M12:28:29.589" - the 'M' is always at position 9
+            // Format time as HH:MM:SS for lexicographic comparison
+
             if (parameters.MarsTimeMinParsed.HasValue)
             {
-                var minHour = parameters.MarsTimeMinParsed.Value.Hours;
-                query = query.Where(p => p.MarsTimeHour.HasValue && p.MarsTimeHour.Value >= minHour);
+                var minTimeStr = $"{parameters.MarsTimeMinParsed.Value.Hours:D2}:{parameters.MarsTimeMinParsed.Value.Minutes:D2}:{parameters.MarsTimeMinParsed.Value.Seconds:D2}";
+                // Extract time from DateTakenMars starting at position 10 (after 'M'), 8 chars for HH:MM:SS
+                query = query.Where(p => !string.IsNullOrEmpty(p.DateTakenMars) &&
+                    p.DateTakenMars.Length >= 18 &&
+                    p.DateTakenMars.Substring(10, 8).CompareTo(minTimeStr) >= 0);
             }
 
             if (parameters.MarsTimeMaxParsed.HasValue)
             {
-                var maxHour = parameters.MarsTimeMaxParsed.Value.Hours;
-                query = query.Where(p => p.MarsTimeHour.HasValue && p.MarsTimeHour.Value <= maxHour);
+                var maxTimeStr = $"{parameters.MarsTimeMaxParsed.Value.Hours:D2}:{parameters.MarsTimeMaxParsed.Value.Minutes:D2}:{parameters.MarsTimeMaxParsed.Value.Seconds:D2}";
+                query = query.Where(p => !string.IsNullOrEmpty(p.DateTakenMars) &&
+                    p.DateTakenMars.Length >= 18 &&
+                    p.DateTakenMars.Substring(10, 8).CompareTo(maxTimeStr) <= 0);
             }
         }
 
@@ -648,6 +657,38 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
 
         if (parameters.DateMax != null)
             metadata["date_max"] = parameters.DateMax;
+
+        // Mars time filters
+        if (!string.IsNullOrWhiteSpace(parameters.MarsTimeMin))
+            metadata["mars_time_min"] = parameters.MarsTimeMin;
+
+        if (!string.IsNullOrWhiteSpace(parameters.MarsTimeMax))
+            metadata["mars_time_max"] = parameters.MarsTimeMax;
+
+        if (parameters.MarsTimeGoldenHour == true)
+            metadata["mars_time_golden_hour"] = true;
+
+        // Location filters
+        if (parameters.Site.HasValue)
+            metadata["site"] = parameters.Site.Value;
+
+        if (parameters.SiteMin.HasValue && !parameters.Site.HasValue)
+            metadata["site_min"] = parameters.SiteMin.Value;
+
+        if (parameters.SiteMax.HasValue && !parameters.Site.HasValue)
+            metadata["site_max"] = parameters.SiteMax.Value;
+
+        if (parameters.Drive.HasValue)
+            metadata["drive"] = parameters.Drive.Value;
+
+        if (parameters.DriveMin.HasValue && !parameters.Drive.HasValue)
+            metadata["drive_min"] = parameters.DriveMin.Value;
+
+        if (parameters.DriveMax.HasValue && !parameters.Drive.HasValue)
+            metadata["drive_max"] = parameters.DriveMax.Value;
+
+        if (parameters.LocationRadius.HasValue)
+            metadata["location_radius"] = parameters.LocationRadius.Value;
 
         return metadata;
     }

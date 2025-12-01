@@ -71,3 +71,4 @@ failed_sols.txt
 # Local settings and Claude Code files
 .claude/
 CLAUDE.md
+.env.local
