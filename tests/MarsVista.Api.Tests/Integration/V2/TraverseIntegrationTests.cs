@@ -56,6 +56,22 @@ public class TraverseIntegrationTests : IntegrationTestBase
         for (int i = 0; i < waypoints.Length; i++)
         {
             var wp = waypoints[i];
+
+            // Add RoverWaypoint for traverse calculations (NASA PDS format)
+            DbContext.RoverWaypoints.Add(new RoverWaypoint
+            {
+                RoverId = 1,
+                Frame = "ROVER",
+                Site = wp.Site,
+                Drive = wp.Drive,
+                Sol = wp.Sol,
+                LandingX = wp.X,
+                LandingY = wp.Y,
+                LandingZ = wp.Z,
+                CreatedAt = now,
+                UpdatedAt = now
+            });
+
             // Add 3 photos per waypoint
             for (int j = 0; j < 3; j++)
             {
@@ -88,6 +104,22 @@ public class TraverseIntegrationTests : IntegrationTestBase
         for (int i = 0; i < persWaypoints.Length; i++)
         {
             var wp = persWaypoints[i];
+
+            // Add RoverWaypoint for traverse calculations
+            DbContext.RoverWaypoints.Add(new RoverWaypoint
+            {
+                RoverId = 2,
+                Frame = "ROVER",
+                Site = 1,
+                Drive = 100 + i * 2,
+                Sol = wp.Sol,
+                LandingX = wp.X,
+                LandingY = wp.Y,
+                LandingZ = wp.Z,
+                CreatedAt = now,
+                UpdatedAt = now
+            });
+
             DbContext.Photos.Add(new Photo
             {
                 NasaId = $"NRP_{wp.Sol}_0000",
@@ -269,28 +301,27 @@ public class TraverseIntegrationTests : IntegrationTestBase
     // ============================================================================
 
     [Fact]
-    public async Task GetTraverse_DeduplicatesSameLocation()
+    public async Task GetTraverse_ReturnsAllWaypoints()
     {
-        // Act - Perseverance has sols 500 and 501 at the same location
+        // Act - Perseverance has 4 waypoints (sols 500-503)
         var response = await _traverseService.GetTraverseAsync("perseverance");
 
-        // Assert
-        // 4 sols but only 3 unique locations
-        response.Attributes.PointCount.Should().Be(3);
-        response.Path.Should().HaveCount(3);
+        // Assert - Each waypoint is a distinct position from NASA PDS data
+        // (no deduplication - NASA tactical data represents actual rover positions)
+        response.Attributes.PointCount.Should().Be(4);
+        response.Path.Should().HaveCount(4);
     }
 
     [Fact]
-    public async Task GetTraverse_TracksSolRangeForDuplicates()
+    public async Task GetTraverse_WaypointSolMatchesFirstAndLast()
     {
         // Act
         var response = await _traverseService.GetTraverseAsync("perseverance");
 
-        // Assert
-        // First point should span sols 500-501 (same location visited twice)
+        // Assert - Each waypoint has a single sol (no merging with NASA waypoint data)
         var firstPoint = response.Path[0];
         firstPoint.SolFirst.Should().Be(500);
-        firstPoint.SolLast.Should().Be(501);
+        firstPoint.SolLast.Should().Be(500);
     }
 
     // ============================================================================
