@@ -232,68 +232,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v2/time-machine": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get photos from the same location at different times */
-        get: {
-            parameters: {
-                query?: {
-                    /** @description Site number (required) */
-                    site?: number;
-                    /** @description Drive number (required) */
-                    drive?: number;
-                    /** @description Rover name filter */
-                    rover?: string;
-                    /** @description Mars local time filter (e.g., M14:00:00) */
-                    mars_time?: string;
-                    /** @description Camera name filter */
-                    camera?: string;
-                    /** @description Maximum number of results (default: 100) */
-                    limit?: number;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["TimeMachineResponse"];
-                        "application/json": components["schemas"]["TimeMachineResponse"];
-                        "text/json": components["schemas"]["TimeMachineResponse"];
-                    };
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["ApiError"];
-                        "application/json": components["schemas"]["ApiError"];
-                        "text/json": components["schemas"]["ApiError"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v2/cameras": {
         parameters: {
             query?: never;
@@ -2287,51 +2225,6 @@ export interface components {
             avg_per_sol?: number | null;
             /** @description Earth date for this sol (only for sol grouping) */
             earth_date?: string | null;
-        };
-        /** @description Location information for time machine query */
-        TimeMachineLocation: {
-            /**
-             * Format: int32
-             * @description Site number
-             */
-            site?: number;
-            /**
-             * Format: int32
-             * @description Drive number
-             */
-            drive?: number;
-            /**
-             * Format: int32
-             * @description Total visits to this location
-             */
-            total_visits?: number;
-            /**
-             * Format: int32
-             * @description Total photos from this location
-             */
-            total_photos?: number;
-        };
-        /** @description Time machine resource representing photos from the same location at different times */
-        TimeMachineResource: {
-            /**
-             * Format: int32
-             * @description Sol when photo was taken
-             */
-            sol?: number;
-            /** @description Earth date when photo was taken */
-            earth_date?: string | null;
-            /** @description Mars time when photo was taken */
-            mars_time?: string | null;
-            photo?: components["schemas"]["PhotoResource"];
-            /** @description Lighting conditions at this time */
-            lighting_conditions?: string | null;
-        };
-        /** @description Time machine query response */
-        TimeMachineResponse: {
-            location?: components["schemas"]["TimeMachineLocation"];
-            /** @description Photos from different times at this location */
-            data?: components["schemas"]["TimeMachineResource"][] | null;
-            meta?: components["schemas"]["ResponseMeta"];
         };
         /** @description Field-level validation error details */
         ValidationError: {

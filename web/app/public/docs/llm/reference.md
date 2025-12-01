@@ -765,27 +765,6 @@ curl -H "X-API-Key: YOUR_KEY" \
 
 ---
 
-## GET /api/v2/time-machine
-
-Find photos from the same location at different times.
-
-### Parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| site | integer | Yes | Site number |
-| drive | integer | Yes | Drive number |
-| mars_time | string | No | Mars local time filter |
-
-### Example Request
-
-```bash
-curl -H "X-API-Key: YOUR_KEY" \
-  "https://api.marsvista.dev/api/v2/time-machine?site=79&drive=1204"
-```
-
----
-
 ## Legacy API (v1)
 
 Drop-in replacement for the archived NASA Mars Rover Photos API.

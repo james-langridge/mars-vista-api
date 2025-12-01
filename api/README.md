@@ -68,7 +68,6 @@ api/
 │   │   ├── get-camera-by-id.bru
 │   │   └── get-camera-with-rover-filter.bru
 │   └── Advanced Features/
-│       ├── time-machine-query.bru
 │       ├── panoramas-list.bru
 │       ├── panoramas-get-by-id.bru
 │       ├── locations-list.bru

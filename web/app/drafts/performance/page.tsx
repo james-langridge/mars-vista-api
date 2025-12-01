@@ -166,11 +166,6 @@ export default function Performance() {
                     <td className="px-6 py-4 text-sm text-slate-600">2-5s</td>
                     <td className="px-6 py-4 text-sm text-slate-600">Large aggregations across millions</td>
                   </tr>
-                  <tr>
-                    <td className="px-6 py-4 text-sm font-mono text-slate-700">/api/v2/time-machine</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">3-8s</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">Complex temporal-location queries</td>
-                  </tr>
                 </tbody>
               </table>
             </div>
