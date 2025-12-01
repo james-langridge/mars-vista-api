@@ -205,6 +205,7 @@ public class PanoramaService : IPanoramaService
 
         // Group by rover, sol, site, drive, and camera
         // Use IDs for grouping to avoid navigation property issues
+        // OrderBy ensures consistent group ordering for stable panorama IDs
         var groups = photos
             .GroupBy(p => new
             {
@@ -214,7 +215,12 @@ public class PanoramaService : IPanoramaService
                 Drive = p.Drive ?? 0,
                 p.CameraId
             })
-            .Where(g => g.Count() >= minPhotos);
+            .Where(g => g.Count() >= minPhotos)
+            .OrderBy(g => g.Key.RoverId)
+            .ThenBy(g => g.Key.Sol)
+            .ThenBy(g => g.Key.Site)
+            .ThenBy(g => g.Key.Drive)
+            .ThenBy(g => g.Key.CameraId);
 
         foreach (var group in groups)
         {
