@@ -235,9 +235,10 @@ public class PerseveranceScraper : IScraperService
                     // Camera telemetry
                     MastAz = mastAz,
                     MastEl = mastEl,
-                    CameraVector = TryGetString(photo, "camera_vector"),
-                    CameraPosition = TryGetString(photo, "camera_position"),
-                    CameraModelType = TryGetString(photo, "camera_model_type"),
+                    // Camera fields are inside the "camera" object in Perseverance API
+                    CameraVector = TryGetString(photo, "camera", "camera_vector"),
+                    CameraPosition = TryGetString(photo, "camera", "camera_position"),
+                    CameraModelType = TryGetString(photo, "camera", "camera_model_type"),
 
                     // Mars time - Perseverance uses date_taken_mars at root (not lmst in extended)
                     DateTakenMars = TryGetString(photo, "date_taken_mars") ?? "",
@@ -248,7 +249,8 @@ public class PerseveranceScraper : IScraperService
 
                     // Receiving metadata
                     DateReceived = TryGetDateTime(photo, "date_received"),
-                    FilterName = TryGetString(extended, "filter_name"),
+                    // filter_name is inside the "camera" object in Perseverance API
+                    FilterName = TryGetString(photo, "camera", "filter_name"),
 
                     // Store complete NASA response in JSONB
                     RawData = JsonDocument.Parse(photo.GetRawText()),

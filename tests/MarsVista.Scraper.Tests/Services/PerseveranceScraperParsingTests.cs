@@ -261,6 +261,37 @@ public class PerseveranceScraperParsingTests
         sclkFromExtended.Should().BeApproximately(800000000.123f, 0.001f, "sclk is in extended object");
     }
 
+    [Fact]
+    public void ParsePhoto_ExtractsCameraTelemetryFromCameraObject()
+    {
+        // BUG FIX: camera_vector, camera_position, camera_model_type, filter_name
+        // are inside the "camera" object, NOT at root or extended level
+        var json = JsonDocument.Parse(SampleNasaResponses.PerseveranceFullPhoto);
+        var photo = json.RootElement;
+
+        // WRONG: These fields don't exist at root level
+        var cameraVectorFromRoot = ScraperHelpers.TryGetString(photo, "camera_vector");
+        var cameraPositionFromRoot = ScraperHelpers.TryGetString(photo, "camera_position");
+        var cameraModelTypeFromRoot = ScraperHelpers.TryGetString(photo, "camera_model_type");
+
+        // CORRECT: Read from camera object
+        var cameraVector = ScraperHelpers.TryGetString(photo, "camera", "camera_vector");
+        var cameraPosition = ScraperHelpers.TryGetString(photo, "camera", "camera_position");
+        var cameraModelType = ScraperHelpers.TryGetString(photo, "camera", "camera_model_type");
+        var filterName = ScraperHelpers.TryGetString(photo, "camera", "filter_name");
+
+        // Root level should be null
+        cameraVectorFromRoot.Should().BeNull("camera_vector is not at root level");
+        cameraPositionFromRoot.Should().BeNull("camera_position is not at root level");
+        cameraModelTypeFromRoot.Should().BeNull("camera_model_type is not at root level");
+
+        // Camera object should have the values
+        cameraVector.Should().Be("(-0.28888,-0.95715,-0.01977)", "camera_vector is in camera object");
+        cameraPosition.Should().Be("(0.55008,0.58345,-1.93705)", "camera_position is in camera object");
+        cameraModelType.Should().Be("CAHVORE", "camera_model_type is in camera object");
+        filterName.Should().Be("UNK", "filter_name is in camera object");
+    }
+
     // ============================================================================
     // DATA QUALITY ASSERTIONS
     // ============================================================================

@@ -104,7 +104,11 @@ public static class SampleNasaResponses
         "drive": "567",
         "attitude": "(0.604916,-0.0395259,-0.0988497,-0.789141)",
         "camera": {
-            "instrument": "NAVCAM_LEFT"
+            "instrument": "NAVCAM_LEFT",
+            "filter_name": "UNK",
+            "camera_vector": "(-0.28888,-0.95715,-0.01977)",
+            "camera_position": "(0.55008,0.58345,-1.93705)",
+            "camera_model_type": "CAHVORE"
         },
         "image_files": {
             "full_res": "https://mars.nasa.gov/mars2020-raw-images/pub/ods/surface/sol/01000/ids/edr/browse/ncam/full.png",
