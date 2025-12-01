@@ -15,18 +15,21 @@ public class RoversController : ControllerBase
     private readonly IRoverQueryServiceV2 _roverQueryService;
     private readonly ICachingServiceV2 _cachingService;
     private readonly IJourneyService? _journeyService;
+    private readonly ITraverseService? _traverseService;
     private readonly ILogger<RoversController> _logger;
 
     public RoversController(
         IRoverQueryServiceV2 roverQueryService,
         ICachingServiceV2 cachingService,
         ILogger<RoversController> logger,
-        IJourneyService? journeyService = null)
+        IJourneyService? journeyService = null,
+        ITraverseService? traverseService = null)
     {
         _roverQueryService = roverQueryService;
         _cachingService = cachingService;
         _logger = logger;
         _journeyService = journeyService;
+        _traverseService = traverseService;
     }
 
     /// <summary>
@@ -236,6 +239,82 @@ public class RoversController : ControllerBase
             sol_min,
             sol_max,
             cancellationToken);
+
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// Get deduplicated traverse path for a rover
+    /// </summary>
+    /// <remarks>
+    /// Returns deduplicated coordinates optimized for map visualization.
+    /// Unlike the journey endpoint which groups by sol/site/drive (including duplicates),
+    /// traverse returns one point per unique location with actual 3D distance calculations.
+    /// </remarks>
+    /// <param name="slug">Rover slug</param>
+    /// <param name="sol_min">Minimum sol</param>
+    /// <param name="sol_max">Maximum sol</param>
+    /// <param name="format">Output format: json (default) or geojson</param>
+    /// <param name="simplify">Douglas-Peucker tolerance in meters (0 = no simplification)</param>
+    /// <param name="include_segments">Include per-segment distance/bearing data</param>
+    [HttpGet("{slug}/traverse")]
+    [ProducesResponseType(typeof(ApiResponse<TraverseResource>), 200)]
+    [ProducesResponseType(typeof(GeoJsonFeatureCollection), 200)]
+    [ProducesResponseType(typeof(ApiError), 404)]
+    public async Task<IActionResult> GetTraverse(
+        string slug,
+        [FromQuery] int? sol_min = null,
+        [FromQuery] int? sol_max = null,
+        [FromQuery] string format = "json",
+        [FromQuery] float simplify = 0,
+        [FromQuery] bool include_segments = false,
+        CancellationToken cancellationToken = default)
+    {
+        if (_traverseService == null)
+        {
+            return NotFound(new ApiError
+            {
+                Type = "/errors/not-implemented",
+                Title = "Not Implemented",
+                Status = 404,
+                Detail = "Traverse service is not available",
+                Instance = Request.Path
+            });
+        }
+
+        // Verify rover exists
+        var rover = await _roverQueryService.GetRoverBySlugAsync(slug, cancellationToken);
+        if (rover == null)
+        {
+            return NotFound(new ApiError
+            {
+                Type = "/errors/not-found",
+                Title = "Not Found",
+                Status = 404,
+                Detail = $"Rover '{slug}' not found",
+                Instance = Request.Path
+            });
+        }
+
+        // Return GeoJSON if requested
+        if (format.Equals("geojson", StringComparison.OrdinalIgnoreCase))
+        {
+            var geoJson = await _traverseService.GetTraverseGeoJsonAsync(
+                slug, sol_min, sol_max, simplify, cancellationToken);
+            return Ok(geoJson);
+        }
+
+        // Default JSON format
+        var traverse = await _traverseService.GetTraverseAsync(
+            slug, sol_min, sol_max, simplify, include_segments, cancellationToken);
+
+        var response = new ApiResponse<TraverseResource>(traverse)
+        {
+            Links = new ResponseLinks
+            {
+                Self = $"{Request.Scheme}://{Request.Host}/api/v2/rovers/{slug}/traverse"
+            }
+        };
 
         return Ok(response);
     }

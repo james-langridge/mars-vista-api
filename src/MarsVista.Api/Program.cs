@@ -188,6 +188,7 @@ builder.Services.AddHostedService<MarsVista.Api.Services.V2.CacheStatsLoggingSer
 builder.Services.AddScoped<MarsVista.Api.Services.V2.IPanoramaService, MarsVista.Api.Services.V2.PanoramaService>();
 builder.Services.AddScoped<MarsVista.Api.Services.V2.ILocationService, MarsVista.Api.Services.V2.LocationService>();
 builder.Services.AddScoped<MarsVista.Api.Services.V2.IJourneyService, MarsVista.Api.Services.V2.JourneyService>();
+builder.Services.AddScoped<MarsVista.Api.Services.V2.ITraverseService, MarsVista.Api.Services.V2.TraverseService>();
 builder.Services.AddScoped<MarsVista.Api.Services.V2.ITimeMachineService, MarsVista.Api.Services.V2.TimeMachineService>();
 
 // API key and rate limiting services
