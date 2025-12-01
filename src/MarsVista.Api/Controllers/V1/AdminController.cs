@@ -1,5 +1,6 @@
 using MarsVista.Core.Data;
 using MarsVista.Api.Filters;
+using MarsVista.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Diagnostics;
@@ -16,12 +17,17 @@ namespace MarsVista.Api.Controllers.V1;
 public class AdminController : ControllerBase
 {
     private readonly MarsVistaDbContext _db;
+    private readonly WaypointImportService _waypointImportService;
     private readonly ILogger<AdminController> _logger;
     private static readonly DateTime _processStartTime = Process.GetCurrentProcess().StartTime.ToUniversalTime();
 
-    public AdminController(MarsVistaDbContext db, ILogger<AdminController> logger)
+    public AdminController(
+        MarsVistaDbContext db,
+        WaypointImportService waypointImportService,
+        ILogger<AdminController> logger)
     {
         _db = db;
+        _waypointImportService = waypointImportService;
         _logger = logger;
     }
 
@@ -431,6 +437,106 @@ public class AdminController : ControllerBase
             responseTimeTrend,
             throughputTrend,
             errorRateTrend
+        });
+    }
+
+    /// <summary>
+    /// Import rover waypoints from NASA PDS localization data
+    /// POST /api/v1/admin/waypoints/import/{rover}
+    /// </summary>
+    /// <remarks>
+    /// Imports official NASA waypoint positions from the Planetary Data System.
+    /// These coordinates are relative to the landing site and used for accurate traverse calculations.
+    /// Source: https://pds-geosciences.wustl.edu/m2020/urn-nasa-pds-mars2020_rover_places/data_localizations/
+    /// </remarks>
+    [HttpPost("waypoints/import/{rover}")]
+    public async Task<IActionResult> ImportWaypoints(string rover)
+    {
+        try
+        {
+            var result = await _waypointImportService.ImportWaypointsAsync(rover);
+            return Ok(new
+            {
+                success = true,
+                rover = result.Rover,
+                totalRows = result.TotalRows,
+                imported = result.Imported,
+                updated = result.Updated,
+                skipped = result.Skipped,
+                totalDistanceKm = result.TotalDistanceKm,
+                maxSol = result.MaxSol
+            });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { success = false, error = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to import waypoints for {Rover}", rover);
+            return StatusCode(500, new { success = false, error = "Failed to import waypoints" });
+        }
+    }
+
+    /// <summary>
+    /// Get waypoint statistics for a rover
+    /// GET /api/v1/admin/waypoints/{rover}
+    /// </summary>
+    [HttpGet("waypoints/{rover}")]
+    public async Task<IActionResult> GetWaypointStats(string rover)
+    {
+        var roverLower = rover.ToLowerInvariant();
+        var roverEntity = await _db.Rovers
+            .FirstOrDefaultAsync(r => r.Name.ToLower() == roverLower);
+
+        if (roverEntity == null)
+        {
+            return NotFound(new { error = $"Rover not found: {rover}" });
+        }
+
+        var waypoints = await _db.RoverWaypoints
+            .Where(w => w.RoverId == roverEntity.Id)
+            .OrderBy(w => w.Sol ?? 0)
+            .ThenBy(w => w.Site)
+            .ThenBy(w => w.Drive ?? 0)
+            .ToListAsync();
+
+        if (!waypoints.Any())
+        {
+            return Ok(new
+            {
+                rover = roverLower,
+                waypointCount = 0,
+                message = "No waypoints imported. Use POST /api/v1/admin/waypoints/import/{rover} to import."
+            });
+        }
+
+        // Calculate total distance
+        float totalDistance = 0;
+        for (int i = 1; i < waypoints.Count; i++)
+        {
+            var prev = waypoints[i - 1];
+            var curr = waypoints[i];
+            totalDistance += MathF.Sqrt(
+                MathF.Pow(curr.LandingX - prev.LandingX, 2) +
+                MathF.Pow(curr.LandingY - prev.LandingY, 2) +
+                MathF.Pow(curr.LandingZ - prev.LandingZ, 2));
+        }
+
+        var siteCount = waypoints.Where(w => w.Frame == "SITE").Count();
+        var roverCount = waypoints.Where(w => w.Frame == "ROVER").Count();
+        var maxSol = waypoints.Where(w => w.Sol.HasValue).Max(w => w.Sol) ?? 0;
+        var lastUpdated = waypoints.Max(w => w.UpdatedAt);
+
+        return Ok(new
+        {
+            rover = roverLower,
+            waypointCount = waypoints.Count,
+            siteFrames = siteCount,
+            roverFrames = roverCount,
+            totalDistanceKm = totalDistance / 1000,
+            maxSol,
+            lastUpdated
         });
     }
 

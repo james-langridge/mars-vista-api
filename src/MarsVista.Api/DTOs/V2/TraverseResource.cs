@@ -19,6 +19,10 @@ public record TraverseResource
     [JsonPropertyName("links")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public TraverseLinks? Links { get; init; }
+
+    [JsonPropertyName("meta")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public TraverseMeta? Meta { get; init; }
 }
 
 /// <summary>
@@ -194,4 +198,30 @@ public record GeoJsonProperties
 
     [JsonPropertyName("point_count")]
     public int PointCount { get; init; }
+}
+
+/// <summary>
+/// Metadata about the traverse data source
+/// </summary>
+public record TraverseMeta
+{
+    [JsonPropertyName("data_source")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? DataSource { get; init; }
+
+    [JsonPropertyName("data_url")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? DataUrl { get; init; }
+
+    [JsonPropertyName("max_sol_in_data")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public int MaxSolInData { get; init; }
+
+    [JsonPropertyName("coordinate_frame")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? CoordinateFrame { get; init; }
+
+    [JsonPropertyName("message")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Message { get; init; }
 }

@@ -6,7 +6,13 @@ using MarsVista.Core.Helpers;
 namespace MarsVista.Api.Services.V2;
 
 /// <summary>
-/// Implementation of traverse service for deduplicated path data
+/// Implementation of traverse service using official NASA PDS waypoint data.
+/// Provides accurate distance calculations based on landing-relative coordinates.
+///
+/// Data source: https://pds-geosciences.wustl.edu/m2020/urn-nasa-pds-mars2020_rover_places/data_localizations/
+///
+/// IMPORTANT: The traverse data comes from NASA's tactical localization, NOT from photo XYZ coordinates.
+/// Photo XYZ is in a local site frame; waypoint data is in a global landing-relative frame.
 /// </summary>
 public class TraverseService : ITraverseService
 {
@@ -34,7 +40,7 @@ public class TraverseService : ITraverseService
     {
         var roverLower = rover.ToLowerInvariant();
 
-        // Get rover ID for photo count (for cache invalidation)
+        // Get rover ID
         var roverId = await _context.Rovers
             .Where(r => r.Name.ToLower() == roverLower)
             .Select(r => r.Id)
@@ -53,29 +59,31 @@ public class TraverseService : ITraverseService
             };
         }
 
-        // Build query for photo count (used for cache invalidation)
-        var photoQuery = _context.Photos
-            .Where(p => p.RoverId == roverId && p.Xyz != null && p.Xyz != "");
+        // Build query for waypoint count (used for cache invalidation)
+        // Only count ROVER frames for consistency with traverse calculation
+        var waypointQuery = _context.RoverWaypoints
+            .Where(w => w.RoverId == roverId)
+            .Where(w => w.Frame == "ROVER");
 
         if (solMin.HasValue)
-            photoQuery = photoQuery.Where(p => p.Sol >= solMin.Value);
+            waypointQuery = waypointQuery.Where(w => w.Sol >= solMin.Value);
         if (solMax.HasValue)
-            photoQuery = photoQuery.Where(p => p.Sol <= solMax.Value);
+            waypointQuery = waypointQuery.Where(w => w.Sol <= solMax.Value);
 
-        var photoCount = await photoQuery.CountAsync(cancellationToken);
+        var waypointCount = await waypointQuery.CountAsync(cancellationToken);
 
-        // Cache key includes rover, sol range, simplify, includeSegments, and photo count for auto-invalidation
+        // Cache key includes rover, sol range, simplify, includeSegments, and waypoint count
         var cacheKey = _cachingService.GenerateCacheKey(
             "traverse", roverLower,
             solMin?.ToString() ?? "all",
             solMax?.ToString() ?? "all",
             simplify.ToString("F1"),
             includeSegments.ToString(),
-            photoCount);
+            waypointCount);
 
         var result = await _cachingService.GetOrSetAsync(
             cacheKey,
-            async () => await ComputeTraverseAsync(roverLower, solMin, solMax, simplify, includeSegments, cancellationToken),
+            async () => await ComputeTraverseAsync(roverLower, roverId, solMin, solMax, simplify, includeSegments, cancellationToken),
             _cachingService.GetManifestCacheOptions(isActiveRover: true));
 
         return result ?? new TraverseResource
@@ -91,16 +99,32 @@ public class TraverseService : ITraverseService
 
     private async Task<TraverseResource> ComputeTraverseAsync(
         string roverLower,
+        int roverId,
         int? solMin,
         int? solMax,
         float simplify,
         bool includeSegments,
         CancellationToken cancellationToken)
     {
-        // Get unique coordinates grouped by xyz, ordered by first appearance
-        var rawPoints = await GetUniqueCoordinatesAsync(roverLower, solMin, solMax, cancellationToken);
+        // Get waypoints from NASA PDS data (ordered by sol, then site, then drive)
+        // Only use ROVER frames - these represent actual rover positions at specific sols
+        // SITE frames are reference positions that would cause double-counting
+        var waypointQuery = _context.RoverWaypoints
+            .Where(w => w.RoverId == roverId)
+            .Where(w => w.Frame == "ROVER");
 
-        if (rawPoints.Count == 0)
+        if (solMin.HasValue)
+            waypointQuery = waypointQuery.Where(w => w.Sol >= solMin.Value);
+        if (solMax.HasValue)
+            waypointQuery = waypointQuery.Where(w => w.Sol <= solMax.Value);
+
+        var waypoints = await waypointQuery
+            .OrderBy(w => w.Sol ?? 0)
+            .ThenBy(w => w.Site)
+            .ThenBy(w => w.Drive ?? 0)
+            .ToListAsync(cancellationToken);
+
+        if (waypoints.Count == 0)
         {
             return new TraverseResource
             {
@@ -109,29 +133,26 @@ public class TraverseService : ITraverseService
                     Rover = roverLower,
                     SolRange = new SolRange { Start = solMin ?? 0, End = solMax ?? 0 },
                     PointCount = 0
-                }
-            };
-        }
-
-        // Parse coordinates
-        var parsedPoints = ParsePoints(rawPoints);
-
-        if (parsedPoints.Count == 0)
-        {
-            return new TraverseResource
-            {
-                Attributes = new TraverseAttributes
+                },
+                Meta = new TraverseMeta
                 {
-                    Rover = roverLower,
-                    SolRange = new SolRange
-                    {
-                        Start = rawPoints.Min(p => p.SolFirst),
-                        End = rawPoints.Max(p => p.SolLast)
-                    },
-                    PointCount = 0
+                    DataSource = "nasa_pds",
+                    Message = "No waypoint data available. Import waypoints using POST /api/v1/admin/waypoints/import/{rover}"
                 }
             };
         }
+
+        // Convert to parsed points for simplification/calculation
+        var parsedPoints = waypoints.Select(w => new ParsedPoint
+        {
+            X = w.LandingX,
+            Y = w.LandingY,
+            Z = w.LandingZ,
+            SolFirst = w.Sol ?? 0,
+            SolLast = w.Sol ?? 0,
+            Site = w.Site,
+            Drive = w.Drive
+        }).ToList();
 
         // Apply simplification if requested
         var originalCount = parsedPoints.Count;
@@ -156,6 +177,8 @@ public class TraverseService : ITraverseService
         // Calculate cumulative distances and statistics
         var (traversePoints, stats) = CalculateTraverseData(parsedPoints, includeSegments);
 
+        var maxSol = waypoints.Where(w => w.Sol.HasValue).Max(w => w.Sol) ?? 0;
+
         return new TraverseResource
         {
             Attributes = new TraverseAttributes
@@ -178,6 +201,13 @@ public class TraverseService : ITraverseService
             Links = new TraverseLinks
             {
                 GeoJson = $"/api/v2/rovers/{roverLower}/traverse?format=geojson"
+            },
+            Meta = new TraverseMeta
+            {
+                DataSource = "nasa_pds",
+                DataUrl = "https://pds-geosciences.wustl.edu/m2020/urn-nasa-pds-mars2020_rover_places/data_localizations/best_tactical.csv",
+                MaxSolInData = maxSol,
+                CoordinateFrame = "landing_relative"
             }
         };
     }
@@ -215,76 +245,6 @@ public class TraverseService : ITraverseService
                 }
             }
         };
-    }
-
-    private async Task<List<RawPointData>> GetUniqueCoordinatesAsync(
-        string roverLower,
-        int? solMin,
-        int? solMax,
-        CancellationToken cancellationToken)
-    {
-        var query = _context.Photos
-            .Where(p => p.Rover.Name.ToLower() == roverLower && p.Xyz != null && p.Xyz != "");
-
-        if (solMin.HasValue)
-            query = query.Where(p => p.Sol >= solMin.Value);
-
-        if (solMax.HasValue)
-            query = query.Where(p => p.Sol <= solMax.Value);
-
-        // Group by xyz to deduplicate, get first and last sol for each unique position
-        var grouped = await query
-            .GroupBy(p => p.Xyz)
-            .Select(g => new RawPointData
-            {
-                Xyz = g.Key!,
-                SolFirst = g.Min(p => p.Sol),
-                SolLast = g.Max(p => p.Sol)
-            })
-            .ToListAsync(cancellationToken);
-
-        // Order by first sol appearance
-        return grouped.OrderBy(p => p.SolFirst).ToList();
-    }
-
-    private List<ParsedPoint> ParsePoints(List<RawPointData> rawPoints)
-    {
-        var parsed = new List<ParsedPoint>();
-
-        foreach (var raw in rawPoints)
-        {
-            if (MarsTimeHelper.TryParseXYZ(raw.Xyz, out var coords))
-            {
-                parsed.Add(new ParsedPoint
-                {
-                    X = coords.X,
-                    Y = coords.Y,
-                    Z = coords.Z,
-                    SolFirst = raw.SolFirst,
-                    SolLast = raw.SolLast
-                });
-            }
-        }
-
-        // Deduplicate by rounded coordinates (2 decimal places ~= 1cm precision)
-        // Different xyz strings can represent same location due to precision differences
-        var deduplicated = parsed
-            .GroupBy(p => (
-                X: MathF.Round(p.X, 2),
-                Y: MathF.Round(p.Y, 2),
-                Z: MathF.Round(p.Z, 2)))
-            .Select(g => new ParsedPoint
-            {
-                X = g.Key.X,
-                Y = g.Key.Y,
-                Z = g.Key.Z,
-                SolFirst = g.Min(p => p.SolFirst),
-                SolLast = g.Max(p => p.SolLast)
-            })
-            .OrderBy(p => p.SolFirst)
-            .ToList();
-
-        return deduplicated;
     }
 
     private (List<TraversePoint> Points, TraverseStats Stats) CalculateTraverseData(
@@ -373,13 +333,6 @@ public class TraverseService : ITraverseService
         return (traversePoints, stats);
     }
 
-    private record RawPointData
-    {
-        public required string Xyz { get; init; }
-        public int SolFirst { get; init; }
-        public int SolLast { get; init; }
-    }
-
     private record ParsedPoint
     {
         public float X { get; init; }
@@ -387,6 +340,8 @@ public class TraverseService : ITraverseService
         public float Z { get; init; }
         public int SolFirst { get; init; }
         public int SolLast { get; init; }
+        public int Site { get; init; }
+        public int? Drive { get; init; }
     }
 
     private record TraverseStats

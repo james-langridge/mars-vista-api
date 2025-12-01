@@ -20,6 +20,7 @@ public class MarsVistaDbContext : DbContext
     public DbSet<ScraperState> ScraperStates { get; set; }
     public DbSet<ScraperJobHistory> ScraperJobHistories { get; set; }
     public DbSet<ScraperJobRoverDetails> ScraperJobRoverDetails { get; set; }
+    public DbSet<RoverWaypoint> RoverWaypoints { get; set; }
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
@@ -272,6 +273,33 @@ public class MarsVistaDbContext : DbContext
 
             // Timestamp with default value
             entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+        });
+
+        // RoverWaypoint configuration
+        modelBuilder.Entity<RoverWaypoint>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            // Unique constraint: one waypoint per rover/site/drive combination
+            entity.HasIndex(e => new { e.RoverId, e.Site, e.Drive }).IsUnique();
+
+            // Index for traverse queries (ordered by site, drive)
+            entity.HasIndex(e => new { e.RoverId, e.Site }).HasDatabaseName("idx_rover_waypoints_rover_site");
+
+            // String length constraints
+            entity.Property(e => e.Frame).HasMaxLength(10).IsRequired();
+
+            // Foreign key to Rover
+            entity.HasOne(e => e.Rover)
+                .WithMany()
+                .HasForeignKey(e => e.RoverId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Timestamps
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.UpdatedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP");
         });
     }

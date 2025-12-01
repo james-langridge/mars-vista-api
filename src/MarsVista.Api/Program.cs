@@ -209,6 +209,9 @@ builder.Services.AddScoped<MarsVista.Scraper.Services.IScraperService, MarsVista
 builder.Services.AddSingleton<IScraperJobTracker, ScraperJobTracker>();
 builder.Services.AddScoped<IAdminScraperTriggerService, AdminScraperTriggerService>();
 
+// Waypoint import service for NASA PDS traverse data
+builder.Services.AddScoped<WaypointImportService>();
+
 // Response compression for 30-50% payload size reduction
 builder.Services.AddResponseCompression(options =>
 {
