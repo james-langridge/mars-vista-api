@@ -11,11 +11,16 @@ namespace MarsVista.Api.Services.V2;
 public class TraverseService : ITraverseService
 {
     private readonly MarsVistaDbContext _context;
+    private readonly ICachingServiceV2 _cachingService;
     private readonly ILogger<TraverseService> _logger;
 
-    public TraverseService(MarsVistaDbContext context, ILogger<TraverseService> logger)
+    public TraverseService(
+        MarsVistaDbContext context,
+        ICachingServiceV2 cachingService,
+        ILogger<TraverseService> logger)
     {
         _context = context;
+        _cachingService = cachingService;
         _logger = logger;
     }
 
@@ -29,6 +34,69 @@ public class TraverseService : ITraverseService
     {
         var roverLower = rover.ToLowerInvariant();
 
+        // Get rover ID for photo count (for cache invalidation)
+        var roverId = await _context.Rovers
+            .Where(r => r.Name.ToLower() == roverLower)
+            .Select(r => r.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (roverId == 0)
+        {
+            return new TraverseResource
+            {
+                Attributes = new TraverseAttributes
+                {
+                    Rover = roverLower,
+                    SolRange = new SolRange { Start = solMin ?? 0, End = solMax ?? 0 },
+                    PointCount = 0
+                }
+            };
+        }
+
+        // Build query for photo count (used for cache invalidation)
+        var photoQuery = _context.Photos
+            .Where(p => p.RoverId == roverId && p.Xyz != null && p.Xyz != "");
+
+        if (solMin.HasValue)
+            photoQuery = photoQuery.Where(p => p.Sol >= solMin.Value);
+        if (solMax.HasValue)
+            photoQuery = photoQuery.Where(p => p.Sol <= solMax.Value);
+
+        var photoCount = await photoQuery.CountAsync(cancellationToken);
+
+        // Cache key includes rover, sol range, simplify, includeSegments, and photo count for auto-invalidation
+        var cacheKey = _cachingService.GenerateCacheKey(
+            "traverse", roverLower,
+            solMin?.ToString() ?? "all",
+            solMax?.ToString() ?? "all",
+            simplify.ToString("F1"),
+            includeSegments.ToString(),
+            photoCount);
+
+        var result = await _cachingService.GetOrSetAsync(
+            cacheKey,
+            async () => await ComputeTraverseAsync(roverLower, solMin, solMax, simplify, includeSegments, cancellationToken),
+            _cachingService.GetManifestCacheOptions(isActiveRover: true));
+
+        return result ?? new TraverseResource
+        {
+            Attributes = new TraverseAttributes
+            {
+                Rover = roverLower,
+                SolRange = new SolRange { Start = solMin ?? 0, End = solMax ?? 0 },
+                PointCount = 0
+            }
+        };
+    }
+
+    private async Task<TraverseResource> ComputeTraverseAsync(
+        string roverLower,
+        int? solMin,
+        int? solMax,
+        float simplify,
+        bool includeSegments,
+        CancellationToken cancellationToken)
+    {
         // Get unique coordinates grouped by xyz, ordered by first appearance
         var rawPoints = await GetUniqueCoordinatesAsync(roverLower, solMin, solMax, cancellationToken);
 
