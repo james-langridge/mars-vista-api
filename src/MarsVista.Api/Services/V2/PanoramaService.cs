@@ -70,11 +70,13 @@ public class PanoramaService : IPanoramaService
         if (solMin.HasValue)
         {
             query = query.Where(p => p.Sol >= solMin.Value);
+            _logger.LogDebug("Applied solMin filter: {SolMin}", solMin.Value);
         }
 
         if (solMax.HasValue)
         {
             query = query.Where(p => p.Sol <= solMax.Value);
+            _logger.LogDebug("Applied solMax filter: {SolMax}", solMax.Value);
         }
 
         // Performance optimization: If no sol range specified, default to recent sols
@@ -87,7 +89,7 @@ public class PanoramaService : IPanoramaService
                 var defaultSolMin = Math.Max(0, maxSol.Value - DefaultSolRangeLimit);
                 query = query.Where(p => p.Sol >= defaultSolMin);
 
-                _logger.LogInformation(
+                _logger.LogDebug(
                     "No sol range specified, defaulting to recent {SolCount} sols (sol {MinSol} to {MaxSol})",
                     DefaultSolRangeLimit, defaultSolMin, maxSol.Value);
             }
@@ -101,11 +103,18 @@ public class PanoramaService : IPanoramaService
             .OrderBy(s => s)
             .ToListAsync(cancellationToken);
 
+        _logger.LogDebug("Found {SolCount} distinct sols to process. First 5: [{Sols}]",
+            sols.Count,
+            string.Join(", ", sols.Take(5)));
+
         var allPanoramas = new List<PanoramaSequence>();
 
         // Process each sol independently to limit memory usage
         foreach (var sol in sols)
         {
+            // Order by time, then by elevation to group photos at similar angles together
+            // This prevents non-deterministic ordering when photos have the same spacecraft_clock
+            // (bracketed exposures or multi-camera captures at the same instant)
             var solPhotos = await query
                 .Where(p => p.Sol == sol)
                 .Include(p => p.Rover)
@@ -115,11 +124,19 @@ public class PanoramaService : IPanoramaService
                 .ThenBy(p => p.Site)
                 .ThenBy(p => p.Drive)
                 .ThenBy(p => p.SpacecraftClock)
+                .ThenBy(p => p.MastEl) // Group photos at similar elevations when same clock
                 .ToListAsync(cancellationToken);
 
             // Detect panoramas for this sol - index resets per sol for stable IDs
             var panoramaIndex = 0;
             var solPanoramas = DetectPanoramasOptimized(solPhotos, minPhotos ?? MinPhotosForPanorama, ref panoramaIndex);
+
+            if (sols.Count <= 5 || solPanoramas.Count > 0)
+            {
+                _logger.LogDebug("Sol {Sol}: {PhotoCount} photos, {PanoramaCount} panoramas detected",
+                    sol, solPhotos.Count, solPanoramas.Count);
+            }
+
             allPanoramas.AddRange(solPanoramas);
         }
 
@@ -186,6 +203,7 @@ public class PanoramaService : IPanoramaService
             .ThenBy(p => p.Site)
             .ThenBy(p => p.Drive)
             .ThenBy(p => p.SpacecraftClock)
+            .ThenBy(p => p.MastEl) // Must match GetPanoramasAsync ordering for consistent IDs
             .ToListAsync(cancellationToken);
 
         var panoramas = DetectPanoramas(photos, MinPhotosForPanorama);
@@ -206,7 +224,7 @@ public class PanoramaService : IPanoramaService
         // Group by rover, sol, site, drive, and camera
         // Use IDs for grouping to avoid navigation property issues
         // OrderBy ensures consistent group ordering for stable panorama IDs
-        var groups = photos
+        var allGroups = photos
             .GroupBy(p => new
             {
                 p.RoverId,
@@ -215,17 +233,30 @@ public class PanoramaService : IPanoramaService
                 Drive = p.Drive ?? 0,
                 p.CameraId
             })
+            .ToList();
+
+        _logger.LogDebug("DetectPanoramasOptimized: {PhotoCount} photos, {GroupCount} total groups, minPhotos={MinPhotos}",
+            photos.Count, allGroups.Count, minPhotos);
+
+        var groups = allGroups
             .Where(g => g.Count() >= minPhotos)
             .OrderBy(g => g.Key.RoverId)
             .ThenBy(g => g.Key.Sol)
             .ThenBy(g => g.Key.Site)
             .ThenBy(g => g.Key.Drive)
-            .ThenBy(g => g.Key.CameraId);
+            .ThenBy(g => g.Key.CameraId)
+            .ToList();
+
+        _logger.LogDebug("DetectPanoramasOptimized: {QualifiedGroupCount} groups with >= {MinPhotos} photos",
+            groups.Count, minPhotos);
 
         foreach (var group in groups)
         {
             // Sort by spacecraft clock
             var groupPhotos = group.OrderBy(p => p.SpacecraftClock).ToList();
+
+            _logger.LogDebug("Processing group: CameraId={CameraId}, Site={Site}, Drive={Drive}, {PhotoCount} photos",
+                group.Key.CameraId, group.Key.Site, group.Key.Drive, groupPhotos.Count);
 
             var currentSequence = new List<Photo>();
             float? baseElevation = null;
@@ -276,8 +307,10 @@ public class PanoramaService : IPanoramaService
             }
 
             // Check final sequence
+            _logger.LogDebug("Final sequence for group has {Count} photos. Validating...", currentSequence.Count);
             if (IsValidPanorama(currentSequence))
             {
+                _logger.LogDebug("Sequence validated as panorama!");
                 panoramas.Add(new PanoramaSequence
                 {
                     Photos = new List<Photo>(currentSequence),
@@ -304,14 +337,22 @@ public class PanoramaService : IPanoramaService
     private bool IsValidPanorama(List<Photo> photos)
     {
         if (photos.Count < MinPhotosForPanorama)
+        {
+            _logger.LogDebug("IsValidPanorama: FAILED - {Count} photos < {Min} required",
+                photos.Count, MinPhotosForPanorama);
             return false;
+        }
 
         // Check azimuth range
         var azimuths = photos.Select(p => p.MastAz ?? 0).ToList();
         var azimuthRange = azimuths.Max() - azimuths.Min();
 
         if (azimuthRange < MinAzimuthRangeDegrees)
+        {
+            _logger.LogDebug("IsValidPanorama: FAILED - azimuth range {Range}° < {Min}° required",
+                azimuthRange, MinAzimuthRangeDegrees);
             return false;
+        }
 
         // Count unique positions (round to nearest degree to handle float precision)
         var uniquePositions = photos
@@ -319,7 +360,16 @@ public class PanoramaService : IPanoramaService
             .Distinct()
             .Count();
 
-        return uniquePositions >= MinUniquePositions;
+        if (uniquePositions < MinUniquePositions)
+        {
+            _logger.LogDebug("IsValidPanorama: FAILED - {UniquePos} unique positions < {Min} required",
+                uniquePositions, MinUniquePositions);
+            return false;
+        }
+
+        _logger.LogDebug("IsValidPanorama: PASSED - {Count} photos, {Range}° coverage, {UniquePos} unique positions",
+            photos.Count, azimuthRange, uniquePositions);
+        return true;
     }
 
     /// <summary>
