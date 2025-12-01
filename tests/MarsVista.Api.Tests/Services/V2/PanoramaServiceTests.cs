@@ -313,6 +313,95 @@ public class PanoramaServiceTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task GetPanoramaByIdAsync_WithMultiplePanoramasOnSameSol_ReturnsCorrectOne()
+    {
+        // Arrange - Add two distinct panorama sequences on sol 6000
+        var now = DateTime.UtcNow;
+
+        // First panorama (different drive)
+        for (int i = 0; i < 4; i++)
+        {
+            DbContext.Photos.Add(new Photo
+            {
+                NasaId = $"NRF_6000_A_{i:D4}",
+                Sol = 6000,
+                EarthDate = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                DateTakenUtc = new DateTime(2025, 1, 1, 10, i, 0, DateTimeKind.Utc),
+                DateTakenMars = $"Sol-6000M10:0{i}:00",
+                ImgSrcSmall = $"https://mars.nasa.gov/photo6000a{i}_s.jpg",
+                ImgSrcMedium = $"https://mars.nasa.gov/photo6000a{i}_m.jpg",
+                ImgSrcLarge = $"https://mars.nasa.gov/photo6000a{i}_l.jpg",
+                ImgSrcFull = $"https://mars.nasa.gov/photo6000a{i}_f.jpg",
+                Site = 200,
+                Drive = 3000,
+                MastAz = 10.0f + (i * 15.0f), // 45° range, 4 positions
+                MastEl = -5.0f,
+                SpacecraftClock = 1500000.0f + (i * 100.0f),
+                RoverId = 1,
+                CameraId = 2,
+                CreatedAt = now,
+                UpdatedAt = now
+            });
+        }
+
+        // Second panorama (different drive)
+        for (int i = 0; i < 3; i++)
+        {
+            DbContext.Photos.Add(new Photo
+            {
+                NasaId = $"NRF_6000_B_{i:D4}",
+                Sol = 6000,
+                EarthDate = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                DateTakenUtc = new DateTime(2025, 1, 1, 14, i, 0, DateTimeKind.Utc),
+                DateTakenMars = $"Sol-6000M14:0{i}:00",
+                ImgSrcSmall = $"https://mars.nasa.gov/photo6000b{i}_s.jpg",
+                ImgSrcMedium = $"https://mars.nasa.gov/photo6000b{i}_m.jpg",
+                ImgSrcLarge = $"https://mars.nasa.gov/photo6000b{i}_l.jpg",
+                ImgSrcFull = $"https://mars.nasa.gov/photo6000b{i}_f.jpg",
+                Site = 200,
+                Drive = 3001, // Different drive
+                MastAz = 90.0f + (i * 20.0f), // 40° range, 3 positions
+                MastEl = -5.0f,
+                SpacecraftClock = 1600000.0f + (i * 100.0f),
+                RoverId = 1,
+                CameraId = 2,
+                CreatedAt = now,
+                UpdatedAt = now
+            });
+        }
+        await DbContext.SaveChangesAsync();
+
+        // Act - Get panoramas list first
+        var allPanoramas = await _service.GetPanoramasAsync(
+            rovers: "curiosity",
+            solMin: 6000,
+            solMax: 6000,
+            pageNumber: 1,
+            pageSize: 25);
+
+        // Should have 2 panoramas on sol 6000
+        allPanoramas.Data.Should().HaveCount(2);
+
+        // Both IDs should be per-sol indexed (0 and 1)
+        var ids = allPanoramas.Data.Select(p => p.Id).ToList();
+        ids.Should().Contain("pano_curiosity_6000_0");
+        ids.Should().Contain("pano_curiosity_6000_1");
+
+        // Now fetch each by ID
+        var pano0 = await _service.GetPanoramaByIdAsync("pano_curiosity_6000_0");
+        var pano1 = await _service.GetPanoramaByIdAsync("pano_curiosity_6000_1");
+
+        // Both should be found
+        pano0.Should().NotBeNull();
+        pano1.Should().NotBeNull();
+
+        // They should have different photo counts
+        var counts = new[] { pano0!.Attributes!.TotalPhotos, pano1!.Attributes!.TotalPhotos };
+        counts.Should().Contain(4);
+        counts.Should().Contain(3);
+    }
+
+    [Fact]
     public async Task GetPanoramaByIdAsync_WithMalformedId_ReturnsNull()
     {
         // Arrange

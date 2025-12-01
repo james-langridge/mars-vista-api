@@ -102,7 +102,6 @@ public class PanoramaService : IPanoramaService
             .ToListAsync(cancellationToken);
 
         var allPanoramas = new List<PanoramaSequence>();
-        var panoramaIndex = 0;
 
         // Process each sol independently to limit memory usage
         foreach (var sol in sols)
@@ -118,7 +117,8 @@ public class PanoramaService : IPanoramaService
                 .ThenBy(p => p.SpacecraftClock)
                 .ToListAsync(cancellationToken);
 
-            // Detect panoramas for this sol
+            // Detect panoramas for this sol - index resets per sol for stable IDs
+            var panoramaIndex = 0;
             var solPanoramas = DetectPanoramasOptimized(solPhotos, minPhotos ?? MinPhotosForPanorama, ref panoramaIndex);
             allPanoramas.AddRange(solPanoramas);
         }
