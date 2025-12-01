@@ -182,7 +182,10 @@ public class PanoramaService : IPanoramaService
         var photos = await query
             .Include(p => p.Rover)
             .Include(p => p.Camera)
-            .OrderBy(p => p.SpacecraftClock)
+            .OrderBy(p => p.RoverId)
+            .ThenBy(p => p.Site)
+            .ThenBy(p => p.Drive)
+            .ThenBy(p => p.SpacecraftClock)
             .ToListAsync(cancellationToken);
 
         var panoramas = DetectPanoramas(photos, MinPhotosForPanorama);
