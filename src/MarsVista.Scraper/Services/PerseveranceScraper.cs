@@ -243,7 +243,8 @@ public class PerseveranceScraper : IScraperService
                     DateTakenMars = TryGetString(photo, "date_taken_mars") ?? "",
                     MarsTimeHour = MarsTimeHelper.ExtractHour(TryGetString(photo, "date_taken_mars")),
                     Attitude = TryGetString(photo, "attitude"),
-                    SpacecraftClock = TryGetFloat(photo, "spacecraft_clock"),
+                    // Perseverance uses "sclk" in extended (not "spacecraft_clock" at root)
+                    SpacecraftClock = TryGetFloatFromString(extended, "sclk"),
 
                     // Receiving metadata
                     DateReceived = TryGetDateTime(photo, "date_received"),
