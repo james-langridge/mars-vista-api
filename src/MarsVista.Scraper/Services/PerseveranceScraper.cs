@@ -230,7 +230,7 @@ public class PerseveranceScraper : IScraperService
                     Site = TryGetInt(photo, "site"),
                     // NASA changed drive to string format (e.g., "4488")
                     Drive = TryGetIntOrParseString(photo, "drive"),
-                    Xyz = TryGetString(photo, "xyz"),
+                    Xyz = TryGetString(extended, "xyz"),
 
                     // Camera telemetry
                     MastAz = mastAz,
