@@ -101,9 +101,11 @@ public class PerseveranceScraperParsingTests
         var photo = json.RootElement;
 
         // These fields MUST be present for a valid Perseverance photo
-        var nasaId = ScraperHelpers.TryGetInt(photo, "imageid");
+        // NOTE: imageid is now STRING (not int) as of 2025-11-29
+        var nasaId = ScraperHelpers.TryGetString(photo, "imageid");
         var sol = ScraperHelpers.TryGetInt(photo, "sol");
-        var dateTaken = ScraperHelpers.TryGetString(photo, "date_taken");
+        // NOTE: date_taken is now null, use date_taken_utc instead
+        var dateTaken = ScraperHelpers.TryGetString(photo, "date_taken_utc");
 
         // Camera is nested
         var camera = ScraperHelpers.TryGetString(photo, "camera", "instrument");
@@ -111,9 +113,9 @@ public class PerseveranceScraperParsingTests
         // Image URL is nested
         var imgUrl = ScraperHelpers.TryGetString(photo, "image_files", "full_res");
 
-        nasaId.Should().NotBeNull("imageid is required");
+        nasaId.Should().NotBeNull("imageid is required (now string format)");
         sol.Should().NotBeNull("sol is required");
-        dateTaken.Should().NotBeNull("date_taken is required");
+        dateTaken.Should().NotBeNull("date_taken_utc is required");
         camera.Should().NotBeNull("camera instrument is required");
         imgUrl.Should().NotBeNull("full_res image URL is required");
     }
@@ -180,10 +182,11 @@ public class PerseveranceScraperParsingTests
         var photo = json.RootElement;
 
         var site = ScraperHelpers.TryGetInt(photo, "site");
-        var drive = ScraperHelpers.TryGetInt(photo, "drive");
+        // NOTE: drive is now STRING (not int) as of 2025-11-29
+        var driveStr = ScraperHelpers.TryGetString(photo, "drive");
 
         site.Should().Be(25);
-        drive.Should().Be(567);
+        driveStr.Should().Be("567");
     }
 
     [Fact]
@@ -193,8 +196,9 @@ public class PerseveranceScraperParsingTests
         var photo = json.RootElement;
 
         photo.TryGetProperty("extended", out var extended);
-        var mastAz = ScraperHelpers.TryGetFloatFromString(extended, "mast_az");
-        var mastEl = ScraperHelpers.TryGetFloatFromString(extended, "mast_el");
+        // NOTE: Perseverance uses camelCase (mastAz, mastEl) not snake_case
+        var mastAz = ScraperHelpers.TryGetFloatFromString(extended, "mastAz");
+        var mastEl = ScraperHelpers.TryGetFloatFromString(extended, "mastEl");
 
         mastAz.Should().BeApproximately(90.0f, 0.1f);
         mastEl.Should().BeApproximately(-10.5f, 0.1f);
@@ -206,10 +210,55 @@ public class PerseveranceScraperParsingTests
         var json = JsonDocument.Parse(SampleNasaResponses.PerseveranceFullPhoto);
         var photo = json.RootElement;
 
-        photo.TryGetProperty("extended", out var extended);
-        var lmst = ScraperHelpers.TryGetString(extended, "lmst");
+        // NOTE: Perseverance has date_taken_mars at ROOT level (not extended.lmst)
+        var dateTakenMars = ScraperHelpers.TryGetString(photo, "date_taken_mars");
 
-        lmst.Should().Be("Sol-01000M14:30:00.000");
+        dateTakenMars.Should().Be("Sol-01000M14:30:00.000");
+    }
+
+    // ============================================================================
+    // XYZ AND SPACECRAFT CLOCK TESTS (bugs fixed 2025-11-30)
+    // These tests would have caught the bugs where xyz and sclk were read
+    // from the wrong JSON location!
+    // ============================================================================
+
+    [Fact]
+    public void ParsePhoto_ExtractsXyzFromExtended()
+    {
+        // BUG FIX: xyz is in extended, NOT at root level
+        // Root level has xyz: null
+        // extended.xyz has the actual coordinates
+        var json = JsonDocument.Parse(SampleNasaResponses.PerseveranceFullPhoto);
+        var photo = json.RootElement;
+
+        // WRONG: This would return null
+        var xyzFromRoot = ScraperHelpers.TryGetString(photo, "xyz");
+
+        // CORRECT: Read from extended
+        photo.TryGetProperty("extended", out var extended);
+        var xyzFromExtended = ScraperHelpers.TryGetString(extended, "xyz");
+
+        xyzFromRoot.Should().BeNull("xyz at root level is always null for Perseverance");
+        xyzFromExtended.Should().Be("(-27.567,-7.029,0.093)", "xyz is in extended object");
+    }
+
+    [Fact]
+    public void ParsePhoto_ExtractsSpacecraftClockFromExtended()
+    {
+        // BUG FIX: spacecraft clock is extended.sclk (not photo.spacecraft_clock)
+        // Perseverance uses "sclk" in extended, not "spacecraft_clock" at root
+        var json = JsonDocument.Parse(SampleNasaResponses.PerseveranceFullPhoto);
+        var photo = json.RootElement;
+
+        // WRONG: This field doesn't exist in Perseverance API
+        var sclkFromRoot = ScraperHelpers.TryGetFloat(photo, "spacecraft_clock");
+
+        // CORRECT: Read from extended.sclk (as string, parse to float)
+        photo.TryGetProperty("extended", out var extended);
+        var sclkFromExtended = ScraperHelpers.TryGetFloatFromString(extended, "sclk");
+
+        sclkFromRoot.Should().BeNull("spacecraft_clock doesn't exist at root for Perseverance");
+        sclkFromExtended.Should().BeApproximately(800000000.123f, 0.001f, "sclk is in extended object");
     }
 
     // ============================================================================

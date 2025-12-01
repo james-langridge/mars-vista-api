@@ -80,36 +80,46 @@ public static class SampleNasaResponses
     // ============================================================================
 
     /// <summary>
-    /// Full Perseverance photo with dimension field (correct way to get dimensions).
+    /// Full Perseverance photo matching real NASA API structure (as of 2025-11-29).
+    /// IMPORTANT: This must match the actual NASA API response format!
+    /// - imageid is STRING (not int)
+    /// - date_taken_mars at ROOT (not extended.lmst)
+    /// - date_taken_utc at ROOT (primary date field)
+    /// - drive is STRING (not int)
+    /// - mastAz/mastEl use camelCase in extended
+    /// - xyz in extended (coordinates)
+    /// - sclk in extended (spacecraft clock)
     /// </summary>
     public const string PerseveranceFullPhoto = """
     {
-        "imageid": 987654,
+        "imageid": "NRF_1000_0800000000_000ECM_N0000000NCAM00000_00_000J",
         "sol": 1000,
         "title": "Mars 2020 Surface Image",
         "caption": "A stunning view of Mars",
         "credit": "NASA/JPL-Caltech",
-        "date_taken": "2024-01-15T10:30:00Z",
-        "sample_type": "full",
+        "date_taken_utc": "2024-01-15T10:30:00.000",
+        "date_taken_mars": "Sol-01000M14:30:00.000",
+        "sample_type": "Full",
         "site": 25,
-        "drive": 567,
+        "drive": "567",
+        "attitude": "(0.604916,-0.0395259,-0.0988497,-0.789141)",
         "camera": {
             "instrument": "NAVCAM_LEFT"
         },
         "image_files": {
-            "full_res": "https://mars.nasa.gov/mars2020-raw-images/pub/ods/surface/sol/01000/ids/edr/browse/ncam/full.jpg",
-            "small": "https://mars.nasa.gov/mars2020-raw-images/pub/ods/surface/sol/01000/ids/edr/browse/ncam/small.jpg",
-            "medium": "https://mars.nasa.gov/mars2020-raw-images/pub/ods/surface/sol/01000/ids/edr/browse/ncam/medium.jpg",
-            "large": "https://mars.nasa.gov/mars2020-raw-images/pub/ods/surface/sol/01000/ids/edr/browse/ncam/large.jpg"
+            "full_res": "https://mars.nasa.gov/mars2020-raw-images/pub/ods/surface/sol/01000/ids/edr/browse/ncam/full.png",
+            "small": "https://mars.nasa.gov/mars2020-raw-images/pub/ods/surface/sol/01000/ids/edr/browse/ncam/full_320.jpg",
+            "medium": "https://mars.nasa.gov/mars2020-raw-images/pub/ods/surface/sol/01000/ids/edr/browse/ncam/full_800.jpg",
+            "large": "https://mars.nasa.gov/mars2020-raw-images/pub/ods/surface/sol/01000/ids/edr/browse/ncam/full_1200.jpg"
         },
         "extended": {
             "dimension": "(1648,1200)",
-            "scaleFactor": 1,
+            "scaleFactor": "1",
             "subframeRect": "(1,1,1648,1200)",
-            "lmst": "Sol-01000M14:30:00.000",
-            "mast_az": "90.0",
-            "mast_el": "-10.5",
-            "filter_name": "FILTER_LEFT"
+            "mastAz": "90.0",
+            "mastEl": "-10.5",
+            "sclk": "800000000.123",
+            "xyz": "(-27.567,-7.029,0.093)"
         }
     }
     """;
