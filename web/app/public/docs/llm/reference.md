@@ -734,11 +734,57 @@ Get auto-detected panorama sequences.
 | sol_min | integer | No | Minimum sol |
 | sol_max | integer | No | Maximum sol |
 
+### Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| total_photos | integer | Total photos in the panorama (including bracketed exposures) |
+| coverage_degrees | float | Angular coverage in degrees |
+| unique_positions | integer | Number of distinct azimuth positions |
+| avg_position_spacing | float | Average degrees between positions (null if single position) |
+| quality | string | Quality tier: "partial", "half", "wide", or "full" |
+| location | object | Site, drive, and coordinates |
+| camera | string | Camera name used |
+| avg_elevation | float | Average elevation angle |
+
+### Quality Tiers
+
+| Tier | Coverage | Positions | Description |
+|------|----------|-----------|-------------|
+| full | >= 300° | >= 10 | Near-complete 360° panorama |
+| wide | >= 200° | >= 7 | Wide panorama with good overlap |
+| half | >= 120° | >= 5 | Half-circle panorama |
+| partial | < 120° | >= 3 | Partial panorama sequence |
+
 ### Example Request
 
 ```bash
 curl -H "X-API-Key: YOUR_KEY" \
   "https://api.marsvista.dev/api/v2/panoramas?rovers=curiosity&min_photos=10"
+```
+
+### Example Response
+
+```json
+{
+  "data": [{
+    "id": "pano_curiosity_4278_0",
+    "type": "panorama",
+    "attributes": {
+      "rover": "curiosity",
+      "sol": 4278,
+      "mars_time_start": "M12:28:00",
+      "mars_time_end": "M12:35:00",
+      "total_photos": 24,
+      "coverage_degrees": 315.5,
+      "unique_positions": 8,
+      "avg_position_spacing": 45.1,
+      "quality": "full",
+      "camera": "NAVCAM",
+      "avg_elevation": -4.2
+    }
+  }]
+}
 ```
 
 ---

@@ -104,6 +104,25 @@ public record PanoramaAttributes
     [JsonPropertyName("avg_elevation")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public float? AvgElevation { get; init; }
+
+    /// <summary>
+    /// Number of unique azimuth positions (distinct camera angles)
+    /// </summary>
+    [JsonPropertyName("unique_positions")]
+    public int UniquePositions { get; init; }
+
+    /// <summary>
+    /// Average spacing between positions in degrees
+    /// </summary>
+    [JsonPropertyName("avg_position_spacing")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public float? AvgPositionSpacing { get; init; }
+
+    /// <summary>
+    /// Quality tier based on coverage and positions: partial, half, wide, or full
+    /// </summary>
+    [JsonPropertyName("quality")]
+    public string Quality { get; init; } = "partial";
 }
 
 /// <summary>

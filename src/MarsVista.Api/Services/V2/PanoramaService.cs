@@ -17,9 +17,10 @@ public class PanoramaService : IPanoramaService
     private readonly IPhotoQueryServiceV2 _photoService;
 
     // Panorama detection parameters
-    private const float ElevationToleranceDegrees = 2.0f; // Photos within 2 degrees elevation
+    private const float ElevationToleranceDegrees = 15.0f; // Photos within 15 degrees elevation (terrain-following)
     private const float MinAzimuthRangeDegrees = 30.0f; // At least 30 degrees coverage
     private const int MinPhotosForPanorama = 3; // At least 3 photos
+    private const int MinUniquePositions = 3; // At least 3 unique azimuth positions (stitchable)
     private const float MaxTimeDeltaSeconds = 300.0f; // Max 5 minutes between photos
 
     // Performance optimization: Limit sol range to prevent loading all photos into memory
@@ -240,7 +241,7 @@ public class PanoramaService : IPanoramaService
 
                     if (elevationDiff <= ElevationToleranceDegrees &&
                         timeDelta <= MaxTimeDeltaSeconds &&
-                        timeDelta > 0)
+                        timeDelta >= 0) // >= 0 allows bracketed exposures (same spacecraft_clock)
                     {
                         // Continue current sequence
                         currentSequence.Add(photo);
@@ -300,7 +301,16 @@ public class PanoramaService : IPanoramaService
         var azimuths = photos.Select(p => p.MastAz ?? 0).ToList();
         var azimuthRange = azimuths.Max() - azimuths.Min();
 
-        return azimuthRange >= MinAzimuthRangeDegrees;
+        if (azimuthRange < MinAzimuthRangeDegrees)
+            return false;
+
+        // Count unique positions (round to nearest degree to handle float precision)
+        var uniquePositions = photos
+            .Select(p => Math.Round(p.MastAz ?? 0))
+            .Distinct()
+            .Count();
+
+        return uniquePositions >= MinUniquePositions;
     }
 
     /// <summary>
@@ -319,6 +329,29 @@ public class PanoramaService : IPanoramaService
         // Calculate coverage
         var azimuths = sequence.Photos.Select(p => p.MastAz ?? 0).ToList();
         var coverageDegrees = azimuths.Max() - azimuths.Min();
+
+        // Calculate unique positions (distinct camera angles, rounded to nearest degree)
+        var uniqueAzimuths = sequence.Photos
+            .Select(p => Math.Round(p.MastAz ?? 0))
+            .Distinct()
+            .OrderBy(a => a)
+            .ToList();
+        var uniquePositions = uniqueAzimuths.Count;
+
+        // Calculate average spacing between positions
+        float? avgPositionSpacing = null;
+        if (uniquePositions > 1)
+        {
+            var totalSpacing = 0.0;
+            for (int i = 1; i < uniqueAzimuths.Count; i++)
+            {
+                totalSpacing += uniqueAzimuths[i] - uniqueAzimuths[i - 1];
+            }
+            avgPositionSpacing = (float)(totalSpacing / (uniquePositions - 1));
+        }
+
+        // Calculate quality tier
+        var quality = GetQualityTier(coverageDegrees, uniquePositions);
 
         // Get Mars time range
         string? marsTimeStart = null;
@@ -375,13 +408,27 @@ public class PanoramaService : IPanoramaService
                 CoverageDegrees = coverageDegrees,
                 Location = location,
                 Camera = firstPhoto.Camera.Name,
-                AvgElevation = avgElevation
+                AvgElevation = avgElevation,
+                UniquePositions = uniquePositions,
+                AvgPositionSpacing = avgPositionSpacing,
+                Quality = quality
             },
             Links = new PanoramaLinks
             {
                 DownloadSet = $"/api/v2/panoramas/{panoramaId}/download"
             }
         };
+    }
+
+    /// <summary>
+    /// Determine quality tier based on coverage and unique positions
+    /// </summary>
+    private static string GetQualityTier(float coverageDegrees, int uniquePositions)
+    {
+        if (coverageDegrees >= 300 && uniquePositions >= 10) return "full";
+        if (coverageDegrees >= 200 && uniquePositions >= 7) return "wide";
+        if (coverageDegrees >= 120 && uniquePositions >= 5) return "half";
+        return "partial";
     }
 
     /// <summary>

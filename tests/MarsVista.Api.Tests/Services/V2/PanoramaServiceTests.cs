@@ -553,6 +553,271 @@ public class PanoramaServiceTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task GetPanoramasAsync_WithBracketedExposures_CountsAllPhotos()
+    {
+        // Arrange - Add bracketed exposures (same spacecraft_clock at each position)
+        DbContext.Photos.RemoveRange(DbContext.Photos);
+        var now = DateTime.UtcNow;
+
+        // 4 positions, 3 bracketed exposures each = 12 total photos
+        var positions = new[] { 45.0f, 67.0f, 89.0f, 111.0f }; // ~22° spacing
+        var baseSpacecraftClock = 813073000.0f;
+
+        for (int pos = 0; pos < positions.Length; pos++)
+        {
+            var positionClock = baseSpacecraftClock + (pos * 60.0f); // 60 seconds between positions
+            for (int exp = 0; exp < 3; exp++)
+            {
+                DbContext.Photos.Add(new Photo
+                {
+                    NasaId = $"BRACKETED_{pos}_{exp}",
+                    Sol = 4278,
+                    EarthDate = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                    DateTakenUtc = new DateTime(2024, 1, 1, 10, pos, exp, DateTimeKind.Utc),
+                    DateTakenMars = $"Sol-4278M14:{pos:D2}:{exp:D2}",
+                    ImgSrcSmall = $"https://mars.nasa.gov/bracketed_{pos}_{exp}_s.jpg",
+                    ImgSrcMedium = $"https://mars.nasa.gov/bracketed_{pos}_{exp}_m.jpg",
+                    ImgSrcLarge = $"https://mars.nasa.gov/bracketed_{pos}_{exp}_l.jpg",
+                    ImgSrcFull = $"https://mars.nasa.gov/bracketed_{pos}_{exp}_f.jpg",
+                    Site = 100,
+                    Drive = 1500,
+                    MastAz = positions[pos],
+                    MastEl = -10.0f,
+                    SpacecraftClock = positionClock, // Same clock for all exposures at this position
+                    RoverId = 1,
+                    CameraId = 2,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                });
+            }
+        }
+        await DbContext.SaveChangesAsync();
+
+        // Act
+        var result = await _service.GetPanoramasAsync(
+            rovers: "curiosity",
+            solMin: 4278,
+            solMax: 4278,
+            pageNumber: 1,
+            pageSize: 25);
+
+        // Assert
+        result.Data.Should().HaveCount(1);
+        var panorama = result.Data.First();
+        panorama.Attributes!.TotalPhotos.Should().Be(12, "all bracketed exposures should be counted");
+        panorama.Attributes.UniquePositions.Should().Be(4, "should detect 4 unique azimuth positions");
+    }
+
+    [Fact]
+    public async Task GetPanoramasAsync_WithVaryingElevation_DetectsFullSweep()
+    {
+        // Arrange - Photos with elevation varying up to 13° (within 15° tolerance)
+        DbContext.Photos.RemoveRange(DbContext.Photos);
+        var now = DateTime.UtcNow;
+
+        // Simulate terrain-following sweep: 6 positions with varying elevation
+        var elevations = new[] { -11.0f, -8.0f, -4.0f, 0.0f, 2.0f, -2.0f }; // 13° total range
+        for (int i = 0; i < 6; i++)
+        {
+            DbContext.Photos.Add(new Photo
+            {
+                NasaId = $"ELEVATION_{i:D4}",
+                Sol = 4279,
+                EarthDate = new DateTime(2024, 1, 2, 0, 0, 0, DateTimeKind.Utc),
+                DateTakenUtc = new DateTime(2024, 1, 2, 10, i, 0, DateTimeKind.Utc),
+                DateTakenMars = $"Sol-4279M14:0{i}:00",
+                ImgSrcSmall = $"https://mars.nasa.gov/elevation_{i}_s.jpg",
+                ImgSrcMedium = $"https://mars.nasa.gov/elevation_{i}_m.jpg",
+                ImgSrcLarge = $"https://mars.nasa.gov/elevation_{i}_l.jpg",
+                ImgSrcFull = $"https://mars.nasa.gov/elevation_{i}_f.jpg",
+                Site = 101,
+                Drive = 1501,
+                MastAz = 45.0f + (i * 30.0f), // 150° coverage
+                MastEl = elevations[i],
+                SpacecraftClock = 913073000.0f + (i * 100.0f),
+                RoverId = 1,
+                CameraId = 2,
+                CreatedAt = now,
+                UpdatedAt = now
+            });
+        }
+        await DbContext.SaveChangesAsync();
+
+        // Act
+        var result = await _service.GetPanoramasAsync(
+            rovers: "curiosity",
+            solMin: 4279,
+            solMax: 4279,
+            pageNumber: 1,
+            pageSize: 25);
+
+        // Assert - Should detect as single panorama despite 13° elevation change
+        result.Data.Should().HaveCount(1);
+        var panorama = result.Data.First();
+        panorama.Attributes!.TotalPhotos.Should().Be(6);
+        panorama.Attributes.CoverageDegrees.Should().BeApproximately(150.0f, 0.1f);
+    }
+
+    [Fact]
+    public async Task GetPanoramasAsync_WithTwoPositions_RejectsAsPanorama()
+    {
+        // Arrange - Only 2 unique positions (not stitchable)
+        DbContext.Photos.RemoveRange(DbContext.Photos);
+        var now = DateTime.UtcNow;
+
+        // 2 positions with 3 exposures each = 6 photos, 46° range
+        var positions = new[] { 163.0f, 209.0f };
+        for (int pos = 0; pos < positions.Length; pos++)
+        {
+            for (int exp = 0; exp < 3; exp++)
+            {
+                DbContext.Photos.Add(new Photo
+                {
+                    NasaId = $"TWOPOS_{pos}_{exp}",
+                    Sol = 4280,
+                    EarthDate = new DateTime(2024, 1, 3, 0, 0, 0, DateTimeKind.Utc),
+                    DateTakenUtc = new DateTime(2024, 1, 3, 10, pos, exp, DateTimeKind.Utc),
+                    DateTakenMars = $"Sol-4280M14:0{pos}:{exp:D2}",
+                    ImgSrcSmall = $"https://mars.nasa.gov/twopos_{pos}_{exp}_s.jpg",
+                    ImgSrcMedium = $"https://mars.nasa.gov/twopos_{pos}_{exp}_m.jpg",
+                    ImgSrcLarge = $"https://mars.nasa.gov/twopos_{pos}_{exp}_l.jpg",
+                    ImgSrcFull = $"https://mars.nasa.gov/twopos_{pos}_{exp}_f.jpg",
+                    Site = 102,
+                    Drive = 1502,
+                    MastAz = positions[pos],
+                    MastEl = -10.0f,
+                    SpacecraftClock = 1013073000.0f + (pos * 60.0f),
+                    RoverId = 1,
+                    CameraId = 2,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                });
+            }
+        }
+        await DbContext.SaveChangesAsync();
+
+        // Act
+        var result = await _service.GetPanoramasAsync(
+            rovers: "curiosity",
+            solMin: 4280,
+            solMax: 4280,
+            pageNumber: 1,
+            pageSize: 25);
+
+        // Assert - Should reject: 46° range passes, but only 2 unique positions fails
+        result.Data.Should().BeEmpty("2 positions is not stitchable");
+    }
+
+    [Fact]
+    public async Task GetPanoramasAsync_ReturnsQualityMetadata()
+    {
+        // Act
+        var result = await _service.GetPanoramasAsync(
+            rovers: "curiosity",
+            pageNumber: 1,
+            pageSize: 25);
+
+        // Assert - Original seed data has 5 photos at 5 positions (40° range)
+        var panorama = result.Data.First();
+        panorama.Attributes!.UniquePositions.Should().Be(5);
+        panorama.Attributes.AvgPositionSpacing.Should().BeApproximately(10.0f, 0.1f);
+        panorama.Attributes.Quality.Should().Be("partial"); // 40° coverage, 5 positions
+    }
+
+    [Fact]
+    public async Task GetPanoramasAsync_WithHalfCoverage_ReturnsHalfQuality()
+    {
+        // Arrange - Add panorama with 120°+ coverage and 5+ positions
+        DbContext.Photos.RemoveRange(DbContext.Photos);
+        var now = DateTime.UtcNow;
+
+        for (int i = 0; i < 6; i++)
+        {
+            DbContext.Photos.Add(new Photo
+            {
+                NasaId = $"HALF_{i:D4}",
+                Sol = 4281,
+                EarthDate = new DateTime(2024, 1, 4, 0, 0, 0, DateTimeKind.Utc),
+                DateTakenUtc = new DateTime(2024, 1, 4, 10, i, 0, DateTimeKind.Utc),
+                ImgSrcSmall = $"https://mars.nasa.gov/half_{i}_s.jpg",
+                ImgSrcMedium = $"https://mars.nasa.gov/half_{i}_m.jpg",
+                ImgSrcLarge = $"https://mars.nasa.gov/half_{i}_l.jpg",
+                ImgSrcFull = $"https://mars.nasa.gov/half_{i}_f.jpg",
+                Site = 103,
+                Drive = 1503,
+                MastAz = 45.0f + (i * 25.0f), // 125° coverage
+                MastEl = -10.0f,
+                SpacecraftClock = 1113073000.0f + (i * 100.0f),
+                RoverId = 1,
+                CameraId = 2,
+                CreatedAt = now,
+                UpdatedAt = now
+            });
+        }
+        await DbContext.SaveChangesAsync();
+
+        // Act
+        var result = await _service.GetPanoramasAsync(
+            rovers: "curiosity",
+            solMin: 4281,
+            solMax: 4281,
+            pageNumber: 1,
+            pageSize: 25);
+
+        // Assert
+        result.Data.Should().HaveCount(1);
+        var panorama = result.Data.First();
+        panorama.Attributes!.Quality.Should().Be("half"); // 125° >= 120°, 6 >= 5 positions
+    }
+
+    [Fact]
+    public async Task GetPanoramasAsync_WithFullCoverage_ReturnsFullQuality()
+    {
+        // Arrange - Add panorama with 300°+ coverage and 10+ positions
+        DbContext.Photos.RemoveRange(DbContext.Photos);
+        var now = DateTime.UtcNow;
+
+        for (int i = 0; i < 12; i++)
+        {
+            DbContext.Photos.Add(new Photo
+            {
+                NasaId = $"FULL_{i:D4}",
+                Sol = 4282,
+                EarthDate = new DateTime(2024, 1, 5, 0, 0, 0, DateTimeKind.Utc),
+                DateTakenUtc = new DateTime(2024, 1, 5, 10, i, 0, DateTimeKind.Utc),
+                ImgSrcSmall = $"https://mars.nasa.gov/full_{i}_s.jpg",
+                ImgSrcMedium = $"https://mars.nasa.gov/full_{i}_m.jpg",
+                ImgSrcLarge = $"https://mars.nasa.gov/full_{i}_l.jpg",
+                ImgSrcFull = $"https://mars.nasa.gov/full_{i}_f.jpg",
+                Site = 104,
+                Drive = 1504,
+                MastAz = 15.0f + (i * 30.0f), // 330° coverage
+                MastEl = -10.0f,
+                SpacecraftClock = 1213073000.0f + (i * 100.0f),
+                RoverId = 1,
+                CameraId = 2,
+                CreatedAt = now,
+                UpdatedAt = now
+            });
+        }
+        await DbContext.SaveChangesAsync();
+
+        // Act
+        var result = await _service.GetPanoramasAsync(
+            rovers: "curiosity",
+            solMin: 4282,
+            solMax: 4282,
+            pageNumber: 1,
+            pageSize: 25);
+
+        // Assert
+        result.Data.Should().HaveCount(1);
+        var panorama = result.Data.First();
+        panorama.Attributes!.Quality.Should().Be("full"); // 330° >= 300°, 12 >= 10 positions
+        panorama.Attributes.UniquePositions.Should().Be(12);
+    }
+
+    [Fact]
     public async Task GetPanoramasAsync_IncludesLocationInformation()
     {
         // Act

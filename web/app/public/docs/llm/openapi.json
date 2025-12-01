@@ -3866,6 +3866,22 @@
             "description": "Average elevation angle",
             "format": "float",
             "nullable": true
+          },
+          "unique_positions": {
+            "type": "integer",
+            "description": "Number of unique azimuth positions (distinct camera angles)",
+            "format": "int32"
+          },
+          "avg_position_spacing": {
+            "type": "number",
+            "description": "Average spacing between positions in degrees",
+            "format": "float",
+            "nullable": true
+          },
+          "quality": {
+            "type": "string",
+            "description": "Quality tier based on coverage and positions: partial, half, wide, or full",
+            "nullable": true
           }
         },
         "additionalProperties": false,

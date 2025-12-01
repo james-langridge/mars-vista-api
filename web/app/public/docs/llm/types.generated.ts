@@ -1821,6 +1821,18 @@ export interface components {
              * @description Average elevation angle
              */
             avg_elevation?: number | null;
+            /**
+             * Format: int32
+             * @description Number of unique azimuth positions (distinct camera angles)
+             */
+            unique_positions?: number;
+            /**
+             * Format: float
+             * @description Average spacing between positions in degrees
+             */
+            avg_position_spacing?: number | null;
+            /** @description Quality tier based on coverage and positions: partial, half, wide, or full */
+            quality?: string | null;
         };
         /** @description Links related to the panorama */
         PanoramaLinks: {
