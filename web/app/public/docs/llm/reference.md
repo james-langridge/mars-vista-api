@@ -571,6 +571,144 @@ curl -H "X-API-Key: YOUR_KEY" \
 
 ---
 
+## GET /api/v2/rovers/{slug}/traverse
+
+Get deduplicated traverse path for a rover, optimized for map visualization.
+
+Unlike the journey endpoint which groups by sol/site/drive (including duplicates when the rover stays at the same location), traverse returns one point per unique location with actual 3D distance calculations, elevation data, and optional path simplification.
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| sol_min | integer | No | Minimum sol |
+| sol_max | integer | No | Maximum sol |
+| format | string | No | Output format: json (default) or geojson |
+| simplify | float | No | Douglas-Peucker tolerance in meters (0 = no simplification) |
+| include_segments | boolean | No | Include per-segment distance/bearing data |
+
+### Example Request
+
+```bash
+curl -H "X-API-Key: YOUR_KEY" \
+  "https://api.marsvista.dev/api/v2/rovers/perseverance/traverse"
+```
+
+### Example Response (JSON)
+
+```json
+{
+  "data": {
+    "type": "traverse",
+    "attributes": {
+      "rover": "perseverance",
+      "sol_range": { "start": 0, "end": 1698 },
+      "total_distance_m": 28547.3,
+      "total_elevation_gain_m": 156.7,
+      "total_elevation_loss_m": 112.4,
+      "net_elevation_change_m": 44.3,
+      "point_count": 1847,
+      "bounding_box": {
+        "min": { "x": -623.4, "y": -413.4, "z": -45.2 },
+        "max": { "x": 0.0, "y": 0.0, "z": 32.5 }
+      }
+    },
+    "path": [
+      {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0,
+        "sol_first": 0,
+        "sol_last": 15,
+        "cumulative_distance_m": 0.0
+      },
+      {
+        "x": -27.567,
+        "y": -7.029,
+        "z": 0.093,
+        "sol_first": 100,
+        "sol_last": 105,
+        "cumulative_distance_m": 28.5
+      }
+    ],
+    "links": {
+      "geo_json": "/api/v2/rovers/perseverance/traverse?format=geojson"
+    }
+  }
+}
+```
+
+### GeoJSON Format
+
+```bash
+curl -H "X-API-Key: YOUR_KEY" \
+  "https://api.marsvista.dev/api/v2/rovers/perseverance/traverse?format=geojson"
+```
+
+Returns a GeoJSON FeatureCollection with a LineString geometry, ready for map libraries like Leaflet or Mapbox:
+
+```json
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [0.0, 0.0, 0.0],
+          [-27.567, -7.029, 0.093]
+        ]
+      },
+      "properties": {
+        "rover": "perseverance",
+        "sol_range": [0, 1698],
+        "total_distance_m": 28547.3,
+        "point_count": 1847
+      }
+    }
+  ]
+}
+```
+
+### Path Simplification
+
+Use the `simplify` parameter to reduce point count for overview maps:
+
+```bash
+curl -H "X-API-Key: YOUR_KEY" \
+  "https://api.marsvista.dev/api/v2/rovers/perseverance/traverse?simplify=10"
+```
+
+This uses the Douglas-Peucker algorithm to remove points within 10 meters of the simplified path.
+
+### Segment Data
+
+Include per-segment details with `include_segments=true`:
+
+```bash
+curl -H "X-API-Key: YOUR_KEY" \
+  "https://api.marsvista.dev/api/v2/rovers/perseverance/traverse?include_segments=true"
+```
+
+Each path point (except the first) will include a `segment` object:
+
+```json
+{
+  "x": -27.567,
+  "y": -7.029,
+  "z": 0.093,
+  "cumulative_distance_m": 28.5,
+  "segment": {
+    "distance_m": 28.5,
+    "bearing_deg": 194.3,
+    "elevation_change_m": 0.093
+  }
+}
+```
+
+---
+
 ## GET /api/v2/cameras
 
 List all cameras across all rovers.

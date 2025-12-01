@@ -3127,6 +3127,114 @@
           }
         }
       }
+    },
+    "/api/v2/rovers/{slug}/traverse": {
+      "get": {
+        "tags": [
+          "V2 - Rovers"
+        ],
+        "summary": "Get deduplicated traverse path for a rover",
+        "description": "Returns deduplicated coordinates optimized for map visualization.\r\nUnlike the journey endpoint which groups by sol/site/drive (including duplicates),\r\ntraverse returns one point per unique location with actual 3D distance calculations.",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "description": "Rover slug",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sol_min",
+            "in": "query",
+            "description": "Minimum sol",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "sol_max",
+            "in": "query",
+            "description": "Maximum sol",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "description": "Output format: json (default) or geojson",
+            "schema": {
+              "type": "string",
+              "default": "json"
+            }
+          },
+          {
+            "name": "simplify",
+            "in": "query",
+            "description": "Douglas-Peucker tolerance in meters (0 = no simplification)",
+            "schema": {
+              "type": "number",
+              "format": "float",
+              "default": 0
+            }
+          },
+          {
+            "name": "include_segments",
+            "in": "query",
+            "description": "Include per-segment distance/bearing data",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/GeoJsonFeatureCollection"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GeoJsonFeatureCollection"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GeoJsonFeatureCollection"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3179,7 +3287,7 @@
       "BatchPhotoRequest": {
         "type": "object",
         "properties": {
-          "ids": {
+          "Ids": {
             "type": "array",
             "items": {
               "type": "integer",
@@ -3195,12 +3303,12 @@
       "CameraAttributes": {
         "type": "object",
         "properties": {
-          "fullName": {
+          "full_name": {
             "type": "string",
             "description": "Full camera name",
             "nullable": true
           },
-          "photoCount": {
+          "photo_count": {
             "type": "integer",
             "description": "Number of photos from this camera (when included in statistics)",
             "format": "int32",
@@ -3290,24 +3398,24 @@
             "description": "Camera name (e.g., \"FHAZ\", \"MAST\")",
             "nullable": true
           },
-          "fullName": {
+          "full_name": {
             "type": "string",
             "description": "Full camera name (e.g., \"Front Hazard Avoidance Camera\")",
             "nullable": true
           },
-          "photoCount": {
+          "photo_count": {
             "type": "integer",
             "description": "Total number of photos from this camera",
             "format": "int32",
             "nullable": true
           },
-          "firstPhotoSol": {
+          "first_photo_sol": {
             "type": "integer",
             "description": "First sol with photos from this camera",
             "format": "int32",
             "nullable": true
           },
-          "lastPhotoSol": {
+          "last_photo_sol": {
             "type": "integer",
             "description": "Last sol with photos from this camera",
             "format": "int32",
@@ -3375,6 +3483,91 @@
         "description": "Field set types for controlling response data",
         "format": "int32"
       },
+      "GeoJsonFeature": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "nullable": true
+          },
+          "geometry": {
+            "$ref": "#/components/schemas/GeoJsonLineString"
+          },
+          "properties": {
+            "$ref": "#/components/schemas/GeoJsonProperties"
+          }
+        },
+        "additionalProperties": false,
+        "description": "GeoJSON Feature containing the traverse LineString"
+      },
+      "GeoJsonFeatureCollection": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "nullable": true
+          },
+          "features": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeoJsonFeature"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "GeoJSON FeatureCollection for traverse path"
+      },
+      "GeoJsonLineString": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "nullable": true
+          },
+          "coordinates": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "number",
+                "format": "float"
+              }
+            },
+            "description": "Array of [x, y, z] coordinate arrays",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "GeoJSON LineString geometry"
+      },
+      "GeoJsonProperties": {
+        "type": "object",
+        "properties": {
+          "rover": {
+            "type": "string",
+            "nullable": true
+          },
+          "sol_range": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "nullable": true
+          },
+          "total_distance_m": {
+            "type": "number",
+            "format": "float"
+          },
+          "point_count": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Properties for the GeoJSON feature"
+      },
       "Int32Int32ValueTuple": {
         "type": "object",
         "additionalProperties": false
@@ -3387,34 +3580,34 @@
             "description": "Rover name",
             "nullable": true
           },
-          "solStart": {
+          "sol_start": {
             "type": "integer",
             "description": "Starting sol",
             "format": "int32"
           },
-          "solEnd": {
+          "sol_end": {
             "type": "integer",
             "description": "Ending sol",
             "format": "int32"
           },
-          "distanceTraveledKm": {
+          "distance_traveled_km": {
             "type": "number",
             "description": "Approximate distance traveled in kilometers",
             "format": "float",
             "nullable": true
           },
-          "locationsVisited": {
+          "locations_visited": {
             "type": "integer",
             "description": "Number of unique locations visited",
             "format": "int32"
           },
-          "elevationChangeM": {
+          "elevation_change_m": {
             "type": "number",
             "description": "Elevation change in meters (if calculable)",
             "format": "float",
             "nullable": true
           },
-          "totalPhotos": {
+          "total_photos": {
             "type": "integer",
             "description": "Total photos taken during journey",
             "format": "int32"
@@ -3426,12 +3619,12 @@
       "JourneyLinks": {
         "type": "object",
         "properties": {
-          "mapVisualization": {
+          "map_visualization": {
             "type": "string",
             "description": "Link to map visualization (future feature)",
             "nullable": true
           },
-          "kmlExport": {
+          "kml_export": {
             "type": "string",
             "description": "Link to KML export (future feature)",
             "nullable": true
@@ -3493,7 +3686,7 @@
             "description": "Sol at this waypoint",
             "format": "int32"
           },
-          "earthDate": {
+          "earth_date": {
             "type": "string",
             "description": "Earth date at this waypoint",
             "nullable": true
@@ -3511,7 +3704,7 @@
           "coordinates": {
             "$ref": "#/components/schemas/PhotoCoordinates"
           },
-          "photosTaken": {
+          "photos_taken": {
             "type": "integer",
             "description": "Number of photos taken at this waypoint",
             "format": "int32"
@@ -3543,34 +3736,34 @@
             "description": "Location name (if known)",
             "nullable": true
           },
-          "firstVisited": {
+          "first_visited": {
             "type": "string",
             "description": "First date this location was visited",
             "nullable": true
           },
-          "lastVisited": {
+          "last_visited": {
             "type": "string",
             "description": "Last date this location was visited",
             "nullable": true
           },
-          "firstSol": {
+          "first_sol": {
             "type": "integer",
             "description": "First sol this location was visited",
             "format": "int32",
             "nullable": true
           },
-          "lastSol": {
+          "last_sol": {
             "type": "integer",
             "description": "Last sol this location was visited",
             "format": "int32",
             "nullable": true
           },
-          "photoCount": {
+          "photo_count": {
             "type": "integer",
             "description": "Total number of photos taken at this location",
             "format": "int32"
           },
-          "visitCount": {
+          "visit_count": {
             "type": "integer",
             "description": "Number of unique visits to this location",
             "format": "int32",
@@ -3591,12 +3784,12 @@
             "description": "Link to all photos at this location",
             "nullable": true
           },
-          "360View": {
+          "360_view": {
             "type": "string",
-            "description": "Link to 360-degree view (future feature)\r\nNote: Property name starts with number, needs explicit attribute",
+            "description": "Link to 360-degree view (future feature)",
             "nullable": true
           },
-          "timeLapse": {
+          "time_lapse": {
             "type": "string",
             "description": "Link to time-lapse of this location (future feature)",
             "nullable": true
@@ -3660,12 +3853,12 @@
             "description": "Rover name",
             "nullable": true
           },
-          "landingDate": {
+          "landing_date": {
             "type": "string",
             "description": "Landing date (YYYY-MM-DD)",
             "nullable": true
           },
-          "launchDate": {
+          "launch_date": {
             "type": "string",
             "description": "Launch date (YYYY-MM-DD)",
             "nullable": true
@@ -3675,17 +3868,17 @@
             "description": "Mission status",
             "nullable": true
           },
-          "maxSol": {
+          "max_sol": {
             "type": "integer",
             "description": "Maximum sol",
             "format": "int32"
           },
-          "maxDate": {
+          "max_date": {
             "type": "string",
             "description": "Most recent photo date",
             "nullable": true
           },
-          "totalPhotos": {
+          "total_photos": {
             "type": "integer",
             "description": "Total photos",
             "format": "int32"
@@ -3711,12 +3904,12 @@
             "format": "int32",
             "nullable": true
           },
-          "perPage": {
+          "per_page": {
             "type": "integer",
             "description": "Number of items per page",
             "format": "int32"
           },
-          "totalPages": {
+          "total_pages": {
             "type": "integer",
             "description": "Total number of pages",
             "format": "int32",
@@ -3742,22 +3935,22 @@
             "description": "Sol when panorama was taken",
             "format": "int32"
           },
-          "marsTimeStart": {
+          "mars_time_start": {
             "type": "string",
             "description": "Mars time when panorama sequence started",
             "nullable": true
           },
-          "marsTimeEnd": {
+          "mars_time_end": {
             "type": "string",
             "description": "Mars time when panorama sequence ended",
             "nullable": true
           },
-          "totalPhotos": {
+          "total_photos": {
             "type": "integer",
             "description": "Total number of photos in the panorama",
             "format": "int32"
           },
-          "coverageDegrees": {
+          "coverage_degrees": {
             "type": "number",
             "description": "Approximate angular coverage in degrees",
             "format": "float",
@@ -3771,7 +3964,7 @@
             "description": "Camera used for the panorama",
             "nullable": true
           },
-          "avgElevation": {
+          "avg_elevation": {
             "type": "number",
             "description": "Average elevation angle",
             "format": "float",
@@ -3784,12 +3977,12 @@
       "PanoramaLinks": {
         "type": "object",
         "properties": {
-          "stitchedPreview": {
+          "stitched_preview": {
             "type": "string",
             "description": "Link to panorama preview/stitched image (future feature)",
             "nullable": true
           },
-          "downloadSet": {
+          "download_set": {
             "type": "string",
             "description": "Link to download all photos as a set",
             "nullable": true
@@ -3873,7 +4066,7 @@
       "PhotoAttributes": {
         "type": "object",
         "properties": {
-          "nasaId": {
+          "nasa_id": {
             "type": "string",
             "description": "NASA's unique identifier for this photo",
             "nullable": true
@@ -3884,18 +4077,18 @@
             "format": "int32",
             "nullable": true
           },
-          "earthDate": {
+          "earth_date": {
             "type": "string",
             "description": "Earth date when photo was taken (YYYY-MM-DD)",
             "nullable": true
           },
-          "dateTakenUtc": {
+          "date_taken_utc": {
             "type": "string",
             "description": "UTC timestamp when photo was taken",
             "format": "date-time",
             "nullable": true
           },
-          "dateTakenMars": {
+          "date_taken_mars": {
             "type": "string",
             "description": "Mars local time when photo was taken (e.g., \"Sol-1000M14:23:45\")",
             "nullable": true
@@ -3906,7 +4099,7 @@
           "dimensions": {
             "$ref": "#/components/schemas/PhotoDimensions"
           },
-          "sampleType": {
+          "sample_type": {
             "type": "string",
             "description": "Sample type (e.g., \"Full\", \"Thumbnail\", \"Subframe\")",
             "nullable": true
@@ -3932,18 +4125,18 @@
             "description": "Photo credit (e.g., \"NASA/JPL-Caltech\")",
             "nullable": true
           },
-          "createdAt": {
+          "created_at": {
             "type": "string",
             "description": "When this photo was added to our database",
             "format": "date-time",
             "nullable": true
           },
-          "imgSrc": {
+          "img_src": {
             "type": "string",
             "description": "URL to the photo image (legacy field, use images.medium instead)",
             "nullable": true
           },
-          "rawData": {
+          "raw_data": {
             "description": "Raw NASA API response data (JSONB). Only included when field_set=complete.\r\nContains all original NASA fields for data validation and debugging.",
             "nullable": true
           }
@@ -4042,33 +4235,33 @@
       "PhotoMeta": {
         "type": "object",
         "properties": {
-          "isPanoramaPart": {
+          "is_panorama_part": {
             "type": "boolean",
             "description": "Whether this photo is part of a panorama sequence",
             "nullable": true
           },
-          "panoramaSequenceId": {
+          "panorama_sequence_id": {
             "type": "string",
             "description": "Panorama sequence identifier if part of a panorama",
             "nullable": true
           },
-          "hasStereoPair": {
+          "has_stereo_pair": {
             "type": "boolean",
             "description": "Whether this photo has a stereo pair",
             "nullable": true
           },
-          "stereoPairId": {
+          "stereo_pair_id": {
             "type": "integer",
             "description": "Stereo pair photo ID if available",
             "format": "int32",
             "nullable": true
           },
-          "lightingConditions": {
+          "lighting_conditions": {
             "type": "string",
             "description": "Lighting conditions (e.g., \"golden_hour\", \"midday\", \"evening\")",
             "nullable": true
           },
-          "locationVisits": {
+          "location_visits": {
             "type": "integer",
             "description": "Number of times rover visited this location",
             "format": "int32",
@@ -4163,7 +4356,7 @@
       "PhotoStatisticsResponse": {
         "type": "object",
         "properties": {
-          "totalPhotos": {
+          "total_photos": {
             "type": "integer",
             "description": "Total count of photos in the period",
             "format": "int32"
@@ -4205,19 +4398,19 @@
       "PhotoTelemetry": {
         "type": "object",
         "properties": {
-          "mastAzimuth": {
+          "mast_azimuth": {
             "type": "number",
             "description": "Mast azimuth angle (horizontal rotation in degrees)",
             "format": "float",
             "nullable": true
           },
-          "mastElevation": {
+          "mast_elevation": {
             "type": "number",
             "description": "Mast elevation angle (vertical tilt in degrees)",
             "format": "float",
             "nullable": true
           },
-          "spacecraftClock": {
+          "spacecraft_clock": {
             "type": "number",
             "description": "Spacecraft clock at time of capture",
             "format": "float",
@@ -4235,12 +4428,12 @@
             "description": "Mars sol number",
             "format": "int32"
           },
-          "earthDate": {
+          "earth_date": {
             "type": "string",
             "description": "Earth date (YYYY-MM-DD)",
             "nullable": true
           },
-          "totalPhotos": {
+          "total_photos": {
             "type": "integer",
             "description": "Total photos taken on this sol",
             "format": "int32"
@@ -4313,13 +4506,13 @@
       "ResponseMeta": {
         "type": "object",
         "properties": {
-          "totalCount": {
+          "total_count": {
             "type": "integer",
             "description": "Total count of resources matching the query (before pagination)",
             "format": "int32",
             "nullable": true
           },
-          "returnedCount": {
+          "returned_count": {
             "type": "integer",
             "description": "Number of resources returned in this response",
             "format": "int32"
@@ -4347,12 +4540,12 @@
             "description": "Rover name (capitalized)",
             "nullable": true
           },
-          "landingDate": {
+          "landing_date": {
             "type": "string",
             "description": "Landing date on Mars (YYYY-MM-DD)",
             "nullable": true
           },
-          "launchDate": {
+          "launch_date": {
             "type": "string",
             "description": "Launch date from Earth (YYYY-MM-DD)",
             "nullable": true
@@ -4362,17 +4555,17 @@
             "description": "Mission status (active, complete)",
             "nullable": true
           },
-          "maxSol": {
+          "max_sol": {
             "type": "integer",
             "description": "Maximum sol reached by this rover",
             "format": "int32"
           },
-          "maxDate": {
+          "max_date": {
             "type": "string",
             "description": "Most recent photo date (YYYY-MM-DD)",
             "nullable": true
           },
-          "totalPhotos": {
+          "total_photos": {
             "type": "integer",
             "description": "Total number of photos in our database",
             "format": "int32"
@@ -4513,11 +4706,11 @@
       "SortField": {
         "type": "object",
         "properties": {
-          "field": {
+          "Field": {
             "type": "string",
             "nullable": true
           },
-          "direction": {
+          "Direction": {
             "$ref": "#/components/schemas/SortDirection"
           }
         },
@@ -4543,13 +4736,13 @@
             "format": "double",
             "nullable": true
           },
-          "avgPerSol": {
+          "avg_per_sol": {
             "type": "number",
             "description": "Average photos per sol (only for rover grouping)",
             "format": "double",
             "nullable": true
           },
-          "earthDate": {
+          "earth_date": {
             "type": "string",
             "description": "Earth date for this sol (only for sol grouping)",
             "nullable": true
@@ -4571,12 +4764,12 @@
             "description": "Drive number",
             "format": "int32"
           },
-          "totalVisits": {
+          "total_visits": {
             "type": "integer",
             "description": "Total visits to this location",
             "format": "int32"
           },
-          "totalPhotos": {
+          "total_photos": {
             "type": "integer",
             "description": "Total photos from this location",
             "format": "int32"
@@ -4593,12 +4786,12 @@
             "description": "Sol when photo was taken",
             "format": "int32"
           },
-          "earthDate": {
+          "earth_date": {
             "type": "string",
             "description": "Earth date when photo was taken",
             "nullable": true
           },
-          "marsTime": {
+          "mars_time": {
             "type": "string",
             "description": "Mars time when photo was taken",
             "nullable": true
@@ -4606,7 +4799,7 @@
           "photo": {
             "$ref": "#/components/schemas/PhotoResource"
           },
-          "lightingConditions": {
+          "lighting_conditions": {
             "type": "string",
             "description": "Lighting conditions at this time",
             "nullable": true

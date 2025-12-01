@@ -1431,6 +1431,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/rovers/{slug}/traverse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get deduplicated traverse path for a rover
+         * @description Returns deduplicated coordinates optimized for map visualization.
+         *     Unlike the journey endpoint which groups by sol/site/drive (including duplicates),
+         *     traverse returns one point per unique location with actual 3D distance calculations.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Minimum sol */
+                    sol_min?: number;
+                    /** @description Maximum sol */
+                    sol_max?: number;
+                    /** @description Output format: json (default) or geojson */
+                    format?: string;
+                    /** @description Douglas-Peucker tolerance in meters (0 = no simplification) */
+                    simplify?: number;
+                    /** @description Include per-segment distance/bearing data */
+                    include_segments?: boolean;
+                };
+                header?: never;
+                path: {
+                    /** @description Rover slug */
+                    slug: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["GeoJsonFeatureCollection"];
+                        "application/json": components["schemas"]["GeoJsonFeatureCollection"];
+                        "text/json": components["schemas"]["GeoJsonFeatureCollection"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ApiError"];
+                        "application/json": components["schemas"]["ApiError"];
+                        "text/json": components["schemas"]["ApiError"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1464,17 +1532,17 @@ export interface components {
         /** @description Request model for batch photo retrieval */
         BatchPhotoRequest: {
             /** @description List of photo IDs to retrieve (maximum 100) */
-            ids?: number[] | null;
+            Ids?: number[] | null;
         };
         /** @description Camera attributes */
         CameraAttributes: {
             /** @description Full camera name */
-            fullName?: string | null;
+            full_name?: string | null;
             /**
              * Format: int32
              * @description Number of photos from this camera (when included in statistics)
              */
-            photoCount?: number | null;
+            photo_count?: number | null;
         };
         /** @description Camera reference with attributes */
         CameraReference: {
@@ -1512,22 +1580,22 @@ export interface components {
             /** @description Camera name (e.g., "FHAZ", "MAST") */
             name?: string | null;
             /** @description Full camera name (e.g., "Front Hazard Avoidance Camera") */
-            fullName?: string | null;
+            full_name?: string | null;
             /**
              * Format: int32
              * @description Total number of photos from this camera
              */
-            photoCount?: number | null;
+            photo_count?: number | null;
             /**
              * Format: int32
              * @description First sol with photos from this camera
              */
-            firstPhotoSol?: number | null;
+            first_photo_sol?: number | null;
             /**
              * Format: int32
              * @description Last sol with photos from this camera
              */
-            lastPhotoSol?: number | null;
+            last_photo_sol?: number | null;
         };
         /**
          * @description Standardized API response envelope for v2 endpoints
@@ -1555,6 +1623,32 @@ export interface components {
          * @enum {integer}
          */
         FieldSetType: 0 | 1 | 2 | 3 | 4;
+        /** @description GeoJSON Feature containing the traverse LineString */
+        GeoJsonFeature: {
+            type?: string | null;
+            geometry?: components["schemas"]["GeoJsonLineString"];
+            properties?: components["schemas"]["GeoJsonProperties"];
+        };
+        /** @description GeoJSON FeatureCollection for traverse path */
+        GeoJsonFeatureCollection: {
+            type?: string | null;
+            features?: components["schemas"]["GeoJsonFeature"][] | null;
+        };
+        /** @description GeoJSON LineString geometry */
+        GeoJsonLineString: {
+            type?: string | null;
+            /** @description Array of [x, y, z] coordinate arrays */
+            coordinates?: number[][] | null;
+        };
+        /** @description Properties for the GeoJSON feature */
+        GeoJsonProperties: {
+            rover?: string | null;
+            sol_range?: number[] | null;
+            /** Format: float */
+            total_distance_m?: number;
+            /** Format: int32 */
+            point_count?: number;
+        };
         Int32Int32ValueTuple: Record<string, never>;
         /** @description Journey attributes and statistics */
         JourneyAttributes: {
@@ -1564,39 +1658,39 @@ export interface components {
              * Format: int32
              * @description Starting sol
              */
-            solStart?: number;
+            sol_start?: number;
             /**
              * Format: int32
              * @description Ending sol
              */
-            solEnd?: number;
+            sol_end?: number;
             /**
              * Format: float
              * @description Approximate distance traveled in kilometers
              */
-            distanceTraveledKm?: number | null;
+            distance_traveled_km?: number | null;
             /**
              * Format: int32
              * @description Number of unique locations visited
              */
-            locationsVisited?: number;
+            locations_visited?: number;
             /**
              * Format: float
              * @description Elevation change in meters (if calculable)
              */
-            elevationChangeM?: number | null;
+            elevation_change_m?: number | null;
             /**
              * Format: int32
              * @description Total photos taken during journey
              */
-            totalPhotos?: number;
+            total_photos?: number;
         };
         /** @description Links related to the journey */
         JourneyLinks: {
             /** @description Link to map visualization (future feature) */
-            mapVisualization?: string | null;
+            map_visualization?: string | null;
             /** @description Link to KML export (future feature) */
-            kmlExport?: string | null;
+            kml_export?: string | null;
         };
         /** @description Journey resource representing a rover's path over a sol range */
         JourneyResource: {
@@ -1625,7 +1719,7 @@ export interface components {
              */
             sol?: number;
             /** @description Earth date at this waypoint */
-            earthDate?: string | null;
+            earth_date?: string | null;
             /**
              * Format: int32
              * @description Site number
@@ -1641,7 +1735,7 @@ export interface components {
              * Format: int32
              * @description Number of photos taken at this waypoint
              */
-            photosTaken?: number;
+            photos_taken?: number;
         };
         /** @description Location attributes */
         LocationAttributes: {
@@ -1660,42 +1754,39 @@ export interface components {
             /** @description Location name (if known) */
             name?: string | null;
             /** @description First date this location was visited */
-            firstVisited?: string | null;
+            first_visited?: string | null;
             /** @description Last date this location was visited */
-            lastVisited?: string | null;
+            last_visited?: string | null;
             /**
              * Format: int32
              * @description First sol this location was visited
              */
-            firstSol?: number | null;
+            first_sol?: number | null;
             /**
              * Format: int32
              * @description Last sol this location was visited
              */
-            lastSol?: number | null;
+            last_sol?: number | null;
             /**
              * Format: int32
              * @description Total number of photos taken at this location
              */
-            photoCount?: number;
+            photo_count?: number;
             /**
              * Format: int32
              * @description Number of unique visits to this location
              */
-            visitCount?: number | null;
+            visit_count?: number | null;
             coordinates?: components["schemas"]["PhotoCoordinates"];
         };
         /** @description Links related to the location */
         LocationLinks: {
             /** @description Link to all photos at this location */
             photos?: string | null;
-            /**
-             * @description Link to 360-degree view (future feature)
-             *     Note: Property name starts with number, needs explicit attribute
-             */
-            "360View"?: string | null;
+            /** @description Link to 360-degree view (future feature) */
+            "360_view"?: string | null;
             /** @description Link to time-lapse of this location (future feature) */
-            timeLapse?: string | null;
+            time_lapse?: string | null;
         };
         /** @description Location resource representing a unique site/drive location visited by a rover */
         LocationResource: {
@@ -1722,23 +1813,23 @@ export interface components {
             /** @description Rover name */
             name?: string | null;
             /** @description Landing date (YYYY-MM-DD) */
-            landingDate?: string | null;
+            landing_date?: string | null;
             /** @description Launch date (YYYY-MM-DD) */
-            launchDate?: string | null;
+            launch_date?: string | null;
             /** @description Mission status */
             status?: string | null;
             /**
              * Format: int32
              * @description Maximum sol
              */
-            maxSol?: number;
+            max_sol?: number;
             /** @description Most recent photo date */
-            maxDate?: string | null;
+            max_date?: string | null;
             /**
              * Format: int32
              * @description Total photos
              */
-            totalPhotos?: number;
+            total_photos?: number;
             /** @description Photo counts by sol */
             photos?: components["schemas"]["PhotosBySol"][] | null;
         };
@@ -1753,12 +1844,12 @@ export interface components {
              * Format: int32
              * @description Number of items per page
              */
-            perPage?: number;
+            per_page?: number;
             /**
              * Format: int32
              * @description Total number of pages
              */
-            totalPages?: number | null;
+            total_pages?: number | null;
             cursor?: components["schemas"]["CursorInfo"];
         };
         /** @description Panorama attributes */
@@ -1771,19 +1862,19 @@ export interface components {
              */
             sol?: number;
             /** @description Mars time when panorama sequence started */
-            marsTimeStart?: string | null;
+            mars_time_start?: string | null;
             /** @description Mars time when panorama sequence ended */
-            marsTimeEnd?: string | null;
+            mars_time_end?: string | null;
             /**
              * Format: int32
              * @description Total number of photos in the panorama
              */
-            totalPhotos?: number;
+            total_photos?: number;
             /**
              * Format: float
              * @description Approximate angular coverage in degrees
              */
-            coverageDegrees?: number | null;
+            coverage_degrees?: number | null;
             location?: components["schemas"]["PhotoLocation"];
             /** @description Camera used for the panorama */
             camera?: string | null;
@@ -1791,14 +1882,14 @@ export interface components {
              * Format: float
              * @description Average elevation angle
              */
-            avgElevation?: number | null;
+            avg_elevation?: number | null;
         };
         /** @description Links related to the panorama */
         PanoramaLinks: {
             /** @description Link to panorama preview/stitched image (future feature) */
-            stitchedPreview?: string | null;
+            stitched_preview?: string | null;
             /** @description Link to download all photos as a set */
-            downloadSet?: string | null;
+            download_set?: string | null;
         };
         /** @description Panorama resource representing an auto-detected panoramic sequence */
         PanoramaResource: {
@@ -1832,25 +1923,25 @@ export interface components {
         /** @description Photo attributes (data fields) */
         PhotoAttributes: {
             /** @description NASA's unique identifier for this photo */
-            nasaId?: string | null;
+            nasa_id?: string | null;
             /**
              * Format: int32
              * @description Mars sol (day) when photo was taken
              */
             sol?: number | null;
             /** @description Earth date when photo was taken (YYYY-MM-DD) */
-            earthDate?: string | null;
+            earth_date?: string | null;
             /**
              * Format: date-time
              * @description UTC timestamp when photo was taken
              */
-            dateTakenUtc?: string | null;
+            date_taken_utc?: string | null;
             /** @description Mars local time when photo was taken (e.g., "Sol-1000M14:23:45") */
-            dateTakenMars?: string | null;
+            date_taken_mars?: string | null;
             images?: components["schemas"]["PhotoImages"];
             dimensions?: components["schemas"]["PhotoDimensions"];
             /** @description Sample type (e.g., "Full", "Thumbnail", "Subframe") */
-            sampleType?: string | null;
+            sample_type?: string | null;
             location?: components["schemas"]["PhotoLocation"];
             telemetry?: components["schemas"]["PhotoTelemetry"];
             /** @description Photo title */
@@ -1863,14 +1954,14 @@ export interface components {
              * Format: date-time
              * @description When this photo was added to our database
              */
-            createdAt?: string | null;
+            created_at?: string | null;
             /** @description URL to the photo image (legacy field, use images.medium instead) */
-            imgSrc?: string | null;
+            img_src?: string | null;
             /**
              * @description Raw NASA API response data (JSONB). Only included when field_set=complete.
              *     Contains all original NASA fields for data validation and debugging.
              */
-            rawData?: unknown;
+            raw_data?: unknown;
         };
         /** @description 3D coordinates */
         PhotoCoordinates: {
@@ -1931,23 +2022,23 @@ export interface components {
         /** @description Photo-specific computed metadata */
         PhotoMeta: {
             /** @description Whether this photo is part of a panorama sequence */
-            isPanoramaPart?: boolean | null;
+            is_panorama_part?: boolean | null;
             /** @description Panorama sequence identifier if part of a panorama */
-            panoramaSequenceId?: string | null;
+            panorama_sequence_id?: string | null;
             /** @description Whether this photo has a stereo pair */
-            hasStereoPair?: boolean | null;
+            has_stereo_pair?: boolean | null;
             /**
              * Format: int32
              * @description Stereo pair photo ID if available
              */
-            stereoPairId?: number | null;
+            stereo_pair_id?: number | null;
             /** @description Lighting conditions (e.g., "golden_hour", "midday", "evening") */
-            lightingConditions?: string | null;
+            lighting_conditions?: string | null;
             /**
              * Format: int32
              * @description Number of times rover visited this location
              */
-            locationVisits?: number | null;
+            location_visits?: number | null;
         };
         /** @description Photo relationships (related resources) */
         PhotoRelationships: {
@@ -1994,7 +2085,7 @@ export interface components {
              * Format: int32
              * @description Total count of photos in the period
              */
-            totalPhotos?: number;
+            total_photos?: number;
             period?: components["schemas"]["PeriodInfo"];
             /** @description Statistics grouped by the requested dimension (camera, rover, or sol) */
             groups?: components["schemas"]["StatisticsGroup"][] | null;
@@ -2015,17 +2106,17 @@ export interface components {
              * Format: float
              * @description Mast azimuth angle (horizontal rotation in degrees)
              */
-            mastAzimuth?: number | null;
+            mast_azimuth?: number | null;
             /**
              * Format: float
              * @description Mast elevation angle (vertical tilt in degrees)
              */
-            mastElevation?: number | null;
+            mast_elevation?: number | null;
             /**
              * Format: float
              * @description Spacecraft clock at time of capture
              */
-            spacecraftClock?: number | null;
+            spacecraft_clock?: number | null;
         };
         /** @description Photos taken on a specific sol */
         PhotosBySol: {
@@ -2035,12 +2126,12 @@ export interface components {
              */
             sol?: number;
             /** @description Earth date (YYYY-MM-DD) */
-            earthDate?: string | null;
+            earth_date?: string | null;
             /**
              * Format: int32
              * @description Total photos taken on this sol
              */
-            totalPhotos?: number;
+            total_photos?: number;
             /** @description Cameras that took photos on this sol */
             cameras?: string[] | null;
         };
@@ -2072,12 +2163,12 @@ export interface components {
              * Format: int32
              * @description Total count of resources matching the query (before pagination)
              */
-            totalCount?: number | null;
+            total_count?: number | null;
             /**
              * Format: int32
              * @description Number of resources returned in this response
              */
-            returnedCount?: number;
+            returned_count?: number;
             /** @description The query parameters that were applied */
             query?: {
                 [key: string]: unknown;
@@ -2093,23 +2184,23 @@ export interface components {
             /** @description Rover name (capitalized) */
             name?: string | null;
             /** @description Landing date on Mars (YYYY-MM-DD) */
-            landingDate?: string | null;
+            landing_date?: string | null;
             /** @description Launch date from Earth (YYYY-MM-DD) */
-            launchDate?: string | null;
+            launch_date?: string | null;
             /** @description Mission status (active, complete) */
             status?: string | null;
             /**
              * Format: int32
              * @description Maximum sol reached by this rover
              */
-            maxSol?: number;
+            max_sol?: number;
             /** @description Most recent photo date (YYYY-MM-DD) */
-            maxDate?: string | null;
+            max_date?: string | null;
             /**
              * Format: int32
              * @description Total number of photos in our database
              */
-            totalPhotos?: number;
+            total_photos?: number;
         };
         /** @description Rover manifest (photo history by sol) */
         RoverManifest: {
@@ -2172,8 +2263,8 @@ export interface components {
         SortDirection: 0 | 1;
         /** @description Sort field with direction */
         SortField: {
-            field?: string | null;
-            direction?: components["schemas"]["SortDirection"];
+            Field?: string | null;
+            Direction?: components["schemas"]["SortDirection"];
         };
         /** @description A single group in the statistics response */
         StatisticsGroup: {
@@ -2193,9 +2284,9 @@ export interface components {
              * Format: double
              * @description Average photos per sol (only for rover grouping)
              */
-            avgPerSol?: number | null;
+            avg_per_sol?: number | null;
             /** @description Earth date for this sol (only for sol grouping) */
-            earthDate?: string | null;
+            earth_date?: string | null;
         };
         /** @description Location information for time machine query */
         TimeMachineLocation: {
@@ -2213,12 +2304,12 @@ export interface components {
              * Format: int32
              * @description Total visits to this location
              */
-            totalVisits?: number;
+            total_visits?: number;
             /**
              * Format: int32
              * @description Total photos from this location
              */
-            totalPhotos?: number;
+            total_photos?: number;
         };
         /** @description Time machine resource representing photos from the same location at different times */
         TimeMachineResource: {
@@ -2228,12 +2319,12 @@ export interface components {
              */
             sol?: number;
             /** @description Earth date when photo was taken */
-            earthDate?: string | null;
+            earth_date?: string | null;
             /** @description Mars time when photo was taken */
-            marsTime?: string | null;
+            mars_time?: string | null;
             photo?: components["schemas"]["PhotoResource"];
             /** @description Lighting conditions at this time */
-            lightingConditions?: string | null;
+            lighting_conditions?: string | null;
         };
         /** @description Time machine query response */
         TimeMachineResponse: {
