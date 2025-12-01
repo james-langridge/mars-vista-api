@@ -56,9 +56,9 @@ Query Mars rover photos with powerful filtering.
 | min_width | integer | No | Minimum image width in pixels |
 | min_height | integer | No | Minimum image height in pixels |
 | sample_type | string | No | Image type: Full, Thumbnail, Subframe |
-| mars_time_min | string | No | Minimum Mars local time (M06:00:00 format) |
-| mars_time_max | string | No | Maximum Mars local time |
-| mars_time_golden_hour | boolean | No | Filter for sunrise/sunset photos |
+| mars_time_min | string | No | Minimum Mars local time (M06:00:00 format, minute precision) |
+| mars_time_max | string | No | Maximum Mars local time (minute precision) |
+| mars_time_golden_hour | boolean | No | Filter for sunrise/sunset photos (hours 5-7 and 17-19) |
 | mast_elevation_min | float | No | Minimum camera elevation angle (degrees) |
 | mast_elevation_max | float | No | Maximum camera elevation angle |
 | mast_azimuth_min | float | No | Minimum camera azimuth angle (degrees) |
@@ -924,3 +924,14 @@ curl -H "X-API-Key: YOUR_KEY" \
 curl -H "X-API-Key: YOUR_KEY" \
   "https://api.marsvista.dev/api/v2/photos?mast_elevation_min=-5&mast_elevation_max=5&include=rover,camera"
 ```
+
+### Get Photos at Location Within Time Window (Panorama Sequences)
+
+Filter by location AND time to get photos from a single panorama capture session:
+
+```bash
+curl -H "X-API-Key: YOUR_KEY" \
+  "https://api.marsvista.dev/api/v2/photos?rovers=curiosity&site=108&drive=876&mars_time_min=M12:28:00&mars_time_max=M12:31:00&include=rover,camera"
+```
+
+Time filtering uses minute-level precision, so `M12:28:00` to `M12:31:00` returns only photos captured within that 3-minute window.
