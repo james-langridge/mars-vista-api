@@ -105,6 +105,16 @@ export default function Footer() {
             <ul className="space-y-2">
               <li>
                 <a
+                  href="https://marsvista.space"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors text-sm"
+                >
+                  Photo Gallery
+                </a>
+              </li>
+              <li>
+                <a
                   href="https://github.com/james-langridge/mars-vista-api"
                   target="_blank"
                   rel="noopener noreferrer"

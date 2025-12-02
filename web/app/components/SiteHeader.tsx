@@ -52,6 +52,14 @@ export default function SiteHeader({ isAuthenticated }: SiteHeaderProps) {
             >
               API
             </a>
+            <a
+              href="https://marsvista.space"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+            >
+              Explore
+            </a>
           </nav>
 
           {/* Right side */}

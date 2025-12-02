@@ -11,13 +11,21 @@ export default function Hero() {
           <p className="text-xl sm:text-2xl text-slate-600 dark:text-slate-300 mb-8 max-w-3xl mx-auto">
             The complete archive of Mars rover imagery. Nearly 1.5 million unique photos from Curiosity, Perseverance, Opportunity, and Spirit missions. Updated daily.
           </p>
-          <div className="flex justify-center">
+          <div className="flex justify-center gap-4">
             <Link
               href="/signin"
-              className="px-12 py-4 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-semibold text-lg transition-colors shadow-lg"
+              className="px-8 py-4 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-semibold text-lg transition-colors shadow-lg"
             >
               Get Started
             </Link>
+            <a
+              href="https://marsvista.space"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-8 py-4 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-600 hover:border-orange-400 dark:hover:border-orange-500 rounded-lg font-semibold text-lg transition-colors shadow-lg"
+            >
+              Explore Photos
+            </a>
           </div>
         </div>
       </div>
