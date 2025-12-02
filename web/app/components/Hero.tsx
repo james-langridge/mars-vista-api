@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import ExternalLinkIcon from './ExternalLinkIcon';
 
 export default function Hero() {
   return (
@@ -22,9 +23,10 @@ export default function Hero() {
               href="https://marsvista.space"
               target="_blank"
               rel="noopener noreferrer"
-              className="px-8 py-4 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-600 hover:border-orange-400 dark:hover:border-orange-500 rounded-lg font-semibold text-lg transition-colors shadow-lg"
+              className="inline-flex items-center gap-2 px-8 py-4 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-600 hover:border-orange-400 dark:hover:border-orange-500 rounded-lg font-semibold text-lg transition-colors shadow-lg"
             >
               Explore Photos
+              <ExternalLinkIcon className="h-4 w-4" />
             </a>
           </div>
         </div>
