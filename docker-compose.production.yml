@@ -1,0 +1,118 @@
+version: '3.8'
+
+# Production-ready Docker Compose configuration
+#
+# Usage:
+#   1. Copy .env.example to .env and configure
+#   2. Run: docker compose -f docker-compose.production.yml up -d
+#
+# This configuration is suitable for:
+#   - Self-hosted deployments
+#   - Small to medium traffic
+#   - Single-server setups
+#
+# For high-availability deployments, consider managed databases
+# and container orchestration (Kubernetes, ECS, etc.)
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: marsvista-api
+    ports:
+      - "${API_PORT:-5000}:5000"
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - REDIS_URL=redis://redis:6379
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://0.0.0.0:5000
+      - INTERNAL_API_SECRET=${INTERNAL_API_SECRET}
+      - ADMIN_API_KEY=${ADMIN_API_KEY}
+      - SENTRY_DSN=${SENTRY_DSN:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  scraper:
+    build:
+      context: .
+      dockerfile: Dockerfile.scraper
+    container_name: marsvista-scraper
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - DOTNET_ENVIRONMENT=Production
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # Run daily at 2 AM UTC
+    # For cron-based scheduling, use external cron or scheduler
+    # This container exits after completion
+    profiles:
+      - scraper
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: marsvista-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-marsvista}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-marsvista}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-marsvista} -d ${POSTGRES_DB:-marsvista}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: marsvista-redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+volumes:
+  postgres_data:
+    name: marsvista_postgres_data
+  redis_data:
+    name: marsvista_redis_data
+
+# Usage:
+#
+# Start API and dependencies:
+#   docker compose -f docker-compose.production.yml up -d
+#
+# Run database migrations:
+#   docker compose -f docker-compose.production.yml exec api \
+#     dotnet ef database update --project src/MarsVista.Core
+#
+# Run scraper manually:
+#   docker compose -f docker-compose.production.yml --profile scraper run --rm scraper
+#
+# View logs:
+#   docker compose -f docker-compose.production.yml logs -f api
+#
+# Stop all services:
+#   docker compose -f docker-compose.production.yml down

@@ -1,95 +1,191 @@
 # Mars Vista API
 
-A modern REST API for Mars rover imagery, serving over 1.5 million photos from NASA's Perseverance, Curiosity, Opportunity, and Spirit missions.
+A modern REST API for Mars rover imagery, providing unified access to over 1.5 million photos from NASA's Perseverance, Curiosity, Opportunity, and Spirit missions.
 
-## Why Mars Vista?
+[![CI](https://github.com/james-langridge/mars-vista-api/actions/workflows/ci.yml/badge.svg)](https://github.com/james-langridge/mars-vista-api/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-NASA's raw image APIs are undocumented and inconsistent across missions. Mars Vista provides:
+## Features
 
-- **Unified interface** - One API for all four rovers
-- **Enhanced metadata** - Access 100% of NASA's data fields (vs ~5% in other APIs)
-- **Mars time queries** - Filter by sol, local solar time, golden hour
-- **Location search** - Query by site, drive, or proximity
-- **Multiple image sizes** - Thumbnails to full resolution
-- **Production ready** - Rate limiting, caching, comprehensive docs
+- **Unified API** - One interface for all four Mars rovers
+- **Complete NASA Data** - 100% metadata preservation (vs ~5% in other APIs)
+- **Mars Time Queries** - Filter by sol, local solar time, golden hour
+- **Location Search** - Query by site, drive, or proximity
+- **Multiple Image Sizes** - Thumbnails to full resolution
+- **Production Ready** - Rate limiting, caching, comprehensive documentation
 
 ## Quick Start
 
+### Using the Public API
+
+Get a free API key at [marsvista.dev/signin](https://marsvista.dev/signin), then:
+
 ```bash
-# Get your free API key at marsvista.dev/signin
 curl -H "X-API-Key: YOUR_KEY" \
   "https://api.marsvista.dev/api/v2/photos?rovers=perseverance&sol=1000"
 ```
 
-**[View full documentation →](https://marsvista.dev/docs)**
+### Self-Hosting
 
-## Links
+```bash
+# Clone and start
+git clone https://github.com/james-langridge/mars-vista-api.git
+cd mars-vista-api
+
+# Start dependencies
+docker compose up -d
+
+# Apply migrations
+dotnet ef database update --project src/MarsVista.Core
+
+# Run the API
+dotnet run --project src/MarsVista.Api
+```
+
+API runs at `http://localhost:5127`. See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for production setup.
+
+## API Documentation
+
+| Resource | Description |
+|----------|-------------|
+| [API Reference](https://marsvista.dev/docs) | Complete documentation |
+| [Swagger UI](https://api.marsvista.dev/swagger) | Interactive explorer |
+| [OpenAPI Spec](openapi.json) | Machine-readable specification |
+
+### For AI Agents
+
+LLM-optimized documentation:
 
 | Resource | URL |
 |----------|-----|
-| Documentation | [marsvista.dev/docs](https://marsvista.dev/docs) |
-| API Playground | [api.marsvista.dev/swagger](https://api.marsvista.dev/swagger) |
-| Status Page | [status.marsvista.dev](https://status.marsvista.dev) |
-| OpenAPI Spec | [marsvista.dev/docs/llm/openapi.json](https://marsvista.dev/docs/llm/openapi.json) |
+| Discovery | [marsvista.dev/llms.txt](https://marsvista.dev/llms.txt) |
+| TypeScript Types | [docs/llm/types.ts](https://marsvista.dev/docs/llm/types.ts) |
+| Reference | [docs/llm/reference.md](https://marsvista.dev/docs/llm/reference.md) |
 
-## For AI Agents
+## API Examples
 
-LLM-optimized documentation is available at:
+### Get Rovers
 
-| Resource | Path |
-|----------|------|
-| Discovery file | [marsvista.dev/llms.txt](https://marsvista.dev/llms.txt) |
-| TypeScript types | [web/app/public/docs/llm/types.ts](web/app/public/docs/llm/types.ts) |
-| API reference | [web/app/public/docs/llm/reference.md](web/app/public/docs/llm/reference.md) |
-| OpenAPI spec | [web/app/public/docs/llm/openapi.json](web/app/public/docs/llm/openapi.json) |
+```bash
+curl -H "X-API-Key: YOUR_KEY" \
+  "https://api.marsvista.dev/api/v2/rovers"
+```
+
+### Query Photos
+
+```bash
+# By rover and sol
+curl -H "X-API-Key: YOUR_KEY" \
+  "https://api.marsvista.dev/api/v2/photos?rovers=curiosity&sol_min=1000&sol_max=1100"
+
+# By date range
+curl -H "X-API-Key: YOUR_KEY" \
+  "https://api.marsvista.dev/api/v2/photos?earth_date_min=2024-01-01&earth_date_max=2024-01-31"
+
+# Golden hour photos
+curl -H "X-API-Key: YOUR_KEY" \
+  "https://api.marsvista.dev/api/v2/photos?rovers=perseverance&is_golden_hour=true"
+```
+
+### Include Related Data
+
+```bash
+curl -H "X-API-Key: YOUR_KEY" \
+  "https://api.marsvista.dev/api/v2/photos?include=rover,camera&per_page=10"
+```
 
 ## Project Structure
 
 ```
+mars-vista-api/
 ├── src/
-│   ├── MarsVista.Api/       # REST API (controllers, services, middleware)
-│   ├── MarsVista.Core/      # Shared library (entities, repositories, DbContext)
-│   └── MarsVista.Scraper/   # Daily NASA data ingestion service
-├── web/
-│   ├── app/                 # Next.js frontend (docs, dashboard, auth)
-│   └── status-site/         # Status page (Vite + React)
+│   ├── MarsVista.Api/         # REST API service
+│   ├── MarsVista.Core/        # Shared library (entities, DbContext)
+│   └── MarsVista.Scraper/     # NASA data ingestion
+├── tests/                     # Unit and integration tests
+├── docs/                      # Documentation
+│   ├── DEPLOYMENT.md          # Deployment guide
+│   ├── CONFIGURATION.md       # Environment variables
+│   ├── ARCHITECTURE.md        # System design
+│   └── CONTRIBUTING.md        # Contribution guidelines
+├── examples/                  # API collection examples
+├── scripts/                   # Utility scripts
+├── openapi.json              # OpenAPI specification
+└── docker-compose.yml        # Local development
 ```
 
 ## Tech Stack
 
-- **API**: .NET 9, ASP.NET Core, Entity Framework Core
-- **Database**: PostgreSQL 15 with JSONB for metadata preservation
-- **Caching**: Redis (two-level: memory + distributed)
-- **Frontend**: Next.js 15, Auth.js, Tailwind CSS
-- **Infrastructure**: Railway, Vercel
+- **.NET 9** - ASP.NET Core, Entity Framework Core
+- **PostgreSQL 15** - JSONB for metadata preservation
+- **Redis** - Two-level caching (L1 memory + L2 distributed)
+- **Docker** - Containerized deployment
 
-## Local Development
+## Development
 
 ### Prerequisites
 
 - .NET 9.0 SDK
 - Docker and Docker Compose
-- Node.js 20+ (for frontend)
+- PostgreSQL 15+ (or use Docker)
+- Redis 7+ (optional, for caching)
 
-### API
+### Setup
 
 ```bash
-docker compose up -d          # Start PostgreSQL + Redis
+# Clone repository
+git clone https://github.com/james-langridge/mars-vista-api.git
+cd mars-vista-api
+
+# Start PostgreSQL and Redis
+docker compose up -d
+
+# Apply database migrations
 dotnet ef database update --project src/MarsVista.Core
+
+# Run the API
 dotnet run --project src/MarsVista.Api
+
+# Run tests
+dotnet test
 ```
 
-API runs at `http://localhost:5127`
-
-### Frontend
+### Populating Data
 
 ```bash
-cd web/app
-npm install
-npm run dev
+# Scrape photos for a sol range
+curl -X POST "http://localhost:5127/api/v1/admin/scraper/perseverance?startSol=1000&endSol=1010" \
+  -H "X-API-Key: YOUR_ADMIN_KEY"
 ```
 
-Frontend runs at `http://localhost:3000`
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for bulk data ingestion.
+
+## Deployment
+
+### Docker
+
+```bash
+docker compose -f docker-compose.production.yml up -d
+```
+
+### Railway
+
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for Railway deployment instructions.
+
+### Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DATABASE_URL` | Yes | PostgreSQL connection string |
+| `REDIS_URL` | No | Redis connection (falls back to memory) |
+| `INTERNAL_API_SECRET` | No | For dashboard integration |
+| `ADMIN_API_KEY` | No | For scraper control |
+
+See [docs/CONFIGURATION.md](docs/CONFIGURATION.md) for complete reference.
+
+## Contributing
+
+Contributions are welcome! Please read [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for guidelines.
 
 ## License
 

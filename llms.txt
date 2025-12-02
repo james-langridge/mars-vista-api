@@ -1,0 +1,22 @@
+# Mars Vista API - AI Agent Resources
+#
+# This file helps AI agents discover documentation optimized for LLM consumption.
+# Human-friendly docs: https://marsvista.dev/docs
+# Source code: https://github.com/james-langridge/mars-vista-api
+
+# TypeScript type definitions - copy into your project
+types: https://marsvista.dev/docs/llm/types.ts
+
+# Complete API reference in markdown
+reference: https://marsvista.dev/docs/llm/reference.md
+
+# OpenAPI 3.0 specification (also available at repo root)
+openapi: https://marsvista.dev/docs/llm/openapi.json
+
+# Interactive API explorer
+swagger: https://api.marsvista.dev/swagger
+
+# Repository documentation
+github: https://github.com/james-langridge/mars-vista-api
+deployment: https://github.com/james-langridge/mars-vista-api/blob/main/docs/DEPLOYMENT.md
+configuration: https://github.com/james-langridge/mars-vista-api/blob/main/docs/CONFIGURATION.md

@@ -2,12 +2,12 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
-  test:
+  build-and-test:
     runs-on: ubuntu-latest
 
     services:
@@ -26,31 +26,109 @@ jobs:
           --health-retries 5
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: '9.0.x'
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
 
-    - name: Restore dependencies
-      run: dotnet restore MarsVista.sln
+      - name: Restore dependencies
+        run: dotnet restore MarsVista.sln
 
-    - name: Build
-      run: dotnet build MarsVista.sln --no-restore --configuration Release
+      - name: Build
+        run: dotnet build MarsVista.sln --no-restore --configuration Release
 
-    - name: Run API tests
-      env:
-        ASPNETCORE_ENVIRONMENT: Test
-        ConnectionStrings__DefaultConnection: "Host=localhost;Port=5432;Database=marsvista_dev;Username=marsvista;Password=marsvista_dev_password"
-      run: dotnet test tests/MarsVista.Api.Tests/MarsVista.Api.Tests.csproj --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=api-test-results.trx" --results-directory ./TestResults
+      - name: Run API tests
+        env:
+          ASPNETCORE_ENVIRONMENT: Test
+          ConnectionStrings__DefaultConnection: "Host=localhost;Port=5432;Database=marsvista_dev;Username=marsvista;Password=marsvista_dev_password"
+        run: |
+          dotnet test tests/MarsVista.Api.Tests/MarsVista.Api.Tests.csproj \
+            --configuration Release \
+            --no-build \
+            --verbosity normal \
+            --logger "trx;LogFileName=api-test-results.trx" \
+            --results-directory ./TestResults
 
-    - name: Run Scraper tests
-      run: dotnet test tests/MarsVista.Scraper.Tests/MarsVista.Scraper.Tests.csproj --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=scraper-test-results.trx" --results-directory ./TestResults
+      - name: Run Scraper tests
+        run: |
+          dotnet test tests/MarsVista.Scraper.Tests/MarsVista.Scraper.Tests.csproj \
+            --configuration Release \
+            --no-build \
+            --verbosity normal \
+            --logger "trx;LogFileName=scraper-test-results.trx" \
+            --results-directory ./TestResults
 
-    - name: Upload test results
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: test-results
-        path: './TestResults/*.trx'
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: './TestResults/*.trx'
+
+  validate-openapi:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate OpenAPI spec exists
+        run: |
+          if [[ ! -f "openapi.json" ]]; then
+            echo "Error: openapi.json not found in repository root"
+            exit 1
+          fi
+
+      - name: Install spectral
+        run: npm install -g @stoplight/spectral-cli
+
+      - name: Lint OpenAPI spec
+        run: |
+          spectral lint openapi.json --ruleset https://raw.githubusercontent.com/stoplightio/spectral/master/packages/rulesets/src/oas/index.ts || true
+          # Note: Currently warning-only, change to fail on errors when spec is clean
+
+      - name: Validate JSON syntax
+        run: |
+          if ! jq empty openapi.json 2>/dev/null; then
+            echo "Error: openapi.json is not valid JSON"
+            exit 1
+          fi
+          echo "OpenAPI spec is valid JSON"
+
+      - name: Check required fields
+        run: |
+          # Verify essential OpenAPI fields exist
+          if [[ "$(jq -r '.openapi' openapi.json)" != "3.0."* ]]; then
+            echo "Error: Missing or invalid openapi version"
+            exit 1
+          fi
+          if [[ "$(jq -r '.info.title' openapi.json)" == "null" ]]; then
+            echo "Error: Missing info.title"
+            exit 1
+          fi
+          if [[ "$(jq '.paths | keys | length' openapi.json)" -lt 1 ]]; then
+            echo "Error: No paths defined in OpenAPI spec"
+            exit 1
+          fi
+          echo "OpenAPI spec has required fields"
+          echo "  Version: $(jq -r '.openapi' openapi.json)"
+          echo "  Title: $(jq -r '.info.title' openapi.json)"
+          echo "  Paths: $(jq '.paths | keys | length' openapi.json)"
+
+  docker-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build API Docker image
+        run: docker build -t mars-vista-api:test .
+
+      - name: Build Scraper Docker image
+        run: docker build -t mars-vista-scraper:test -f Dockerfile.scraper .
+
+      - name: Verify images built
+        run: |
+          docker images | grep mars-vista-api
+          docker images | grep mars-vista-scraper

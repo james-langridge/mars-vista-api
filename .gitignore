@@ -1,72 +1,61 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# Build output
+bin/
+obj/
+out/
 
-# dependencies
-/node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
+# .NET
+*.user
+*.userosscache
+*.sln.docstates
+*.suo
+*.cache
+project.lock.json
+.vs/
+*.nupkg
+*.snupkg
 
-# testing
-/coverage
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
 
-# next.js
-/.next/
-/out/
+# Test results
+TestResults/
+*.trx
 
-# production
-/build
-
-# misc
-.DS_Store
-*.pem
-
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-
-# env files (can opt-in for committing if needed)
+# Environment files
 .env
 .env.*
 !.env.example
 
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
-
-.idea/
-
-/lib/generated/prisma
-
-bin/
-obj/
-
-# PostgreSQL
+# PostgreSQL dumps
 *.sql
 *.dump
-
-# Exception: Allow Prisma migration SQL files (must be version controlled)
-!web/app/prisma/migrations/**/migration.sql
-
-# Exception: Allow validation scripts
-!scripts/validate-data.sql
-
-# Runtime files
-*.log
-api.log
-logs/
-
-# Data and backups
 backups/
+
+# Exception: Keep validation scripts
+!scripts/*.sql
+
+# Logs
+*.log
+logs/
+api.log
+
+# Runtime
 failed_sols.txt
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Dependencies (if using Node.js tools)
+node_modules/
+
+# Coverage
+coverage/
+*.lcov
 
 # Local settings and Claude Code files
 .claude/
