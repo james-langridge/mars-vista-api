@@ -1,6 +1,6 @@
 # Mars Vista API
 
-A modern REST API for Mars rover imagery, serving nearly 1.5 million photos from NASA's Perseverance, Curiosity, Opportunity, and Spirit missions.
+A modern REST API for Mars rover imagery, serving over 1.5 million photos from NASA's Perseverance, Curiosity, Opportunity, and Spirit missions.
 
 ## Why Mars Vista?
 
