@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import DocsSearch from './docs/DocsSearch';
 import ThemeToggle from './docs/ThemeToggle';
+import ExternalLinkIcon from './ExternalLinkIcon';
 
 interface SiteHeaderProps {
   isAuthenticated: boolean;
@@ -48,17 +49,19 @@ export default function SiteHeader({ isAuthenticated }: SiteHeaderProps) {
               href="https://api.marsvista.dev/swagger"
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden sm:inline-block text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+              className="hidden sm:inline-flex items-center gap-1 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
             >
               API
+              <ExternalLinkIcon />
             </a>
             <a
               href="https://marsvista.space"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+              className="inline-flex items-center gap-1 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
             >
               Explore
+              <ExternalLinkIcon />
             </a>
           </nav>
 

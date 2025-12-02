@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import ExternalLinkIcon from './ExternalLinkIcon';
 
 export default function Footer() {
   return (
@@ -73,27 +74,32 @@ export default function Footer() {
                   href="https://api.marsvista.dev/swagger"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors text-sm"
+                  className="inline-flex items-center gap-1 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors text-sm"
                 >
                   Swagger UI
+                  <ExternalLinkIcon />
                 </a>
               </li>
               <li>
-                <Link
+                <a
                   href="/docs/llm/openapi.json"
-                  className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors text-sm"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors text-sm"
                 >
                   OpenAPI Spec
-                </Link>
+                  <ExternalLinkIcon />
+                </a>
               </li>
               <li>
                 <a
                   href="https://status.marsvista.dev"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors text-sm"
+                  className="inline-flex items-center gap-1 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors text-sm"
                 >
                   Status
+                  <ExternalLinkIcon />
                 </a>
               </li>
             </ul>
@@ -108,9 +114,10 @@ export default function Footer() {
                   href="https://marsvista.space"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors text-sm"
+                  className="inline-flex items-center gap-1 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors text-sm"
                 >
                   Photo Gallery
+                  <ExternalLinkIcon />
                 </a>
               </li>
               <li>
@@ -118,9 +125,10 @@ export default function Footer() {
                   href="https://github.com/james-langridge/mars-vista-api"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors text-sm"
+                  className="inline-flex items-center gap-1 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors text-sm"
                 >
                   GitHub
+                  <ExternalLinkIcon />
                 </a>
               </li>
               <li>
@@ -128,9 +136,10 @@ export default function Footer() {
                   href="https://github.com/james-langridge/mars-vista-api/issues"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors text-sm"
+                  className="inline-flex items-center gap-1 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors text-sm"
                 >
                   Report an Issue
+                  <ExternalLinkIcon />
                 </a>
               </li>
             </ul>
@@ -162,15 +171,16 @@ export default function Footer() {
 
         {/* Bottom bar */}
         <div className="mt-10 pt-8 border-t border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-slate-500 dark:text-slate-400">
-          <p>
+          <p className="inline-flex items-center gap-1">
             Built by{' '}
             <a
               href="https://langridge.dev"
-              className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors"
+              className="inline-flex items-center gap-1 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors"
               target="_blank"
               rel="noopener noreferrer"
             >
               James Langridge
+              <ExternalLinkIcon />
             </a>
           </p>
           <p>NASA imagery courtesy of JPL-Caltech</p>
