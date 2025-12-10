@@ -24,6 +24,9 @@ public interface IIncrementalScraperService
 
 public class IncrementalScraperService : IIncrementalScraperService
 {
+    private const int MaxCurrentSolRetries = 3;
+    private const int StuckJobThresholdHours = 1;
+
     private readonly IEnumerable<IScraperService> _scrapers;
     private readonly IScraperStateRepository _stateRepository;
     private readonly MarsVistaDbContext _context;
@@ -50,6 +53,9 @@ public class IncrementalScraperService : IIncrementalScraperService
     public async Task<IncrementalScrapeResult> ScrapeAllRoversAsync(CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Starting incremental scrape for all active rovers");
+
+        // Clean up stuck jobs before starting
+        await CleanupStuckJobsAsync(cancellationToken);
 
         var results = new List<RoverScrapeResult>();
         var overallStartTime = DateTime.UtcNow;
@@ -175,14 +181,19 @@ public class IncrementalScraperService : IIncrementalScraperService
                 return result;
             }
 
-            // Get current mission sol from NASA API
-            var currentSol = await GetCurrentMissionSolAsync(roverNameLower, cancellationToken);
+            // Get current mission sol with retry and fallback logic
+            var (currentSol, usedFallback) = await GetCurrentSolWithFallbackAsync(roverNameLower, cancellationToken);
             if (!currentSol.HasValue)
             {
-                _logger.LogWarning("Could not determine current sol for {Rover}", roverName);
+                _logger.LogError("Could not determine current sol for {Rover} (both NASA API and database fallback failed)", roverName);
                 result.Success = false;
-                result.ErrorMessage = "Could not determine current mission sol";
+                result.ErrorMessage = "Could not determine current mission sol (NASA API unavailable and no photos in database)";
                 return result;
+            }
+
+            if (usedFallback)
+            {
+                _logger.LogWarning("Using database fallback for {Rover} current sol: {Sol} (NASA API unavailable)", roverName, currentSol.Value);
             }
 
             // Get or create scraper state
@@ -252,11 +263,22 @@ public class IncrementalScraperService : IIncrementalScraperService
             result.PhotosAdded = totalPhotos;
             result.SolsSucceeded = solsSucceeded;
             result.SolsFailed = solsFailed;
-            result.Success = solsFailed == 0;
+            // Rover is successful if it completed (even with some sol failures)
+            // Only mark as failed if the rover failed completely (e.g., couldn't determine sol)
+            result.Success = true;
 
-            _logger.LogInformation(
-                "Completed {Rover}: {Photos} photos added, {Succeeded}/{Total} sols succeeded",
-                roverName, totalPhotos, solsSucceeded, result.SolsAttempted);
+            if (solsFailed > 0)
+            {
+                _logger.LogWarning(
+                    "Completed {Rover} with partial success: {Photos} photos added, {Succeeded}/{Total} sols succeeded, {Failed} sols failed",
+                    roverName, totalPhotos, solsSucceeded, result.SolsAttempted, solsFailed);
+            }
+            else
+            {
+                _logger.LogInformation(
+                    "Completed {Rover}: {Photos} photos added, {Succeeded}/{Total} sols succeeded",
+                    roverName, totalPhotos, solsSucceeded, result.SolsAttempted);
+            }
 
             return result;
         }
@@ -333,6 +355,110 @@ public class IncrementalScraperService : IIncrementalScraperService
             _logger.LogError(ex, "Error getting current sol for {Rover}", roverName);
             return null;
         }
+    }
+
+    /// <summary>
+    /// Get current mission sol with retry logic and fallback to database max sol
+    /// </summary>
+    private async Task<(int? Sol, bool UsedFallback)> GetCurrentSolWithFallbackAsync(
+        string roverName,
+        CancellationToken cancellationToken)
+    {
+        // Try NASA API with retry logic (3 attempts with exponential backoff)
+        for (var attempt = 1; attempt <= MaxCurrentSolRetries; attempt++)
+        {
+            var sol = await GetCurrentMissionSolAsync(roverName, cancellationToken);
+            if (sol.HasValue)
+            {
+                return (sol.Value, false);
+            }
+
+            if (attempt < MaxCurrentSolRetries)
+            {
+                var delay = TimeSpan.FromSeconds(Math.Pow(2, attempt));
+                _logger.LogWarning(
+                    "NASA API failed for {Rover} current sol (attempt {Attempt}/{Max}). Retrying in {Delay}s...",
+                    roverName, attempt, MaxCurrentSolRetries, delay.TotalSeconds);
+                await Task.Delay(delay, cancellationToken);
+            }
+        }
+
+        _logger.LogWarning(
+            "NASA API failed for {Rover} after {Max} attempts. Falling back to database max sol",
+            roverName, MaxCurrentSolRetries);
+
+        // Fallback: use database max sol + 1
+        var fallbackSol = await GetDatabaseMaxSolAsync(roverName, cancellationToken);
+        if (fallbackSol.HasValue)
+        {
+            // Use max sol + 1 as the assumed current sol (photos may arrive for current sol)
+            return (fallbackSol.Value + 1, true);
+        }
+
+        return (null, false);
+    }
+
+    /// <summary>
+    /// Get the maximum sol from the database for a rover
+    /// </summary>
+    private async Task<int?> GetDatabaseMaxSolAsync(string roverName, CancellationToken cancellationToken)
+    {
+        var rover = await _context.Rovers
+            .AsNoTracking()
+            .FirstOrDefaultAsync(r => r.Name.ToLower() == roverName, cancellationToken);
+
+        if (rover == null)
+        {
+            _logger.LogWarning("Rover {Rover} not found in database for fallback sol lookup", roverName);
+            return null;
+        }
+
+        var maxSol = await _context.Photos
+            .Where(p => p.RoverId == rover.Id)
+            .MaxAsync(p => (int?)p.Sol, cancellationToken);
+
+        if (!maxSol.HasValue)
+        {
+            _logger.LogWarning("No photos found for {Rover} in database for fallback sol lookup", roverName);
+            return null;
+        }
+
+        _logger.LogInformation("Database max sol for {Rover}: {MaxSol}", roverName, maxSol.Value);
+        return maxSol.Value;
+    }
+
+    /// <summary>
+    /// Clean up stuck jobs that have been in_progress for more than the threshold
+    /// </summary>
+    private async Task CleanupStuckJobsAsync(CancellationToken cancellationToken)
+    {
+        var threshold = DateTime.UtcNow.AddHours(-StuckJobThresholdHours);
+
+        var stuckJobs = await _context.ScraperJobHistories
+            .Where(j => j.Status == "in_progress" && j.JobStartedAt < threshold)
+            .ToListAsync(cancellationToken);
+
+        if (stuckJobs.Count == 0)
+        {
+            return;
+        }
+
+        _logger.LogWarning(
+            "Found {Count} stuck job(s) older than {Hours} hour(s). Marking as failed",
+            stuckJobs.Count, StuckJobThresholdHours);
+
+        foreach (var job in stuckJobs)
+        {
+            job.Status = "failed";
+            job.JobCompletedAt = DateTime.UtcNow;
+            job.ErrorSummary = $"Job was stuck in in_progress status for more than {StuckJobThresholdHours} hour(s). Cleaned up on startup.";
+
+            _logger.LogWarning(
+                "Marked stuck job {JobId} (started at {StartedAt}) as failed",
+                job.Id, job.JobStartedAt);
+        }
+
+        await _context.SaveChangesAsync(cancellationToken);
     }
 }
 
