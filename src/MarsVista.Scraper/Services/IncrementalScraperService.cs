@@ -358,8 +358,18 @@ public class IncrementalScraperService : IIncrementalScraperService
     }
 
     /// <summary>
-    /// Get current mission sol with retry logic and fallback to database max sol
+    /// Get current mission sol with retry logic and fallback to database max sol.
     /// </summary>
+    /// <remarks>
+    /// Limitation: When using database fallback, only max_sol + 1 is returned as the
+    /// assumed current sol. If NASA API is unavailable for multiple days, the mission
+    /// may have advanced several sols, but this method will only return one sol ahead.
+    /// Combined with the lookback window, this means some recent sols may be missed
+    /// until NASA API recovers. This is acceptable because:
+    /// 1. The lookback window ensures we re-scrape recent sols (catching late arrivals)
+    /// 2. Once NASA API recovers, the correct current sol will trigger full scraping
+    /// 3. Idempotent scraping means no data is lost, just potentially delayed
+    /// </remarks>
     private async Task<(int? Sol, bool UsedFallback)> GetCurrentSolWithFallbackAsync(
         string roverName,
         CancellationToken cancellationToken)
