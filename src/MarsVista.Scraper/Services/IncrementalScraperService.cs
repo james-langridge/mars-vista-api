@@ -100,8 +100,9 @@ public class IncrementalScraperService : IIncrementalScraperService
                     SolsFailed = result.SolsFailed,
                     PhotosAdded = result.PhotosAdded,
                     DurationSeconds = (int)(DateTime.UtcNow - roverStartTime).TotalSeconds,
-                    Status = result.Success ? "success" : "failed",
+                    Status = result.SolsFailed > 0 ? "partial" : (result.Success ? "success" : "failed"),
                     ErrorMessage = result.ErrorMessage,
+                    FailedSols = result.GetFailedSolsJson(),
                     CreatedAt = DateTime.UtcNow
                 };
                 roverDetails.Add(roverDetail);
@@ -231,6 +232,7 @@ public class IncrementalScraperService : IIncrementalScraperService
             var totalPhotos = 0;
             var solsSucceeded = 0;
             var solsFailed = 0;
+            var failedSolDetails = new List<FailedSolInfo>();
 
             // Scrape each sol in the range
             for (var sol = startSol; sol <= endSol; sol++)
@@ -241,15 +243,22 @@ public class IncrementalScraperService : IIncrementalScraperService
                     totalPhotos += photosAdded;
                     solsSucceeded++;
 
-                    if (photosAdded > 0)
-                    {
-                        _logger.LogInformation("Sol {Sol}: {Count} photos added", sol, photosAdded);
-                    }
+                    _logger.LogInformation(
+                        "Sol {Sol}: SUCCESS ({Count} photos)",
+                        sol, photosAdded);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error scraping sol {Sol}", sol);
+                    var failedSolInfo = FailedSolInfo.FromException(sol, ex);
+                    failedSolDetails.Add(failedSolInfo);
                     solsFailed++;
+
+                    _logger.LogWarning(
+                        "Sol {Sol}: FAILED - {ErrorType}: {ErrorMessage}",
+                        sol, failedSolInfo.ErrorType, failedSolInfo.ErrorMessage);
+
+                    // Log full exception at debug level for troubleshooting
+                    _logger.LogDebug(ex, "Sol {Sol} exception details", sol);
                 }
             }
 
@@ -263,15 +272,20 @@ public class IncrementalScraperService : IIncrementalScraperService
             result.PhotosAdded = totalPhotos;
             result.SolsSucceeded = solsSucceeded;
             result.SolsFailed = solsFailed;
+            result.FailedSolDetails = failedSolDetails;
             // Rover is successful if it completed (even with some sol failures)
             // Only mark as failed if the rover failed completely (e.g., couldn't determine sol)
             result.Success = true;
 
             if (solsFailed > 0)
             {
+                // Build summary of failed sols for logging
+                var failedSolsSummary = string.Join(", ",
+                    failedSolDetails.Select(f => $"{f.Sol} ({f.ErrorType})"));
+
                 _logger.LogWarning(
-                    "Completed {Rover} with partial success: {Photos} photos added, {Succeeded}/{Total} sols succeeded, {Failed} sols failed",
-                    roverName, totalPhotos, solsSucceeded, result.SolsAttempted, solsFailed);
+                    "Completed {Rover} with partial success: {Photos} photos added, {Succeeded}/{Total} sols succeeded, {Failed} sols failed. Failed sols: {FailedSols}",
+                    roverName, totalPhotos, solsSucceeded, result.SolsAttempted, solsFailed, failedSolsSummary);
             }
             else
             {
@@ -482,6 +496,11 @@ public class IncrementalScrapeResult
 
 public class RoverScrapeResult
 {
+    private static readonly JsonSerializerOptions SnakeCaseOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
+    };
+
     public string RoverName { get; set; } = "";
     public int PhotosAdded { get; set; }
     public int StartSol { get; set; }
@@ -491,4 +510,77 @@ public class RoverScrapeResult
     public int SolsFailed { get; set; }
     public bool Success { get; set; }
     public string? ErrorMessage { get; set; }
+    public List<FailedSolInfo> FailedSolDetails { get; set; } = new();
+
+    /// <summary>
+    /// Serialize failed sol details to JSON for database storage
+    /// </summary>
+    public string? GetFailedSolsJson()
+    {
+        if (FailedSolDetails.Count == 0)
+            return null;
+
+        return JsonSerializer.Serialize(FailedSolDetails, SnakeCaseOptions);
+    }
+}
+
+/// <summary>
+/// Structured information about a failed sol scrape attempt
+/// </summary>
+public class FailedSolInfo
+{
+    public int Sol { get; set; }
+    public string ErrorType { get; set; } = "";
+    public string ErrorMessage { get; set; } = "";
+    public DateTime Timestamp { get; set; }
+
+    /// <summary>
+    /// Classify an exception into an error type for structured logging
+    /// </summary>
+    public static FailedSolInfo FromException(int sol, Exception ex)
+    {
+        var errorType = ex switch
+        {
+            HttpRequestException httpEx => ClassifyHttpError(httpEx),
+            TaskCanceledException => "Timeout",
+            JsonException => "ParseError",
+            OperationCanceledException => "Cancelled",
+            _ => "Unknown"
+        };
+
+        return new FailedSolInfo
+        {
+            Sol = sol,
+            ErrorType = errorType,
+            ErrorMessage = GetConciseErrorMessage(ex),
+            Timestamp = DateTime.UtcNow
+        };
+    }
+
+    private static string ClassifyHttpError(HttpRequestException ex)
+    {
+        if (ex.StatusCode.HasValue)
+        {
+            // Named codes for common scraper errors improve log readability
+            // All other status codes fall through to HTTP_{code}
+            return ex.StatusCode.Value switch
+            {
+                System.Net.HttpStatusCode.ServiceUnavailable => "HTTP_503",
+                System.Net.HttpStatusCode.TooManyRequests => "HTTP_429",
+                _ => $"HTTP_{(int)ex.StatusCode.Value}"
+            };
+        }
+
+        // Network-level error without HTTP status
+        return "NetworkError";
+    }
+
+    private static string GetConciseErrorMessage(Exception ex)
+    {
+        // Get the most relevant part of the error message (first 200 chars)
+        var message = ex.Message;
+        if (message.Length > 200)
+            message = message[..200] + "...";
+        return message;
+    }
 }
