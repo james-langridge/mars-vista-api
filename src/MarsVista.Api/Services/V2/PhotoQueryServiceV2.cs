@@ -600,27 +600,62 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
 
         if (includeRover || includeCamera)
         {
+            // Defensive null checks: Include() can fail to populate relationships due to
+            // transient database issues, query timeouts, or connection pool edge cases.
+            // When a relationship is null but was requested, log a warning and omit it.
+            ResourceReference? roverRef = null;
+            if (includeRover)
+            {
+                if (photo.Rover != null)
+                {
+                    roverRef = new ResourceReference
+                    {
+                        Id = photo.Rover.Name.ToLowerInvariant(),
+                        Type = "rover",
+                        Attributes = new
+                        {
+                            name = photo.Rover.Name,
+                            status = photo.Rover.Status
+                        }
+                    };
+                }
+                else
+                {
+                    _logger.LogWarning(
+                        "Photo {PhotoId} has null Rover navigation property despite Include() - " +
+                        "possible transient database issue (rover_id={RoverId})",
+                        photo.Id, photo.RoverId);
+                }
+            }
+
+            CameraReference? cameraRef = null;
+            if (includeCamera)
+            {
+                if (photo.Camera != null)
+                {
+                    cameraRef = new CameraReference
+                    {
+                        Id = photo.Camera.Name,
+                        Type = "camera",
+                        Attributes = new CameraAttributes
+                        {
+                            FullName = photo.Camera.FullName
+                        }
+                    };
+                }
+                else
+                {
+                    _logger.LogWarning(
+                        "Photo {PhotoId} has null Camera navigation property despite Include() - " +
+                        "possible transient database issue (camera_id={CameraId})",
+                        photo.Id, photo.CameraId);
+                }
+            }
+
             relationships = new PhotoRelationships
             {
-                Rover = includeRover ? new ResourceReference
-                {
-                    Id = photo.Rover.Name.ToLowerInvariant(),
-                    Type = "rover",
-                    Attributes = new
-                    {
-                        name = photo.Rover.Name,
-                        status = photo.Rover.Status
-                    }
-                } : null,
-                Camera = includeCamera ? new CameraReference
-                {
-                    Id = photo.Camera.Name,
-                    Type = "camera",
-                    Attributes = new CameraAttributes
-                    {
-                        FullName = photo.Camera.FullName
-                    }
-                } : null
+                Rover = roverRef,
+                Camera = cameraRef
             };
         }
 
