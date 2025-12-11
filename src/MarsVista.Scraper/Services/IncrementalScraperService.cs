@@ -256,6 +256,9 @@ public class IncrementalScraperService : IIncrementalScraperService
                     _logger.LogWarning(
                         "Sol {Sol}: FAILED - {ErrorType}: {ErrorMessage}",
                         sol, failedSolInfo.ErrorType, failedSolInfo.ErrorMessage);
+
+                    // Log full exception at debug level for troubleshooting
+                    _logger.LogDebug(ex, "Sol {Sol} exception details", sol);
                 }
             }
 
@@ -493,6 +496,11 @@ public class IncrementalScrapeResult
 
 public class RoverScrapeResult
 {
+    private static readonly JsonSerializerOptions SnakeCaseOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
+    };
+
     public string RoverName { get; set; } = "";
     public int PhotosAdded { get; set; }
     public int StartSol { get; set; }
@@ -512,10 +520,7 @@ public class RoverScrapeResult
         if (FailedSolDetails.Count == 0)
             return null;
 
-        return JsonSerializer.Serialize(FailedSolDetails, new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
-        });
+        return JsonSerializer.Serialize(FailedSolDetails, SnakeCaseOptions);
     }
 }
 
@@ -556,14 +561,12 @@ public class FailedSolInfo
     {
         if (ex.StatusCode.HasValue)
         {
+            // Named codes for common scraper errors improve log readability
+            // All other status codes fall through to HTTP_{code}
             return ex.StatusCode.Value switch
             {
                 System.Net.HttpStatusCode.ServiceUnavailable => "HTTP_503",
                 System.Net.HttpStatusCode.TooManyRequests => "HTTP_429",
-                System.Net.HttpStatusCode.InternalServerError => "HTTP_500",
-                System.Net.HttpStatusCode.BadGateway => "HTTP_502",
-                System.Net.HttpStatusCode.GatewayTimeout => "HTTP_504",
-                System.Net.HttpStatusCode.NotFound => "HTTP_404",
                 _ => $"HTTP_{(int)ex.StatusCode.Value}"
             };
         }
