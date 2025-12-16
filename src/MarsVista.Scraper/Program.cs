@@ -54,9 +54,10 @@ try
         .UseSnakeCaseNamingConvention());
 
     // HTTP client for NASA API with resilience policies
+    // 90s timeout: NASA API can be slow, especially for sols with many photos
     builder.Services.AddHttpClient("NASA", client =>
     {
-        client.Timeout = TimeSpan.FromSeconds(30);
+        client.Timeout = TimeSpan.FromSeconds(90);
         client.DefaultRequestHeaders.Add("User-Agent", "MarsVistaScraper/1.0");
     })
     .AddPolicyHandler(GetRetryPolicy())
@@ -134,11 +135,14 @@ finally
 }
 
 // Retry policy with exponential backoff
+// Handles: transient HTTP errors, 429 Too Many Requests, and timeout exceptions
 static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy()
 {
     return HttpPolicyExtensions
         .HandleTransientHttpError()
         .OrResult(msg => msg.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+        .Or<TimeoutException>()
+        .Or<TaskCanceledException>()
         .WaitAndRetryAsync(
             retryCount: 3,
             sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
@@ -150,10 +154,13 @@ static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy()
 }
 
 // Circuit breaker - stop hitting NASA API if it's down
+// Also handles timeouts to prevent hammering a slow/unresponsive API
 static IAsyncPolicy<HttpResponseMessage> GetCircuitBreakerPolicy()
 {
     return HttpPolicyExtensions
         .HandleTransientHttpError()
+        .Or<TimeoutException>()
+        .Or<TaskCanceledException>()
         .CircuitBreakerAsync(
             handledEventsAllowedBeforeBreaking: 5,
             durationOfBreak: TimeSpan.FromMinutes(1));
