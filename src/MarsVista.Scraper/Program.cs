@@ -79,6 +79,14 @@ try
     // Get configuration
     var config = host.Services.GetRequiredService<IOptions<ScraperScheduleOptions>>().Value;
 
+    // Override lookback from environment variable if set
+    var lookbackEnv = Environment.GetEnvironmentVariable("LOOKBACK_SOLS");
+    if (!string.IsNullOrEmpty(lookbackEnv) && int.TryParse(lookbackEnv, out var lookbackSols))
+    {
+        config.LookbackSols = lookbackSols;
+        Log.Information("Using LOOKBACK_SOLS environment variable: {LookbackSols}", lookbackSols);
+    }
+
     var activeRovers = config.ActiveRovers.Count > 0
         ? config.ActiveRovers
         : new List<string> { "perseverance", "curiosity" };
