@@ -55,13 +55,13 @@ try
 
     // HTTP client for NASA API with resilience policies
     // 90s timeout: NASA API can be slow, especially for sols with many photos
+    // Note: Circuit breaker removed - not suitable for batch jobs with sol-level retry
     builder.Services.AddHttpClient("NASA", client =>
     {
         client.Timeout = TimeSpan.FromSeconds(90);
         client.DefaultRequestHeaders.Add("User-Agent", "MarsVistaScraper/1.0");
     })
-    .AddPolicyHandler(GetRetryPolicy())
-    .AddPolicyHandler(GetCircuitBreakerPolicy());
+    .AddPolicyHandler(GetRetryPolicy());
 
     // Register scrapers (only active rovers)
     builder.Services.AddScoped<IScraperService, PerseveranceScraper>();
@@ -153,15 +153,3 @@ static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy()
             });
 }
 
-// Circuit breaker - stop hitting NASA API if it's down
-// Also handles timeouts to prevent hammering a slow/unresponsive API
-static IAsyncPolicy<HttpResponseMessage> GetCircuitBreakerPolicy()
-{
-    return HttpPolicyExtensions
-        .HandleTransientHttpError()
-        .Or<TimeoutException>()
-        .Or<TaskCanceledException>()
-        .CircuitBreakerAsync(
-            handledEventsAllowedBeforeBreaking: 5,
-            durationOfBreak: TimeSpan.FromMinutes(1));
-}
