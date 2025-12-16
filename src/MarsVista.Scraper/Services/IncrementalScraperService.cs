@@ -262,6 +262,52 @@ public class IncrementalScraperService : IIncrementalScraperService
                 }
             }
 
+            // Retry failed sols up to 2 more times
+            const int maxRetries = 2;
+            for (var retry = 1; retry <= maxRetries && failedSolDetails.Count > 0; retry++)
+            {
+                var solsToRetry = failedSolDetails.Select(f => f.Sol).ToList();
+                _logger.LogInformation(
+                    "Retry {Retry}/{Max}: Retrying {Count} failed sols for {Rover}",
+                    retry, maxRetries, solsToRetry.Count, roverName);
+
+                // Wait before retry (exponential backoff: 10s, 20s)
+                await Task.Delay(TimeSpan.FromSeconds(10 * retry), cancellationToken);
+
+                foreach (var sol in solsToRetry)
+                {
+                    try
+                    {
+                        var photosAdded = await scraper.ScrapeSolAsync(sol, cancellationToken);
+                        totalPhotos += photosAdded;
+                        solsSucceeded++;
+                        solsFailed--;
+
+                        // Remove from failed list on success
+                        failedSolDetails.RemoveAll(f => f.Sol == sol);
+
+                        _logger.LogInformation(
+                            "Sol {Sol}: RETRY SUCCESS ({Count} photos)",
+                            sol, photosAdded);
+                    }
+                    catch (Exception ex)
+                    {
+                        // Update the failed sol info with latest error
+                        var existingFailure = failedSolDetails.FirstOrDefault(f => f.Sol == sol);
+                        if (existingFailure != null)
+                        {
+                            var newInfo = FailedSolInfo.FromException(sol, ex);
+                            existingFailure.ErrorType = newInfo.ErrorType;
+                            existingFailure.ErrorMessage = newInfo.ErrorMessage;
+                        }
+
+                        _logger.LogWarning(
+                            "Sol {Sol}: RETRY {Retry} FAILED - {ErrorType}",
+                            sol, retry, ex.GetType().Name);
+                    }
+                }
+            }
+
             // Update state with results
             state.LastScrapedSol = endSol;
             state.LastScrapeTimestamp = DateTime.UtcNow;
