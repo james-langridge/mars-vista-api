@@ -109,8 +109,20 @@ curl -X POST "http://localhost:5127/api/v1/admin/scraper/perseverance?startSol=1
 
 The scraper runs as a standalone service that:
 1. Queries NASA for the current mission sol
-2. Fetches photos from recent sols (7-day lookback)
+2. Fetches photos from recent sols (14-sol lookback by default)
 3. Stores new photos in the database
+
+### Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DATABASE_URL` | PostgreSQL connection string (Railway format) | - |
+| `LOOKBACK_SOLS` | Number of sols to look back for new photos | 14 |
+
+Example:
+```bash
+LOOKBACK_SOLS=7 dotnet run --project src/MarsVista.Scraper
+```
 
 ### Manual Scraping
 
