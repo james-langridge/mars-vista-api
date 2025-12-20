@@ -29,6 +29,7 @@ public class IncrementalScraperService : IIncrementalScraperService
 
     private readonly IEnumerable<IScraperService> _scrapers;
     private readonly IScraperStateRepository _stateRepository;
+    private readonly ISolCompletenessRepository _completenessRepository;
     private readonly MarsVistaDbContext _context;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IOptions<ScraperScheduleOptions> _scraperOptions;
@@ -37,6 +38,7 @@ public class IncrementalScraperService : IIncrementalScraperService
     public IncrementalScraperService(
         IEnumerable<IScraperService> scrapers,
         IScraperStateRepository stateRepository,
+        ISolCompletenessRepository completenessRepository,
         MarsVistaDbContext context,
         IHttpClientFactory httpClientFactory,
         IOptions<ScraperScheduleOptions> scraperOptions,
@@ -44,6 +46,7 @@ public class IncrementalScraperService : IIncrementalScraperService
     {
         _scrapers = scrapers;
         _stateRepository = stateRepository;
+        _completenessRepository = completenessRepository;
         _context = context;
         _httpClientFactory = httpClientFactory;
         _scraperOptions = scraperOptions;
@@ -182,6 +185,21 @@ public class IncrementalScraperService : IIncrementalScraperService
                 return result;
             }
 
+            // Get rover ID for completeness tracking
+            var rover = await _context.Rovers
+                .AsNoTracking()
+                .FirstOrDefaultAsync(r => r.Name.ToLower() == roverNameLower, cancellationToken);
+
+            if (rover == null)
+            {
+                _logger.LogWarning("Rover {Rover} not found in database", roverName);
+                result.Success = false;
+                result.ErrorMessage = $"Rover {roverName} not found in database";
+                return result;
+            }
+
+            var roverId = rover.Id;
+
             // Get current mission sol with retry and fallback logic
             var (currentSol, usedFallback) = await GetCurrentSolWithFallbackAsync(roverNameLower, cancellationToken);
             if (!currentSol.HasValue)
@@ -243,9 +261,14 @@ public class IncrementalScraperService : IIncrementalScraperService
                     totalPhotos += photosAdded;
                     solsSucceeded++;
 
+                    // Get total photo count for this sol and record success
+                    var solPhotoCount = await _context.Photos
+                        .CountAsync(p => p.RoverId == roverId && p.Sol == sol, cancellationToken);
+                    await _completenessRepository.RecordSuccessAsync(roverId, sol, solPhotoCount);
+
                     _logger.LogInformation(
-                        "Sol {Sol}: SUCCESS ({Count} photos)",
-                        sol, photosAdded);
+                        "Sol {Sol}: SUCCESS ({Count} new, {Total} total)",
+                        sol, photosAdded, solPhotoCount);
                 }
                 catch (Exception ex)
                 {
@@ -288,9 +311,14 @@ public class IncrementalScraperService : IIncrementalScraperService
                         // Remove from failed list on success
                         failedSolDetails.RemoveAll(f => f.Sol == sol);
 
+                        // Get total photo count for this sol and record success
+                        var solPhotoCount = await _context.Photos
+                            .CountAsync(p => p.RoverId == roverId && p.Sol == sol, cancellationToken);
+                        await _completenessRepository.RecordSuccessAsync(roverId, sol, solPhotoCount);
+
                         _logger.LogInformation(
-                            "Sol {Sol}: RETRY SUCCESS ({Count} photos)",
-                            sol, photosAdded);
+                            "Sol {Sol}: RETRY SUCCESS ({Count} new, {Total} total)",
+                            sol, photosAdded, solPhotoCount);
                     }
                     catch (Exception ex)
                     {
@@ -308,6 +336,13 @@ public class IncrementalScraperService : IIncrementalScraperService
                             sol, retry, ex.GetType().Name);
                     }
                 }
+            }
+
+            // Record failures for any remaining failed sols
+            foreach (var failure in failedSolDetails)
+            {
+                await _completenessRepository.RecordFailureAsync(
+                    roverId, failure.Sol, $"{failure.ErrorType}: {failure.ErrorMessage}");
             }
 
             // Update state with results

@@ -69,6 +69,7 @@ try
 
     // Register incremental scraper services
     builder.Services.AddScoped<IScraperStateRepository, ScraperStateRepository>();
+    builder.Services.AddScoped<ISolCompletenessRepository, SolCompletenessRepository>();
     builder.Services.AddScoped<IIncrementalScraperService, IncrementalScraperService>();
 
     // Configure scraper schedule options

@@ -172,6 +172,9 @@ builder.Services.AddScoped<IRoverQueryService, RoverQueryService>();
 builder.Services.AddScoped<IPhotoQueryService, PhotoQueryService>();
 builder.Services.AddScoped<IStatisticsService, StatisticsService>();
 
+// Repositories
+builder.Services.AddScoped<MarsVista.Core.Repositories.ISolCompletenessRepository, MarsVista.Core.Repositories.SolCompletenessRepository>();
+
 // v2 services
 builder.Services.AddScoped<MarsVista.Api.Services.V2.IPhotoQueryServiceV2, MarsVista.Api.Services.V2.PhotoQueryServiceV2>();
 builder.Services.AddScoped<MarsVista.Api.Services.V2.IRoverQueryServiceV2, MarsVista.Api.Services.V2.RoverQueryServiceV2>();
