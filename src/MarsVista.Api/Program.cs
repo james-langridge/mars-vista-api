@@ -158,9 +158,10 @@ else
 builder.Services.AddSingleton<IConnectionMultiplexer?>(redisMultiplexer);
 
 // HTTP client for NASA API with resilience policies
+// 45s timeout matches scraper for on-demand scraping via API
 builder.Services.AddHttpClient("NASA", client =>
 {
-    client.Timeout = TimeSpan.FromSeconds(30);
+    client.Timeout = TimeSpan.FromSeconds(45);
     client.DefaultRequestHeaders.Add("User-Agent", "MarsVistaAPI/1.0");
 })
 .AddPolicyHandler(GetRetryPolicy())
@@ -174,6 +175,10 @@ builder.Services.AddScoped<IStatisticsService, StatisticsService>();
 
 // Repositories
 builder.Services.AddScoped<MarsVista.Core.Repositories.ISolCompletenessRepository, MarsVista.Core.Repositories.SolCompletenessRepository>();
+
+// Scrapers (for on-demand scraping via API)
+builder.Services.AddScoped<MarsVista.Scraper.Services.IScraperService, MarsVista.Scraper.Services.PerseveranceScraper>();
+builder.Services.AddScoped<MarsVista.Scraper.Services.IScraperService, MarsVista.Scraper.Services.CuriosityScraper>();
 
 // v2 services
 builder.Services.AddScoped<MarsVista.Api.Services.V2.IPhotoQueryServiceV2, MarsVista.Api.Services.V2.PhotoQueryServiceV2>();
