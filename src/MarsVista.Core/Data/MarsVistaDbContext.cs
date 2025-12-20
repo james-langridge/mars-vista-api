@@ -21,6 +21,7 @@ public class MarsVistaDbContext : DbContext
     public DbSet<ScraperJobHistory> ScraperJobHistories { get; set; }
     public DbSet<ScraperJobRoverDetails> ScraperJobRoverDetails { get; set; }
     public DbSet<RoverWaypoint> RoverWaypoints { get; set; }
+    public DbSet<SolCompleteness> SolCompleteness { get; set; }
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
@@ -289,6 +290,33 @@ public class MarsVistaDbContext : DbContext
 
             // String length constraints
             entity.Property(e => e.Frame).HasMaxLength(10).IsRequired();
+
+            // Foreign key to Rover
+            entity.HasOne(e => e.Rover)
+                .WithMany()
+                .HasForeignKey(e => e.RoverId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Timestamps
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.UpdatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+        });
+
+        // SolCompleteness configuration
+        modelBuilder.Entity<SolCompleteness>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            // Unique constraint: one record per rover/sol combination
+            entity.HasIndex(e => new { e.RoverId, e.Sol }).IsUnique();
+
+            // Index for querying by status (find failed/pending sols)
+            entity.HasIndex(e => new { e.RoverId, e.ScrapeStatus });
+
+            // String length constraints
+            entity.Property(e => e.ScrapeStatus).HasMaxLength(20).IsRequired();
 
             // Foreign key to Rover
             entity.HasOne(e => e.Rover)
