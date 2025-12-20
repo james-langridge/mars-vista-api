@@ -78,6 +78,16 @@ try
 
     var host = builder.Build();
 
+    // Apply pending migrations on startup
+    // This ensures the scraper can run independently of API deployment order
+    using (var migrationScope = host.Services.CreateScope())
+    {
+        var dbContext = migrationScope.ServiceProvider.GetRequiredService<MarsVistaDbContext>();
+        Log.Information("Applying pending database migrations...");
+        await dbContext.Database.MigrateAsync();
+        Log.Information("Database migrations complete");
+    }
+
     // Get configuration
     var config = host.Services.GetRequiredService<IOptions<ScraperScheduleOptions>>().Value;
 
