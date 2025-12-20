@@ -54,11 +54,11 @@ try
         .UseSnakeCaseNamingConvention());
 
     // HTTP client for NASA API with resilience policies
-    // 90s timeout: NASA API can be slow, especially for sols with many photos
+    // 45s timeout: Fail fast - if NASA doesn't respond in 45s, retry at sol level
     // Note: Circuit breaker removed - not suitable for batch jobs with sol-level retry
     builder.Services.AddHttpClient("NASA", client =>
     {
-        client.Timeout = TimeSpan.FromSeconds(90);
+        client.Timeout = TimeSpan.FromSeconds(45);
         client.DefaultRequestHeaders.Add("User-Agent", "MarsVistaScraper/1.0");
     })
     .AddPolicyHandler(GetRetryPolicy());

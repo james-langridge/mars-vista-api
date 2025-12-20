@@ -262,9 +262,9 @@ public class IncrementalScraperService : IIncrementalScraperService
                 }
             }
 
-            // Retry failed sols up to 3 more times with longer exponential backoff
-            // NASA's Perseverance API is slow (~20-30s per sol) and occasionally times out
-            const int maxRetries = 3;
+            // Retry failed sols up to 2 more times with short backoff (fail fast strategy)
+            // Failed sols will be retried on subsequent daily runs
+            const int maxRetries = 2;
             for (var retry = 1; retry <= maxRetries && failedSolDetails.Count > 0; retry++)
             {
                 var solsToRetry = failedSolDetails.Select(f => f.Sol).ToList();
@@ -272,8 +272,8 @@ public class IncrementalScraperService : IIncrementalScraperService
                     "Retry {Retry}/{Max}: Retrying {Count} failed sols for {Rover}",
                     retry, maxRetries, solsToRetry.Count, roverName);
 
-                // Wait before retry (exponential backoff: 30s, 60s, 120s)
-                var delaySeconds = 30 * (int)Math.Pow(2, retry - 1);
+                // Wait before retry (short backoff: 15s, 30s)
+                var delaySeconds = 15 * retry;
                 await Task.Delay(TimeSpan.FromSeconds(delaySeconds), cancellationToken);
 
                 foreach (var sol in solsToRetry)
