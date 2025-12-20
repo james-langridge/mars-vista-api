@@ -732,6 +732,80 @@ namespace MarsVista.Core.Data.Migrations
                     b.ToTable("scraper_states", (string)null);
                 });
 
+            modelBuilder.Entity("MarsVista.Core.Entities.SolCompleteness", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("attempt_count");
+
+                    b.Property<int>("ConsecutiveFailures")
+                        .HasColumnType("integer")
+                        .HasColumnName("consecutive_failures");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("LastError")
+                        .HasColumnType("text")
+                        .HasColumnName("last_error");
+
+                    b.Property<DateTime?>("LastScrapeAttempt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_scrape_attempt");
+
+                    b.Property<DateTime?>("LastSuccessAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_success_at");
+
+                    b.Property<int?>("NasaExpectedCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("nasa_expected_count");
+
+                    b.Property<int>("PhotoCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("photo_count");
+
+                    b.Property<int>("RoverId")
+                        .HasColumnType("integer")
+                        .HasColumnName("rover_id");
+
+                    b.Property<string>("ScrapeStatus")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("scrape_status");
+
+                    b.Property<int>("Sol")
+                        .HasColumnType("integer")
+                        .HasColumnName("sol");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.HasKey("Id")
+                        .HasName("pk_sol_completeness");
+
+                    b.HasIndex("RoverId", "ScrapeStatus")
+                        .HasDatabaseName("ix_sol_completeness_rover_id_scrape_status");
+
+                    b.HasIndex("RoverId", "Sol")
+                        .IsUnique()
+                        .HasDatabaseName("ix_sol_completeness_rover_id_sol");
+
+                    b.ToTable("sol_completeness", (string)null);
+                });
+
             modelBuilder.Entity("MarsVista.Core.Entities.UsageEvent", b =>
                 {
                     b.Property<long>("Id")
@@ -850,6 +924,18 @@ namespace MarsVista.Core.Data.Migrations
                         .HasConstraintName("fk_scraper_job_rover_details_scraper_job_histories_job_history");
 
                     b.Navigation("JobHistory");
+                });
+
+            modelBuilder.Entity("MarsVista.Core.Entities.SolCompleteness", b =>
+                {
+                    b.HasOne("MarsVista.Core.Entities.Rover", "Rover")
+                        .WithMany()
+                        .HasForeignKey("RoverId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_sol_completeness_rovers_rover_id");
+
+                    b.Navigation("Rover");
                 });
 
             modelBuilder.Entity("MarsVista.Core.Entities.Camera", b =>
