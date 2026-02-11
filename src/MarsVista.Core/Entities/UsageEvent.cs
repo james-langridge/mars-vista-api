@@ -42,6 +42,16 @@ public class UsageEvent
     public int PhotosReturned { get; set; }
 
     /// <summary>
+    /// Query string from the request (e.g., "?per_page=10&sort=-earth_date")
+    /// </summary>
+    public string? QueryString { get; set; }
+
+    /// <summary>
+    /// Error detail extracted from the response body for failed requests (4xx/5xx)
+    /// </summary>
+    public string? ErrorDetail { get; set; }
+
+    /// <summary>
     /// When the API request was made
     /// </summary>
     public DateTime CreatedAt { get; set; }

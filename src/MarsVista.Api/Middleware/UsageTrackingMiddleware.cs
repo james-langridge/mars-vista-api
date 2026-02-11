@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text.Json;
 using MarsVista.Core.Data;
 using MarsVista.Core.Entities;
 
@@ -46,20 +47,82 @@ public class UsageTrackingMiddleware
         {
             stopwatch.Stop();
 
+            // Read error detail from response body before copying back
+            string? errorDetail = null;
+            if (context.Response.StatusCode >= 400)
+            {
+                errorDetail = ExtractErrorDetail(responseBody);
+            }
+
             // Copy response back to original stream
             responseBody.Seek(0, SeekOrigin.Begin);
             await responseBody.CopyToAsync(originalBodyStream);
             context.Response.Body = originalBodyStream;
 
             // Track usage (fire-and-forget)
-            _ = TrackUsageAsync(context, stopwatch.ElapsedMilliseconds);
+            _ = TrackUsageAsync(context, stopwatch.ElapsedMilliseconds, errorDetail);
+        }
+    }
+
+    /// <summary>
+    /// Extracts a concise error description from the response body JSON.
+    /// </summary>
+    private string? ExtractErrorDetail(MemoryStream responseBody)
+    {
+        try
+        {
+            if (responseBody.Length == 0) return null;
+
+            responseBody.Seek(0, SeekOrigin.Begin);
+            using var doc = JsonDocument.Parse(responseBody);
+            var root = doc.RootElement;
+
+            // RFC 7807 format (custom validation errors): { "detail": "...", "errors": [...] }
+            if (root.TryGetProperty("detail", out var detail) &&
+                root.TryGetProperty("errors", out var errors) &&
+                errors.ValueKind == JsonValueKind.Array)
+            {
+                var parts = new List<string>();
+                foreach (var err in errors.EnumerateArray())
+                {
+                    if (err.TryGetProperty("message", out var msg))
+                        parts.Add(msg.GetString() ?? "");
+                }
+                return parts.Count > 0 ? string.Join("; ", parts) : detail.GetString();
+            }
+
+            // ASP.NET Core validation format: { "errors": { "field": ["msg"] } }
+            if (root.TryGetProperty("errors", out var aspErrors) &&
+                aspErrors.ValueKind == JsonValueKind.Object)
+            {
+                var parts = new List<string>();
+                foreach (var prop in aspErrors.EnumerateObject())
+                {
+                    if (prop.Value.ValueKind == JsonValueKind.Array)
+                    {
+                        foreach (var msg in prop.Value.EnumerateArray())
+                            parts.Add($"{prop.Name}: {msg.GetString()}");
+                    }
+                }
+                return parts.Count > 0 ? string.Join("; ", parts) : null;
+            }
+
+            // Simple { "detail": "..." } or { "message": "..." }
+            if (root.TryGetProperty("detail", out var d)) return d.GetString();
+            if (root.TryGetProperty("message", out var m)) return m.GetString();
+
+            return null;
+        }
+        catch
+        {
+            return null;
         }
     }
 
     /// <summary>
     /// Asynchronously tracks the usage event without blocking the response.
     /// </summary>
-    private async Task TrackUsageAsync(HttpContext context, long responseTimeMs)
+    private async Task TrackUsageAsync(HttpContext context, long responseTimeMs, string? errorDetail)
     {
         try
         {
@@ -80,6 +143,11 @@ public class UsageTrackingMiddleware
                 photosReturned = (int)(context.Items["PhotosReturned"] ?? 0);
             }
 
+            // Capture query string for error requests
+            var queryString = context.Request.QueryString.HasValue
+                ? context.Request.QueryString.Value
+                : null;
+
             // Create usage event
             var usageEvent = new UsageEvent
             {
@@ -89,6 +157,8 @@ public class UsageTrackingMiddleware
                 StatusCode = context.Response.StatusCode,
                 ResponseTimeMs = (int)responseTimeMs,
                 PhotosReturned = photosReturned,
+                QueryString = queryString,
+                ErrorDetail = errorDetail,
                 CreatedAt = DateTime.UtcNow
             };
 
