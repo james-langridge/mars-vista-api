@@ -209,6 +209,8 @@ public class MarsVistaDbContext : DbContext
             entity.Property(e => e.UserEmail).HasMaxLength(255).IsRequired();
             entity.Property(e => e.Tier).HasMaxLength(20).IsRequired();
             entity.Property(e => e.Endpoint).HasMaxLength(500).IsRequired();
+            entity.Property(e => e.QueryString).HasMaxLength(2000);
+            entity.Property(e => e.ErrorDetail).HasMaxLength(2000);
 
             // Timestamp with default value
             entity.Property(e => e.CreatedAt)
