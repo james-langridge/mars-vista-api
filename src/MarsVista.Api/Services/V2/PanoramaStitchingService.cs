@@ -369,44 +369,47 @@ public class PanoramaStitchingService : IPanoramaStitchingService
         };
 
         using var process = new Process { StartInfo = startInfo };
+        _logger.LogInformation("Starting Python stitcher: {Script} with {Count} images, output: {Output}",
+            _pythonScriptPath, imagePaths.Count, outputPath);
         process.Start();
 
         await process.StandardInput.WriteAsync(input);
         process.StandardInput.Close();
 
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        cts.CancelAfter(TimeSpan.FromMinutes(5));
+        // Read stdout and stderr in parallel to avoid pipe buffer deadlock.
+        // Don't pass CancellationToken — pipe reads can't be cancelled in .NET.
+        // Instead, kill the process on timeout to unblock the reads.
+        var stdoutTask = process.StandardOutput.ReadToEndAsync();
+        var stderrTask = process.StandardError.ReadToEndAsync();
+        var readTask = Task.WhenAll(stdoutTask, stderrTask);
+        var timeoutTask = Task.Delay(TimeSpan.FromMinutes(5), ct);
 
-        try
-        {
-            // Read stdout and stderr in parallel to avoid deadlock when
-            // stderr buffer fills before stdout reaches EOF
-            var stdoutTask = process.StandardOutput.ReadToEndAsync(cts.Token);
-            var stderrTask = process.StandardError.ReadToEndAsync(cts.Token);
-            await Task.WhenAll(stdoutTask, stderrTask);
-            var stdout = stdoutTask.Result;
-            var stderr = stderrTask.Result;
-            await process.WaitForExitAsync(cts.Token);
-
-            if (!string.IsNullOrEmpty(stderr))
-                _logger.LogWarning("Python stitcher stderr: {Stderr}", stderr);
-
-            try
-            {
-                return JsonSerializer.Deserialize<StitchResult>(stdout)
-                    ?? new StitchResult { Status = "failed", Error = "Empty response from stitcher" };
-            }
-            catch (JsonException ex)
-            {
-                _logger.LogError(ex, "Failed to parse stitcher output: {Output}", stdout);
-                return new StitchResult { Status = "failed", Error = $"Invalid stitcher output: {stdout}" };
-            }
-        }
-        catch (OperationCanceledException)
+        var completed = await Task.WhenAny(readTask, timeoutTask);
+        if (completed != readTask)
         {
             try { process.Kill(entireProcessTree: true); }
             catch { /* best effort */ }
+            // Killing unblocks the pipe reads — wait briefly for them to finish
+            await Task.WhenAny(readTask, Task.Delay(5000));
             return new StitchResult { Status = "failed", Error = "Stitching timed out after 5 minutes" };
+        }
+
+        var stdout = stdoutTask.Result;
+        var stderr = stderrTask.Result;
+        await process.WaitForExitAsync(ct);
+
+        if (!string.IsNullOrEmpty(stderr))
+            _logger.LogWarning("Python stitcher stderr: {Stderr}", stderr);
+
+        try
+        {
+            return JsonSerializer.Deserialize<StitchResult>(stdout)
+                ?? new StitchResult { Status = "failed", Error = "Empty response from stitcher" };
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "Failed to parse stitcher output: {Output}", stdout);
+            return new StitchResult { Status = "failed", Error = $"Invalid stitcher output: {stdout}" };
         }
     }
 
