@@ -312,7 +312,7 @@ public class PhotoQueryParameters
     public DateTime? DateMaxParsed { get; set; }
 
     /// <summary>
-    /// Effective page number (with default)
+    /// Effective page number (with default, clamped to minimum of 1)
     /// </summary>
     public int PageNumber => Math.Max(Page ?? 1, 1);
 

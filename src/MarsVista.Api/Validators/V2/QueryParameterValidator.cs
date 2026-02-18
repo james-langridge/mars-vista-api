@@ -378,10 +378,18 @@ public class QueryParameterValidator
             (parameters.MastElevationMin, parameters.MastElevationMax) = (parameters.MastElevationMax, parameters.MastElevationMin);
         }
 
+        // Azimuth is circular (0-360), so min > max could mean a wrap-around query
+        // (e.g. 350-10 = "roughly north"). Auto-swapping would silently return wrong results.
         if (parameters.MastAzimuthMin.HasValue && parameters.MastAzimuthMax.HasValue &&
             parameters.MastAzimuthMin > parameters.MastAzimuthMax)
         {
-            (parameters.MastAzimuthMin, parameters.MastAzimuthMax) = (parameters.MastAzimuthMax, parameters.MastAzimuthMin);
+            errors.Add(new ValidationError
+            {
+                Field = "mast_azimuth_min",
+                Value = parameters.MastAzimuthMin,
+                Message = "mast_azimuth_min must be <= mast_azimuth_max (wrap-around not yet supported)",
+                Example = "mast_azimuth_min=90&mast_azimuth_max=180"
+            });
         }
 
         // Validate and parse field set
