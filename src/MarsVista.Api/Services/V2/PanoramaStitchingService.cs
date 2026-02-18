@@ -10,24 +10,23 @@ namespace MarsVista.Api.Services.V2;
 public class PanoramaStitchingService : IPanoramaStitchingService
 {
     private readonly IServiceScopeFactory _scopeFactory;
-    private readonly IPanoramaService _panoramaService;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<PanoramaStitchingService> _logger;
     private readonly string _stitchedImagesPath;
     private readonly string _pythonScriptPath;
+    private readonly CancellationTokenSource _shutdownCts = new();
 
     // Limit concurrent stitch jobs (CPU-intensive)
     private static readonly SemaphoreSlim _stitchSemaphore = new(2);
 
     public PanoramaStitchingService(
         IServiceScopeFactory scopeFactory,
-        IPanoramaService panoramaService,
         IHttpClientFactory httpClientFactory,
         ILogger<PanoramaStitchingService> logger,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IHostApplicationLifetime lifetime)
     {
         _scopeFactory = scopeFactory;
-        _panoramaService = panoramaService;
         _httpClientFactory = httpClientFactory;
         _logger = logger;
         _stitchedImagesPath = configuration["StitchedImagesPath"]
@@ -40,6 +39,41 @@ public class PanoramaStitchingService : IPanoramaStitchingService
         {
             _pythonScriptPath = Path.Combine(Directory.GetCurrentDirectory(), "scripts", "stitch_panorama.py");
         }
+
+        if (!File.Exists(_pythonScriptPath))
+        {
+            _logger.LogWarning("Python stitching script not found at {Path}. Stitching will fail at runtime.", _pythonScriptPath);
+        }
+
+        lifetime.ApplicationStopping.Register(() => _shutdownCts.Cancel());
+
+        // Mark orphaned "processing" records as failed on startup
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                using var scope = _scopeFactory.CreateScope();
+                var dbContext = scope.ServiceProvider.GetRequiredService<MarsVistaDbContext>();
+                var orphaned = await dbContext.StitchedPanoramas
+                    .Where(s => s.Status == "processing")
+                    .ToListAsync();
+                foreach (var record in orphaned)
+                {
+                    record.Status = "failed";
+                    record.ErrorMessage = "Interrupted by application restart";
+                    record.CompletedAt = DateTime.UtcNow;
+                }
+                if (orphaned.Count > 0)
+                {
+                    await dbContext.SaveChangesAsync();
+                    _logger.LogInformation("Marked {Count} orphaned stitch jobs as failed", orphaned.Count);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to clean up orphaned stitch records on startup");
+            }
+        });
     }
 
     public async Task<StitchStatusResponse> GetStitchStatusAsync(
@@ -83,7 +117,8 @@ public class PanoramaStitchingService : IPanoramaStitchingService
         else
         {
             // Verify panorama exists before creating record
-            var panoramaResource = await _panoramaService.GetPanoramaByIdAsync(panoramaId, cancellationToken);
+            var panoramaService = scope.ServiceProvider.GetRequiredService<IPanoramaService>();
+            var panoramaResource = await panoramaService.GetPanoramaByIdAsync(panoramaId, cancellationToken);
             if (panoramaResource == null)
                 return new StitchStatusResponse { Status = "not_found" };
 
@@ -97,8 +132,8 @@ public class PanoramaStitchingService : IPanoramaStitchingService
             await dbContext.SaveChangesAsync(cancellationToken);
         }
 
-        // Fire-and-forget background task
-        _ = Task.Run(() => ExecuteStitchAsync(panoramaId));
+        // Fire-and-forget background task with shutdown awareness
+        _ = Task.Run(() => ExecuteStitchAsync(panoramaId, _shutdownCts.Token));
 
         return new StitchStatusResponse { Status = "processing" };
     }
@@ -120,9 +155,15 @@ public class PanoramaStitchingService : IPanoramaStitchingService
         return File.Exists(fullPath) ? fullPath : null;
     }
 
-    private async Task ExecuteStitchAsync(string panoramaId)
+    private async Task ExecuteStitchAsync(string panoramaId, CancellationToken shutdownToken)
     {
-        await _stitchSemaphore.WaitAsync();
+        if (!await _stitchSemaphore.WaitAsync(TimeSpan.FromMinutes(10), shutdownToken))
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<MarsVistaDbContext>();
+            await SetFailedAsync(dbContext, panoramaId, "Timed out waiting for available stitching slot");
+            return;
+        }
         try
         {
             _logger.LogInformation("Starting stitch for panorama {PanoramaId}", panoramaId);
@@ -156,7 +197,7 @@ public class PanoramaStitchingService : IPanoramaStitchingService
 
             try
             {
-                var imagePaths = await DownloadPhotosAsync(selectedPhotos, tempDir);
+                var imagePaths = await DownloadPhotosAsync(selectedPhotos, tempDir, shutdownToken);
                 if (imagePaths.Count < 2)
                 {
                     await SetFailedAsync(dbContext, panoramaId, "Failed to download enough source images");
@@ -167,7 +208,7 @@ public class PanoramaStitchingService : IPanoramaStitchingService
                 var outputPath = Path.Combine(_stitchedImagesPath, $"{panoramaId}.jpg");
                 Directory.CreateDirectory(_stitchedImagesPath);
 
-                var result = await RunPythonStitcherAsync(imagePaths, outputPath);
+                var result = await RunPythonStitcherAsync(imagePaths, outputPath, shutdownToken);
 
                 if (result.Status == "success")
                 {
@@ -243,48 +284,57 @@ public class PanoramaStitchingService : IPanoramaStitchingService
         return selected;
     }
 
-    private async Task<List<string>> DownloadPhotosAsync(List<Photo> photos, string tempDir)
+    private async Task<List<string>> DownloadPhotosAsync(List<Photo> photos, string tempDir, CancellationToken ct = default)
     {
         var client = _httpClientFactory.CreateClient("NASA");
-        var paths = new List<string>();
+        var downloadSemaphore = new SemaphoreSlim(4);
+        var results = new (int index, string? path)[photos.Count];
 
-        foreach (var photo in photos)
+        var tasks = photos.Select(async (photo, index) =>
         {
             var url = photo.ImgSrcFull;
             if (string.IsNullOrEmpty(url))
             {
                 url = photo.ImgSrcLarge;
-                if (string.IsNullOrEmpty(url)) continue;
+                if (string.IsNullOrEmpty(url)) return;
             }
 
-            // Normalize to HTTPS
             if (url.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
                 url = "https://" + url[7..];
 
+            await downloadSemaphore.WaitAsync(ct);
             try
             {
-                var fileName = $"{paths.Count:D3}_{photo.Id}.jpg";
+                var fileName = $"{index:D3}_{photo.Id}.jpg";
                 var filePath = Path.Combine(tempDir, fileName);
 
-                using var response = await client.GetAsync(url);
+                using var response = await client.GetAsync(url, ct);
                 response.EnsureSuccessStatusCode();
 
                 await using var fs = File.Create(filePath);
-                await response.Content.CopyToAsync(fs);
+                await response.Content.CopyToAsync(fs, ct);
 
-                paths.Add(filePath);
+                results[index] = (index, filePath);
                 _logger.LogDebug("Downloaded photo {PhotoId} to {Path}", photo.Id, filePath);
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Failed to download photo {PhotoId} from {Url}", photo.Id, url);
             }
-        }
+            finally
+            {
+                downloadSemaphore.Release();
+            }
+        });
 
-        return paths;
+        await Task.WhenAll(tasks);
+
+        // Return in order, filtering out failed downloads
+        return results.Where(r => r.path != null).OrderBy(r => r.index).Select(r => r.path!).ToList();
     }
 
-    private async Task<StitchResult> RunPythonStitcherAsync(List<string> imagePaths, string outputPath)
+    private async Task<StitchResult> RunPythonStitcherAsync(List<string> imagePaths, string outputPath, CancellationToken ct = default)
     {
         var input = JsonSerializer.Serialize(new
         {
@@ -309,23 +359,34 @@ public class PanoramaStitchingService : IPanoramaStitchingService
         await process.StandardInput.WriteAsync(input);
         process.StandardInput.Close();
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
-        var stdout = await process.StandardOutput.ReadToEndAsync(cts.Token);
-        var stderr = await process.StandardError.ReadToEndAsync(cts.Token);
-        await process.WaitForExitAsync(cts.Token);
-
-        if (!string.IsNullOrEmpty(stderr))
-            _logger.LogWarning("Python stitcher stderr: {Stderr}", stderr);
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        cts.CancelAfter(TimeSpan.FromMinutes(5));
 
         try
         {
-            return JsonSerializer.Deserialize<StitchResult>(stdout)
-                ?? new StitchResult { Status = "failed", Error = "Empty response from stitcher" };
+            var stdout = await process.StandardOutput.ReadToEndAsync(cts.Token);
+            var stderr = await process.StandardError.ReadToEndAsync(cts.Token);
+            await process.WaitForExitAsync(cts.Token);
+
+            if (!string.IsNullOrEmpty(stderr))
+                _logger.LogWarning("Python stitcher stderr: {Stderr}", stderr);
+
+            try
+            {
+                return JsonSerializer.Deserialize<StitchResult>(stdout)
+                    ?? new StitchResult { Status = "failed", Error = "Empty response from stitcher" };
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogError(ex, "Failed to parse stitcher output: {Output}", stdout);
+                return new StitchResult { Status = "failed", Error = $"Invalid stitcher output: {stdout}" };
+            }
         }
-        catch (JsonException ex)
+        catch (OperationCanceledException)
         {
-            _logger.LogError(ex, "Failed to parse stitcher output: {Output}", stdout);
-            return new StitchResult { Status = "failed", Error = $"Invalid stitcher output: {stdout}" };
+            try { process.Kill(entireProcessTree: true); }
+            catch { /* best effort */ }
+            return new StitchResult { Status = "failed", Error = "Stitching timed out after 5 minutes" };
         }
     }
 
