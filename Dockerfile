@@ -24,8 +24,17 @@ RUN dotnet publish src/MarsVista.Api/MarsVista.Api.csproj \
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
 WORKDIR /app
 
+# Install Python3 + OpenCV for panorama stitching
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 python3-pip \
+    && pip3 install --break-system-packages opencv-python-headless==4.11.0.86 numpy \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
 # Copy published app
 COPY --from=build /app/publish .
+
+# Copy panorama stitching script
+COPY scripts/stitch_panorama.py scripts/stitch_panorama.py
 
 # Railway provides PORT environment variable
 ENV ASPNETCORE_URLS=http://0.0.0.0:${PORT:-5000}
