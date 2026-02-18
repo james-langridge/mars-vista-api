@@ -22,6 +22,7 @@ public class MarsVistaDbContext : DbContext
     public DbSet<ScraperJobRoverDetails> ScraperJobRoverDetails { get; set; }
     public DbSet<RoverWaypoint> RoverWaypoints { get; set; }
     public DbSet<SolCompleteness> SolCompleteness { get; set; }
+    public DbSet<StitchedPanorama> StitchedPanoramas { get; set; }
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
@@ -303,6 +304,26 @@ public class MarsVistaDbContext : DbContext
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.UpdatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+        });
+
+        // StitchedPanorama configuration
+        modelBuilder.Entity<StitchedPanorama>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            entity.HasIndex(e => e.PanoramaId).IsUnique();
+            entity.HasIndex(e => e.Status);
+
+            entity.Property(e => e.Id)
+                .HasDefaultValueSql("gen_random_uuid()");
+            entity.Property(e => e.PanoramaId).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.Status).HasMaxLength(20).IsRequired()
+                .HasDefaultValue("processing");
+            entity.Property(e => e.ImagePath).HasMaxLength(500);
+            entity.Property(e => e.ErrorMessage).HasMaxLength(2000);
+
+            entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP");
         });
 

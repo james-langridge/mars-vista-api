@@ -1,4 +1,5 @@
 using MarsVista.Api.DTOs.V2;
+using MarsVista.Core.Entities;
 
 namespace MarsVista.Api.Services.V2;
 
@@ -23,6 +24,13 @@ public interface IPanoramaService
     /// Get a specific panorama by ID
     /// </summary>
     Task<PanoramaResource?> GetPanoramaByIdAsync(
+        string panoramaId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Get raw Photo entities for a panorama (for stitching)
+    /// </summary>
+    Task<List<Photo>?> GetPanoramaPhotosAsync(
         string panoramaId,
         CancellationToken cancellationToken = default);
 }
