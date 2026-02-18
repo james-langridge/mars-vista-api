@@ -200,7 +200,18 @@ public class PanoramaService : IPanoramaService
             ? new Dictionary<string, StitchedPanorama> { { panoramaId, stitchRecord } }
             : null;
 
-        return ToPanoramaResource(sequence, stitchStatuses);
+        // Map constituent photos to PhotoResource for detail response
+        var photoIds = sequence.Photos.Select(p => p.Id).ToList();
+        var photoParams = new Models.V2.PhotoQueryParameters
+        {
+            Include = "rover,camera",
+            FieldSet = "extended",
+            IncludeList = new List<string> { "rover", "camera" },
+            FieldSetParsed = Models.V2.FieldSetType.Extended
+        };
+        var photoResources = await _photoService.GetPhotosByIdsAsync(photoIds, photoParams, cancellationToken);
+
+        return ToPanoramaResource(sequence, stitchStatuses, photoResources);
     }
 
     public async Task<List<Photo>?> GetPanoramaPhotosAsync(
@@ -416,7 +427,8 @@ public class PanoramaService : IPanoramaService
     /// Convert panorama sequence to resource DTO
     /// </summary>
     private PanoramaResource ToPanoramaResource(PanoramaSequence sequence,
-        Dictionary<string, StitchedPanorama>? stitchStatuses = null)
+        Dictionary<string, StitchedPanorama>? stitchStatuses = null,
+        List<PhotoResource>? photoResources = null)
     {
         var firstPhoto = sequence.Photos.First();
         var lastPhoto = sequence.Photos.Last();
@@ -499,6 +511,7 @@ public class PanoramaService : IPanoramaService
         {
             Id = panoramaId,
             Type = "panorama",
+            Photos = photoResources,
             Attributes = new PanoramaAttributes
             {
                 Rover = rover,
