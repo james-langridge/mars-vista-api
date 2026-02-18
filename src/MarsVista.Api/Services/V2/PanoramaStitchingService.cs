@@ -379,8 +379,13 @@ public class PanoramaStitchingService : IPanoramaStitchingService
 
         try
         {
-            var stdout = await process.StandardOutput.ReadToEndAsync(cts.Token);
-            var stderr = await process.StandardError.ReadToEndAsync(cts.Token);
+            // Read stdout and stderr in parallel to avoid deadlock when
+            // stderr buffer fills before stdout reaches EOF
+            var stdoutTask = process.StandardOutput.ReadToEndAsync(cts.Token);
+            var stderrTask = process.StandardError.ReadToEndAsync(cts.Token);
+            await Task.WhenAll(stdoutTask, stderrTask);
+            var stdout = stdoutTask.Result;
+            var stderr = stderrTask.Result;
             await process.WaitForExitAsync(cts.Token);
 
             if (!string.IsNullOrEmpty(stderr))
