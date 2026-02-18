@@ -36,6 +36,9 @@ try
 {
     Log.Information("Starting Mars Vista API");
 
+// Disable configuration file watching to avoid inotify limits in containers
+Environment.SetEnvironmentVariable("DOTNET_hostBuilder__reloadConfigOnChange", "false");
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Use Serilog for logging
