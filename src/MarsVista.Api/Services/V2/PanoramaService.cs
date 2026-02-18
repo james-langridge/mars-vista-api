@@ -150,8 +150,21 @@ public class PanoramaService : IPanoramaService
             .Take(pageSize)
             .ToList();
 
+        // Batch-load stitch statuses to avoid N+1 queries
+        var panoramaIds = paginatedPanoramas.Select(p =>
+        {
+            var first = p.Photos.First();
+            var r = first.Rover.Name.ToLowerInvariant();
+            return $"pano_{r}_{first.Sol}_{p.Index}";
+        }).ToList();
+
+        var stitchStatuses = await _context.StitchedPanoramas
+            .AsNoTracking()
+            .Where(s => panoramaIds.Contains(s.PanoramaId) && s.Status == "completed")
+            .ToDictionaryAsync(s => s.PanoramaId, cancellationToken);
+
         // Convert to resources
-        var resources = paginatedPanoramas.Select(p => ToPanoramaResource(p)).ToList();
+        var resources = paginatedPanoramas.Select(p => ToPanoramaResource(p, stitchStatuses)).ToList();
 
         var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
 
@@ -174,6 +187,33 @@ public class PanoramaService : IPanoramaService
     public async Task<PanoramaResource?> GetPanoramaByIdAsync(
         string panoramaId,
         CancellationToken cancellationToken = default)
+    {
+        var sequence = await DetectPanoramaSequenceByIdAsync(panoramaId, cancellationToken);
+        if (sequence == null)
+            return null;
+
+        var stitchRecord = await _context.StitchedPanoramas
+            .AsNoTracking()
+            .FirstOrDefaultAsync(s => s.PanoramaId == panoramaId && s.Status == "completed", cancellationToken);
+
+        var stitchStatuses = stitchRecord != null
+            ? new Dictionary<string, StitchedPanorama> { { panoramaId, stitchRecord } }
+            : null;
+
+        return ToPanoramaResource(sequence, stitchStatuses);
+    }
+
+    public async Task<List<Photo>?> GetPanoramaPhotosAsync(
+        string panoramaId,
+        CancellationToken cancellationToken = default)
+    {
+        var sequence = await DetectPanoramaSequenceByIdAsync(panoramaId, cancellationToken);
+        return sequence?.Photos;
+    }
+
+    private async Task<PanoramaSequence?> DetectPanoramaSequenceByIdAsync(
+        string panoramaId,
+        CancellationToken cancellationToken)
     {
         // Parse panorama ID (format: "pano_curiosity_1000_14")
         var parts = panoramaId.Split('_');
@@ -211,7 +251,7 @@ public class PanoramaService : IPanoramaService
         if (sequenceIndex < 0 || sequenceIndex >= panoramas.Count)
             return null;
 
-        return ToPanoramaResource(panoramas[sequenceIndex]);
+        return panoramas[sequenceIndex];
     }
 
     /// <summary>
@@ -375,7 +415,8 @@ public class PanoramaService : IPanoramaService
     /// <summary>
     /// Convert panorama sequence to resource DTO
     /// </summary>
-    private PanoramaResource ToPanoramaResource(PanoramaSequence sequence)
+    private PanoramaResource ToPanoramaResource(PanoramaSequence sequence,
+        Dictionary<string, StitchedPanorama>? stitchStatuses = null)
     {
         var firstPhoto = sequence.Photos.First();
         var lastPhoto = sequence.Photos.Last();
@@ -475,6 +516,9 @@ public class PanoramaService : IPanoramaService
             },
             Links = new PanoramaLinks
             {
+                StitchedPreview = stitchStatuses != null && stitchStatuses.ContainsKey(panoramaId)
+                    ? $"/api/v2/panoramas/{panoramaId}/stitch/image"
+                    : null,
                 DownloadSet = $"/api/v2/panoramas/{panoramaId}/download"
             }
         };

@@ -197,6 +197,7 @@ builder.Services.AddHostedService<MarsVista.Api.Services.V2.CacheStatsLoggingSer
 
 // v2 Phase 2 advanced features services
 builder.Services.AddScoped<MarsVista.Api.Services.V2.IPanoramaService, MarsVista.Api.Services.V2.PanoramaService>();
+builder.Services.AddSingleton<MarsVista.Api.Services.V2.IPanoramaStitchingService, MarsVista.Api.Services.V2.PanoramaStitchingService>();
 builder.Services.AddScoped<MarsVista.Api.Services.V2.ILocationService, MarsVista.Api.Services.V2.LocationService>();
 builder.Services.AddScoped<MarsVista.Api.Services.V2.IJourneyService, MarsVista.Api.Services.V2.JourneyService>();
 builder.Services.AddScoped<MarsVista.Api.Services.V2.ITraverseService, MarsVista.Api.Services.V2.TraverseService>();
@@ -401,6 +402,12 @@ if (app.Environment.IsDevelopment())
     var seeder = scope.ServiceProvider.GetRequiredService<DatabaseSeeder>();
     await seeder.SeedAsync();
 }
+
+// Ensure stitched images directory exists
+var stitchedImagesPath = builder.Configuration["StitchedImagesPath"]
+    ?? Environment.GetEnvironmentVariable("STITCHED_IMAGES_PATH")
+    ?? "./data/stitched";
+Directory.CreateDirectory(stitchedImagesPath);
 
 // Configure the HTTP request pipeline.
 // Enable Swagger in both development and production for API documentation
