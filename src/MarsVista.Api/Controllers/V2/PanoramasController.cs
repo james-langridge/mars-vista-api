@@ -185,7 +185,8 @@ public class PanoramasController : ControllerBase
 
         var stream = System.IO.File.OpenRead(imagePath);
         var contentDisposition = download ? "attachment" : "inline";
-        Response.Headers.Append("Content-Disposition", $"{contentDisposition}; filename=\"{id}.jpg\"");
+        var safeFilename = $"{id.Replace("\"", "").Replace("\r", "").Replace("\n", "")}.jpg";
+        Response.Headers.Append("Content-Disposition", $"{contentDisposition}; filename=\"{safeFilename}\"");
         Response.Headers.Append("Cache-Control", "public, max-age=31536000, immutable");
 
         return File(stream, "image/jpeg");

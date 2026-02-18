@@ -192,7 +192,15 @@ public class PanoramaService : IPanoramaService
         if (sequence == null)
             return null;
 
-        return ToPanoramaResource(sequence);
+        var stitchRecord = await _context.StitchedPanoramas
+            .AsNoTracking()
+            .FirstOrDefaultAsync(s => s.PanoramaId == panoramaId && s.Status == "completed", cancellationToken);
+
+        var stitchStatuses = stitchRecord != null
+            ? new Dictionary<string, StitchedPanorama> { { panoramaId, stitchRecord } }
+            : null;
+
+        return ToPanoramaResource(sequence, stitchStatuses);
     }
 
     public async Task<List<Photo>?> GetPanoramaPhotosAsync(
