@@ -180,6 +180,7 @@ public class PanoramaStitchingService : IPanoramaStitchingService
         }
         try
         {
+            var sw = Stopwatch.StartNew();
             _logger.LogInformation("Starting stitch for panorama {PanoramaId}", panoramaId);
 
             using var scope = _scopeFactory.CreateScope();
@@ -238,8 +239,8 @@ public class PanoramaStitchingService : IPanoramaStitchingService
                     await dbContext.SaveChangesAsync();
 
                     _logger.LogInformation(
-                        "Stitch completed for {PanoramaId}: {Width}x{Height}, {SizeBytes} bytes",
-                        panoramaId, result.Width, result.Height, result.SizeBytes);
+                        "Stitch completed for {PanoramaId}: {Width}x{Height}, {SizeBytes} bytes in {Elapsed}ms",
+                        panoramaId, result.Width, result.Height, result.SizeBytes, sw.ElapsedMilliseconds);
                 }
                 else
                 {
@@ -301,7 +302,7 @@ public class PanoramaStitchingService : IPanoramaStitchingService
     private async Task<List<string>> DownloadPhotosAsync(List<Photo> photos, string tempDir, CancellationToken ct = default)
     {
         var client = _httpClientFactory.CreateClient("NASA");
-        var downloadSemaphore = new SemaphoreSlim(4);
+        using var downloadSemaphore = new SemaphoreSlim(4);
         var results = new (int index, string? path)[photos.Count];
 
         var tasks = photos.Select(async (photo, index) =>

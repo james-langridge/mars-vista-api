@@ -142,6 +142,7 @@ public class PanoramasController : ControllerBase
         if (result.Status == "completed")
             return Ok(result);
 
+        Response.Headers.Append("Retry-After", "30");
         return StatusCode(202, result);
     }
 
