@@ -68,6 +68,8 @@ public class RoversController : ControllerBase
         [FromQuery(Name = "per_page")] int perPage = 25,
         CancellationToken cancellationToken = default)
     {
+        page = Math.Max(page, 1);
+
         // Validate rover exists
         var rover = await _roverQueryService.GetRoverByNameAsync(name, cancellationToken);
         if (rover == null)
@@ -121,6 +123,8 @@ public class RoversController : ControllerBase
         [FromQuery(Name = "per_page")] int perPage = 25,
         CancellationToken cancellationToken = default)
     {
+        page = Math.Max(page, 1);
+
         // Validate rover exists
         var rover = await _roverQueryService.GetRoverByNameAsync(name, cancellationToken);
         if (rover == null)
