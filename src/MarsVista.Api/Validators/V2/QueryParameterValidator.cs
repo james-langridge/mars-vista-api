@@ -103,13 +103,7 @@ public class QueryParameterValidator
 
         if (parameters.SolMin.HasValue && parameters.SolMax.HasValue && parameters.SolMin > parameters.SolMax)
         {
-            errors.Add(new ValidationError
-            {
-                Field = "sol_min",
-                Value = parameters.SolMin,
-                Message = "sol_min must be <= sol_max",
-                Example = "sol_min=100&sol_max=200"
-            });
+            (parameters.SolMin, parameters.SolMax) = (parameters.SolMax, parameters.SolMin);
         }
 
         // Validate and parse dates
@@ -157,13 +151,8 @@ public class QueryParameterValidator
 
         if (parameters.DateMinParsed.HasValue && parameters.DateMaxParsed.HasValue && parameters.DateMinParsed > parameters.DateMaxParsed)
         {
-            errors.Add(new ValidationError
-            {
-                Field = "date_min",
-                Value = parameters.DateMin,
-                Message = "date_min must be <= date_max",
-                Example = "date_min=2023-01-01&date_max=2023-12-31"
-            });
+            (parameters.DateMin, parameters.DateMax) = (parameters.DateMax, parameters.DateMin);
+            (parameters.DateMinParsed, parameters.DateMaxParsed) = (parameters.DateMaxParsed, parameters.DateMinParsed);
         }
 
         // Validate and parse sort fields
@@ -283,13 +272,8 @@ public class QueryParameterValidator
         if (parameters.MarsTimeMinParsed.HasValue && parameters.MarsTimeMaxParsed.HasValue &&
             parameters.MarsTimeMinParsed > parameters.MarsTimeMaxParsed)
         {
-            errors.Add(new ValidationError
-            {
-                Field = "mars_time_min",
-                Value = parameters.MarsTimeMin,
-                Message = "mars_time_min must be <= mars_time_max",
-                Example = "mars_time_min=M06:00:00&mars_time_max=M18:00:00"
-            });
+            (parameters.MarsTimeMin, parameters.MarsTimeMax) = (parameters.MarsTimeMax, parameters.MarsTimeMin);
+            (parameters.MarsTimeMinParsed, parameters.MarsTimeMaxParsed) = (parameters.MarsTimeMaxParsed, parameters.MarsTimeMinParsed);
         }
 
         // Validate location ranges
@@ -309,24 +293,12 @@ public class QueryParameterValidator
 
         if (parameters.SiteMin.HasValue && parameters.SiteMax.HasValue && parameters.SiteMin > parameters.SiteMax)
         {
-            errors.Add(new ValidationError
-            {
-                Field = "site_min",
-                Value = parameters.SiteMin,
-                Message = "site_min must be <= site_max",
-                Example = "site_min=70&site_max=80"
-            });
+            (parameters.SiteMin, parameters.SiteMax) = (parameters.SiteMax, parameters.SiteMin);
         }
 
         if (parameters.DriveMin.HasValue && parameters.DriveMax.HasValue && parameters.DriveMin > parameters.DriveMax)
         {
-            errors.Add(new ValidationError
-            {
-                Field = "drive_min",
-                Value = parameters.DriveMin,
-                Message = "drive_min must be <= drive_max",
-                Example = "drive_min=1000&drive_max=1200"
-            });
+            (parameters.DriveMin, parameters.DriveMax) = (parameters.DriveMax, parameters.DriveMin);
         }
 
         // location_radius requires both site and drive
@@ -344,24 +316,12 @@ public class QueryParameterValidator
         // Validate image dimension ranges
         if (parameters.MinWidth.HasValue && parameters.MaxWidth.HasValue && parameters.MinWidth > parameters.MaxWidth)
         {
-            errors.Add(new ValidationError
-            {
-                Field = "min_width",
-                Value = parameters.MinWidth,
-                Message = "min_width must be <= max_width",
-                Example = "min_width=1024&max_width=1920"
-            });
+            (parameters.MinWidth, parameters.MaxWidth) = (parameters.MaxWidth, parameters.MinWidth);
         }
 
         if (parameters.MinHeight.HasValue && parameters.MaxHeight.HasValue && parameters.MinHeight > parameters.MaxHeight)
         {
-            errors.Add(new ValidationError
-            {
-                Field = "min_height",
-                Value = parameters.MinHeight,
-                Message = "min_height must be <= max_height",
-                Example = "min_height=768&max_height=1080"
-            });
+            (parameters.MinHeight, parameters.MaxHeight) = (parameters.MaxHeight, parameters.MinHeight);
         }
 
         // Validate and parse sample types
@@ -415,25 +375,13 @@ public class QueryParameterValidator
         if (parameters.MastElevationMin.HasValue && parameters.MastElevationMax.HasValue &&
             parameters.MastElevationMin > parameters.MastElevationMax)
         {
-            errors.Add(new ValidationError
-            {
-                Field = "mast_elevation_min",
-                Value = parameters.MastElevationMin,
-                Message = "mast_elevation_min must be <= mast_elevation_max",
-                Example = "mast_elevation_min=-30&mast_elevation_max=30"
-            });
+            (parameters.MastElevationMin, parameters.MastElevationMax) = (parameters.MastElevationMax, parameters.MastElevationMin);
         }
 
         if (parameters.MastAzimuthMin.HasValue && parameters.MastAzimuthMax.HasValue &&
             parameters.MastAzimuthMin > parameters.MastAzimuthMax)
         {
-            errors.Add(new ValidationError
-            {
-                Field = "mast_azimuth_min",
-                Value = parameters.MastAzimuthMin,
-                Message = "mast_azimuth_min must be <= mast_azimuth_max",
-                Example = "mast_azimuth_min=90&mast_azimuth_max=180"
-            });
+            (parameters.MastAzimuthMin, parameters.MastAzimuthMax) = (parameters.MastAzimuthMax, parameters.MastAzimuthMin);
         }
 
         // Validate and parse field set

@@ -94,7 +94,6 @@ public class PhotoQueryParameters
     /// Page number (1-indexed, default: 1)
     /// </summary>
     [FromQuery(Name = "page")]
-    [Range(1, int.MaxValue, ErrorMessage = "page must be >= 1")]
     public int? Page { get; set; }
 
     /// <summary>
@@ -315,7 +314,7 @@ public class PhotoQueryParameters
     /// <summary>
     /// Effective page number (with default)
     /// </summary>
-    public int PageNumber => Page ?? 1;
+    public int PageNumber => Math.Max(Page ?? 1, 1);
 
     /// <summary>
     /// Effective page size (with default, capped at 100)
