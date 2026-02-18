@@ -176,13 +176,6 @@ builder.Services.AddScoped<IRoverQueryService, RoverQueryService>();
 builder.Services.AddScoped<IPhotoQueryService, PhotoQueryService>();
 builder.Services.AddScoped<IStatisticsService, StatisticsService>();
 
-// Repositories
-builder.Services.AddScoped<MarsVista.Core.Repositories.ISolCompletenessRepository, MarsVista.Core.Repositories.SolCompletenessRepository>();
-
-// Scrapers (for on-demand scraping via API)
-builder.Services.AddScoped<MarsVista.Scraper.Services.IScraperService, MarsVista.Scraper.Services.PerseveranceScraper>();
-builder.Services.AddScoped<MarsVista.Scraper.Services.IScraperService, MarsVista.Scraper.Services.CuriosityScraper>();
-
 // v2 services
 builder.Services.AddScoped<MarsVista.Api.Services.V2.IPhotoQueryServiceV2, MarsVista.Api.Services.V2.PhotoQueryServiceV2>();
 builder.Services.AddScoped<MarsVista.Api.Services.V2.IRoverQueryServiceV2, MarsVista.Api.Services.V2.RoverQueryServiceV2>();
@@ -471,6 +464,7 @@ app.UseMiddleware<JsonFormatMiddleware>();
 
 // Rate limiting (first defense - stops spam before API key check)
 app.UseRateLimiter();
+
 
 // Internal API authentication (protects /api/v1/internal/* endpoints)
 app.UseMiddleware<InternalApiMiddleware>();

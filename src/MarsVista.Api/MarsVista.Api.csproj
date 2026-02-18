@@ -10,7 +10,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MarsVista.Core\MarsVista.Core.csproj" />
-    <ProjectReference Include="..\MarsVista.Scraper\MarsVista.Scraper.csproj" />
   </ItemGroup>
 
   <ItemGroup>
