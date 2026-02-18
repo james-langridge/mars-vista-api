@@ -957,8 +957,9 @@ public class PanoramaServiceTests : IntegrationTestBase
     [Fact]
     public async Task GetPanoramasAsync_ReverseSweep_NormalizesMarsTimeRange()
     {
-        // Arrange - Panorama where camera sweeps in decreasing azimuth order,
-        // so the first photo (by azimuth) has a LATER Mars time than the last.
+        // Arrange - Photos ordered by increasing spacecraft clock but DECREASING Mars time.
+        // This simulates a reverse-sweep panorama where the camera sweeps in decreasing
+        // azimuth order, so the first photo (by clock) has a later Mars time than the last.
         DbContext.Photos.RemoveRange(DbContext.Photos);
         var now = DateTime.UtcNow;
 
@@ -969,17 +970,17 @@ public class PanoramaServiceTests : IntegrationTestBase
                 NasaId = $"REVERSE_{i:D4}",
                 Sol = 4500,
                 EarthDate = new DateTime(2024, 3, 1, 0, 0, 0, DateTimeKind.Utc),
-                DateTakenUtc = new DateTime(2024, 3, 1, 10, 0, 0, DateTimeKind.Utc).AddMinutes(-i), // Decreasing time
-                DateTakenMars = $"Sol-4500M14:{(4 - i):D2}:00", // 14:04, 14:03, 14:02, 14:01, 14:00
+                DateTakenUtc = new DateTime(2024, 3, 1, 10, 0, 0, DateTimeKind.Utc).AddMinutes(i),
+                DateTakenMars = $"Sol-4500M14:{(4 - i):D2}:00", // 14:04, 14:03, 14:02, 14:01, 14:00 (decreasing)
                 ImgSrcSmall = $"https://mars.nasa.gov/reverse_{i}_s.jpg",
                 ImgSrcMedium = $"https://mars.nasa.gov/reverse_{i}_m.jpg",
                 ImgSrcLarge = $"https://mars.nasa.gov/reverse_{i}_l.jpg",
                 ImgSrcFull = $"https://mars.nasa.gov/reverse_{i}_f.jpg",
                 Site = 120,
                 Drive = 2000,
-                MastAz = 45.0f + (i * 10.0f), // Increasing azimuth: 45, 55, 65, 75, 85
+                MastAz = 85.0f - (i * 10.0f), // Decreasing azimuth: 85, 75, 65, 55, 45
                 MastEl = -10.0f,
-                SpacecraftClock = 1313073000.0f - (i * 60.0f), // Decreasing clock (reverse sweep)
+                SpacecraftClock = 800000.0f + (i * 300.0f), // Increasing clock, float-safe gaps
                 RoverId = 1,
                 CameraId = 2,
                 CreatedAt = now,
@@ -996,12 +997,12 @@ public class PanoramaServiceTests : IntegrationTestBase
             pageNumber: 1,
             pageSize: 25);
 
-        // Assert - Mars time should be normalized so start <= end
+        // Assert - firstPhoto (lowest clock) has Mars time 14:04, lastPhoto has 14:00.
+        // Without the fix, mars_time_start=M14:04:00 > mars_time_end=M14:00:00.
+        // The swap should normalize to start=M14:00:00, end=M14:04:00.
         result.Data.Should().HaveCount(1);
         var panorama = result.Data.First();
-        panorama.Attributes!.MarsTimeStart.Should().NotBeNull();
-        panorama.Attributes.MarsTimeEnd.Should().NotBeNull();
-        string.Compare(panorama.Attributes.MarsTimeStart!, panorama.Attributes.MarsTimeEnd!, StringComparison.Ordinal)
-            .Should().BeLessThanOrEqualTo(0, "mars_time_start should be <= mars_time_end after normalization");
+        panorama.Attributes!.MarsTimeStart.Should().Be("M14:00:00");
+        panorama.Attributes.MarsTimeEnd.Should().Be("M14:04:00");
     }
 }
