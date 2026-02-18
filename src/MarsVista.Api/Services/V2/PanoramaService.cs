@@ -412,18 +412,19 @@ public class PanoramaService : IPanoramaService
         // Calculate quality tier
         var quality = GetQualityTier(coverageDegrees, uniquePositions);
 
-        // Get Mars time range
+        // Get Mars time range (normalize so start <= end for reverse-sweep panoramas)
         string? marsTimeStart = null;
         string? marsTimeEnd = null;
-        if (!string.IsNullOrEmpty(firstPhoto.DateTakenMars) &&
-            MarsTimeHelper.TryExtractTimeFromTimestamp(firstPhoto.DateTakenMars, out var startTime))
+        TimeSpan parsedStart = default, parsedEnd = default;
+        bool hasStart = !string.IsNullOrEmpty(firstPhoto.DateTakenMars) &&
+            MarsTimeHelper.TryExtractTimeFromTimestamp(firstPhoto.DateTakenMars, out parsedStart);
+        bool hasEnd = !string.IsNullOrEmpty(lastPhoto.DateTakenMars) &&
+            MarsTimeHelper.TryExtractTimeFromTimestamp(lastPhoto.DateTakenMars, out parsedEnd);
+        if (hasStart) marsTimeStart = MarsTimeHelper.FormatMarsTime(parsedStart);
+        if (hasEnd) marsTimeEnd = MarsTimeHelper.FormatMarsTime(parsedEnd);
+        if (hasStart && hasEnd && parsedStart > parsedEnd)
         {
-            marsTimeStart = MarsTimeHelper.FormatMarsTime(startTime);
-        }
-        if (!string.IsNullOrEmpty(lastPhoto.DateTakenMars) &&
-            MarsTimeHelper.TryExtractTimeFromTimestamp(lastPhoto.DateTakenMars, out var endTime))
-        {
-            marsTimeEnd = MarsTimeHelper.FormatMarsTime(endTime);
+            (marsTimeStart, marsTimeEnd) = (marsTimeEnd, marsTimeStart);
         }
 
         // Average elevation

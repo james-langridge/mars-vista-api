@@ -953,4 +953,55 @@ public class PanoramaServiceTests : IntegrationTestBase
         panorama.Links.DownloadSet.Should().Contain("/api/v2/panoramas/");
         panorama.Links.DownloadSet.Should().Contain("/download");
     }
+
+    [Fact]
+    public async Task GetPanoramasAsync_ReverseSweep_NormalizesMarsTimeRange()
+    {
+        // Arrange - Panorama where camera sweeps in decreasing azimuth order,
+        // so the first photo (by azimuth) has a LATER Mars time than the last.
+        DbContext.Photos.RemoveRange(DbContext.Photos);
+        var now = DateTime.UtcNow;
+
+        for (int i = 0; i < 5; i++)
+        {
+            DbContext.Photos.Add(new Photo
+            {
+                NasaId = $"REVERSE_{i:D4}",
+                Sol = 4500,
+                EarthDate = new DateTime(2024, 3, 1, 0, 0, 0, DateTimeKind.Utc),
+                DateTakenUtc = new DateTime(2024, 3, 1, 10, 0, 0, DateTimeKind.Utc).AddMinutes(-i), // Decreasing time
+                DateTakenMars = $"Sol-4500M14:{(4 - i):D2}:00", // 14:04, 14:03, 14:02, 14:01, 14:00
+                ImgSrcSmall = $"https://mars.nasa.gov/reverse_{i}_s.jpg",
+                ImgSrcMedium = $"https://mars.nasa.gov/reverse_{i}_m.jpg",
+                ImgSrcLarge = $"https://mars.nasa.gov/reverse_{i}_l.jpg",
+                ImgSrcFull = $"https://mars.nasa.gov/reverse_{i}_f.jpg",
+                Site = 120,
+                Drive = 2000,
+                MastAz = 45.0f + (i * 10.0f), // Increasing azimuth: 45, 55, 65, 75, 85
+                MastEl = -10.0f,
+                SpacecraftClock = 1313073000.0f - (i * 60.0f), // Decreasing clock (reverse sweep)
+                RoverId = 1,
+                CameraId = 2,
+                CreatedAt = now,
+                UpdatedAt = now
+            });
+        }
+        await DbContext.SaveChangesAsync();
+
+        // Act
+        var result = await _service.GetPanoramasAsync(
+            rovers: "curiosity",
+            solMin: 4500,
+            solMax: 4500,
+            pageNumber: 1,
+            pageSize: 25);
+
+        // Assert - Mars time should be normalized so start <= end
+        result.Data.Should().HaveCount(1);
+        var panorama = result.Data.First();
+        panorama.Attributes!.MarsTimeStart.Should().NotBeNull();
+        panorama.Attributes.MarsTimeEnd.Should().NotBeNull();
+        string.Compare(panorama.Attributes.MarsTimeStart!, panorama.Attributes.MarsTimeEnd!, StringComparison.Ordinal)
+            .Should().BeLessThanOrEqualTo(0, "mars_time_start should be <= mars_time_end after normalization");
+    }
 }
