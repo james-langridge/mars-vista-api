@@ -214,14 +214,6 @@ public class PanoramaService : IPanoramaService
         return ToPanoramaResource(sequence, stitchStatuses, photoResources);
     }
 
-    public async Task<List<Photo>?> GetPanoramaPhotosAsync(
-        string panoramaId,
-        CancellationToken cancellationToken = default)
-    {
-        var sequence = await DetectPanoramaSequenceByIdAsync(panoramaId, cancellationToken);
-        return sequence?.Photos;
-    }
-
     private async Task<PanoramaSequence?> DetectPanoramaSequenceByIdAsync(
         string panoramaId,
         CancellationToken cancellationToken)
@@ -530,7 +522,7 @@ public class PanoramaService : IPanoramaService
             Links = new PanoramaLinks
             {
                 StitchedPreview = stitchStatuses != null && stitchStatuses.ContainsKey(panoramaId)
-                    ? $"/api/v2/panoramas/{panoramaId}/stitch/image"
+                    ? $"/stitch/{panoramaId}/image"
                     : null,
                 DownloadSet = $"/api/v2/panoramas/{panoramaId}/download"
             }
