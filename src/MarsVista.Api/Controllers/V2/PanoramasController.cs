@@ -13,16 +13,13 @@ namespace MarsVista.Api.Controllers.V2;
 public class PanoramasController : ControllerBase
 {
     private readonly IPanoramaService _panoramaService;
-    private readonly IPanoramaStitchingService _stitchingService;
     private readonly ILogger<PanoramasController> _logger;
 
     public PanoramasController(
         IPanoramaService panoramaService,
-        IPanoramaStitchingService stitchingService,
         ILogger<PanoramasController> logger)
     {
         _panoramaService = panoramaService;
-        _stitchingService = stitchingService;
         _logger = logger;
     }
 
@@ -112,84 +109,5 @@ public class PanoramasController : ControllerBase
         }
 
         return Ok(panorama);
-    }
-
-    /// <summary>
-    /// Request panorama stitching (idempotent)
-    /// </summary>
-    [HttpPost("{id}/stitch")]
-    [ProducesResponseType(typeof(StitchStatusResponse), 200)]
-    [ProducesResponseType(typeof(StitchStatusResponse), 202)]
-    [ProducesResponseType(typeof(ApiError), 404)]
-    public async Task<IActionResult> RequestStitch(
-        string id,
-        CancellationToken cancellationToken = default)
-    {
-        var result = await _stitchingService.RequestStitchAsync(id, cancellationToken);
-
-        if (result.Status == "not_found")
-        {
-            return NotFound(new ApiError
-            {
-                Type = "/errors/not-found",
-                Title = "Not Found",
-                Status = 404,
-                Detail = $"Panorama with ID '{id}' not found",
-                Instance = Request.Path
-            });
-        }
-
-        if (result.Status == "completed")
-            return Ok(result);
-
-        Response.Headers.Append("Retry-After", "30");
-        return StatusCode(202, result);
-    }
-
-    /// <summary>
-    /// Get panorama stitch status
-    /// </summary>
-    [HttpGet("{id}/stitch")]
-    [ProducesResponseType(typeof(StitchStatusResponse), 200)]
-    public async Task<IActionResult> GetStitchStatus(
-        string id,
-        CancellationToken cancellationToken = default)
-    {
-        var result = await _stitchingService.GetStitchStatusAsync(id, cancellationToken);
-        return Ok(result);
-    }
-
-    /// <summary>
-    /// Serve the stitched panorama image
-    /// </summary>
-    [HttpGet("{id}/stitch/image")]
-    [ProducesResponseType(typeof(FileStreamResult), 200)]
-    [ProducesResponseType(typeof(ApiError), 404)]
-    public async Task<IActionResult> GetStitchedImage(
-        string id,
-        [FromQuery] bool download = false,
-        CancellationToken cancellationToken = default)
-    {
-        var imagePath = await _stitchingService.GetStitchedImagePathAsync(id, cancellationToken);
-
-        if (imagePath == null)
-        {
-            return NotFound(new ApiError
-            {
-                Type = "/errors/not-found",
-                Title = "Not Found",
-                Status = 404,
-                Detail = $"Stitched image for panorama '{id}' not found",
-                Instance = Request.Path
-            });
-        }
-
-        var stream = System.IO.File.OpenRead(imagePath);
-        var contentDisposition = download ? "attachment" : "inline";
-        var safeFilename = $"{id.Replace("\"", "").Replace("\r", "").Replace("\n", "")}.jpg";
-        Response.Headers.Append("Content-Disposition", $"{contentDisposition}; filename=\"{safeFilename}\"");
-        Response.Headers.Append("Cache-Control", "public, max-age=31536000, immutable");
-
-        return File(stream, "image/jpeg");
     }
 }
