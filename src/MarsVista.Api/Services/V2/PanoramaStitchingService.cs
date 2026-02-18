@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using MarsVista.Core.Data;
 using MarsVista.Core.Entities;
@@ -129,7 +130,20 @@ public class PanoramaStitchingService : IPanoramaStitchingService
                 CreatedAt = DateTime.UtcNow
             };
             dbContext.StitchedPanoramas.Add(existing);
-            await dbContext.SaveChangesAsync(cancellationToken);
+            try
+            {
+                await dbContext.SaveChangesAsync(cancellationToken);
+            }
+            catch (DbUpdateException)
+            {
+                // Concurrent insert won the race - return the existing record
+                var raced = await dbContext.StitchedPanoramas
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(s => s.PanoramaId == panoramaId, cancellationToken);
+                if (raced != null)
+                    return ToResponse(raced, panoramaId);
+                throw;
+            }
         }
 
         // Fire-and-forget background task with shutdown awareness
@@ -420,10 +434,15 @@ public class PanoramaStitchingService : IPanoramaStitchingService
 
     private record StitchResult
     {
+        [JsonPropertyName("status")]
         public string Status { get; init; } = string.Empty;
+        [JsonPropertyName("width")]
         public int? Width { get; init; }
+        [JsonPropertyName("height")]
         public int? Height { get; init; }
+        [JsonPropertyName("size_bytes")]
         public long? SizeBytes { get; init; }
+        [JsonPropertyName("error")]
         public string? Error { get; init; }
     }
 }
