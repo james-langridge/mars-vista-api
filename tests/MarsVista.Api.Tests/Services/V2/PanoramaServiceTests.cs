@@ -1306,14 +1306,15 @@ public class PanoramaServiceTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task GetPanoramasAsync_MultiRow_LowGridCompletenessRejected()
+    public async Task GetPanoramasAsync_MultiRow_LowGridCompletenessRecoversAsSingleRow()
     {
-        // Arrange - 4 elevation tiers with 3+ positions but < 40% grid completeness
-        // Tier 0 (-30°): 8 azimuth columns → defines max columns = 8
+        // Arrange - 4 elevation tiers with only 1 tier having >= 3 columns
+        // Tier 0 (-30°): 8 azimuth columns → valid single-row panorama
         // Tier 1 (-15°): 1 column
         // Tier 2 (0°): 1 column
         // Tier 3 (15°): 1 column
-        // Grid = 4 rows × 8 cols = 32 cells, filled = 11 → 34% < 40%
+        // Multi-row rejected: only 1 tier has >= 3 columns (need at least 2)
+        // Fallback: tier 0 recovered as single-row panorama
         DbContext.Photos.RemoveRange(DbContext.Photos);
         var now = DateTime.UtcNow;
         var clock = 5100000.0f;
@@ -1380,8 +1381,94 @@ public class PanoramaServiceTests : IntegrationTestBase
             pageNumber: 1,
             pageSize: 25);
 
-        // Assert - Rejected: 11/(4*8) = 34% grid completeness < 40% threshold
-        result.Data.Should().BeEmpty();
+        // Assert - Multi-row rejected (only 1 tier has >= 3 columns), but tier 0 recovered as single-row
+        result.Data.Should().HaveCount(1);
+        var panorama = result.Data.First();
+        panorama.Attributes!.MosaicType.Should().Be("single_row");
+        panorama.Attributes.TotalPhotos.Should().Be(8);
+        panorama.Attributes.ElevationRows.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task GetPanoramasAsync_MultiRow_SparseTierFallsBackToSingleRow()
+    {
+        // Arrange - Reproduces the sol 4324 false positive pattern:
+        // Tier 0 (~5°): 4 unique azimuths spanning 220° (a real sweep)
+        // Tier 1 (~17°): 15 bracketed exposures at 1 azimuth (stationary burst)
+        // Multi-row rejected: only 1 tier has >= 3 columns. Tier 0 recovered as single-row.
+        DbContext.Photos.RemoveRange(DbContext.Photos);
+        var now = DateTime.UtcNow;
+        var clock = 5200000.0f;
+
+        // Tier 0: 4 unique positions
+        var azimuths = new[] { 65.0f, 105.0f, 145.0f, 285.0f };
+        foreach (var az in azimuths)
+        {
+            DbContext.Photos.Add(new Photo
+            {
+                NasaId = $"FALLBACK_T0_{az}",
+                Sol = 7011,
+                EarthDate = new DateTime(2025, 6, 11, 0, 0, 0, DateTimeKind.Utc),
+                DateTakenUtc = new DateTime(2025, 6, 11, 10, 0, 0, DateTimeKind.Utc),
+                ImgSrcSmall = $"https://mars.nasa.gov/fb_t0_{az}_s.jpg",
+                ImgSrcMedium = $"https://mars.nasa.gov/fb_t0_{az}_m.jpg",
+                ImgSrcLarge = $"https://mars.nasa.gov/fb_t0_{az}_l.jpg",
+                ImgSrcFull = $"https://mars.nasa.gov/fb_t0_{az}_f.jpg",
+                Site = 311,
+                Drive = 5011,
+                MastAz = az,
+                MastEl = 5.0f,
+                SpacecraftClock = clock,
+                RoverId = 1,
+                CameraId = 2,
+                CreatedAt = now,
+                UpdatedAt = now
+            });
+            clock += 60.0f;
+        }
+
+        // Tier 1: bracketed burst at single position (15 photos, 1 unique azimuth)
+        for (int i = 0; i < 15; i++)
+        {
+            DbContext.Photos.Add(new Photo
+            {
+                NasaId = $"FALLBACK_T1_{i}",
+                Sol = 7011,
+                EarthDate = new DateTime(2025, 6, 11, 0, 0, 0, DateTimeKind.Utc),
+                DateTakenUtc = new DateTime(2025, 6, 11, 10, 5, 0, DateTimeKind.Utc),
+                ImgSrcSmall = $"https://mars.nasa.gov/fb_t1_{i}_s.jpg",
+                ImgSrcMedium = $"https://mars.nasa.gov/fb_t1_{i}_m.jpg",
+                ImgSrcLarge = $"https://mars.nasa.gov/fb_t1_{i}_l.jpg",
+                ImgSrcFull = $"https://mars.nasa.gov/fb_t1_{i}_f.jpg",
+                Site = 311,
+                Drive = 5011,
+                MastAz = 115.0f, // Single position
+                MastEl = 17.0f, // 12° gap from tier 0 → separate tier
+                SpacecraftClock = clock,
+                RoverId = 1,
+                CameraId = 2,
+                CreatedAt = now,
+                UpdatedAt = now
+            });
+            clock += 10.0f;
+        }
+        await DbContext.SaveChangesAsync();
+
+        // Act
+        var result = await _service.GetPanoramasAsync(
+            rovers: "curiosity",
+            solMin: 7011,
+            solMax: 7011,
+            pageNumber: 1,
+            pageSize: 25);
+
+        // Assert - Multi-row rejected (tier 1 has only 1 column), tier 0 recovered as single-row
+        result.Data.Should().HaveCount(1);
+        var panorama = result.Data.First();
+        panorama.Attributes!.MosaicType.Should().Be("single_row");
+        panorama.Attributes.TotalPhotos.Should().Be(4); // Just the 4 sweep photos
+        panorama.Attributes.CoverageDegrees.Should().BeApproximately(220.0f, 0.1f);
+        panorama.Attributes.ElevationRows.Should().Be(1);
     }
 
     [Fact]

@@ -364,6 +364,37 @@ public class PanoramaService : IPanoramaService
                             MaxElevation = elevations.Max()
                         });
                     }
+                    else
+                    {
+                        // Fallback: try each tier as a single-row panorama.
+                        // A block with multiple elevation tiers that fails mosaic validation
+                        // may still contain valid single-row panoramas within individual tiers.
+                        foreach (var tier in tiers)
+                        {
+                            var tierPhotos = block
+                                .Where(p => GetElevationTier(p.MastEl ?? 0, tiers) == tier)
+                                .OrderBy(p => p.SpacecraftClock)
+                                .ThenBy(p => p.MastEl)
+                                .ToList();
+
+                            if (tierPhotos.Count >= minPhotos && IsValidPanorama(tierPhotos))
+                            {
+                                var uniqueAz = tierPhotos
+                                    .Select(p => Math.Round(p.MastAz ?? 0))
+                                    .Distinct()
+                                    .Count();
+
+                                panoramas.Add(new PanoramaSequence
+                                {
+                                    Photos = new List<Photo>(tierPhotos),
+                                    Index = panoramaIndex++,
+                                    IsMultiRow = false,
+                                    ElevationTierCount = 1,
+                                    AzimuthColumnCount = uniqueAz
+                                });
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -485,12 +516,14 @@ public class PanoramaService : IPanoramaService
             return false;
         }
 
-        // Grid structure: each tier must have enough columns for stitching
-        var maxColumnsPerTier = tiers.Max(tier =>
+        // Compute per-tier column counts in one pass
+        var tierColumnCounts = tiers.Select(tier =>
         {
             var tierPhotos = photos.Where(p => GetElevationTier(p.MastEl ?? 0, tiers) == tier);
             return tierPhotos.Select(p => Math.Round(p.MastAz ?? 0)).Distinct().Count();
-        });
+        }).ToList();
+
+        var maxColumnsPerTier = tierColumnCounts.Max();
 
         if (maxColumnsPerTier < MinUniquePositions)
         {
@@ -499,14 +532,20 @@ public class PanoramaService : IPanoramaService
             return false;
         }
 
+        // At least 2 tiers must have meaningful column counts for a real multi-row mosaic.
+        // One dense tier + sparse single-shot tiers is not a mosaic — it's a sweep with
+        // unrelated observations at different elevations (e.g., bracketed bursts).
+        var tiersWithEnoughColumns = tierColumnCounts.Count(c => c >= MinUniquePositions);
+        if (tiersWithEnoughColumns < 2)
+        {
+            _logger.LogDebug("IsValidMosaic: FAILED - only {Count} tier(s) have >= {Min} columns (need at least 2)",
+                tiersWithEnoughColumns, MinUniquePositions);
+            return false;
+        }
+
         // Grid completeness: how many (tier, azimuth) cells are filled vs total possible
         var totalCells = tiers.Count * maxColumnsPerTier;
-        var filledCells = 0;
-        foreach (var tier in tiers)
-        {
-            var tierPhotos = photos.Where(p => GetElevationTier(p.MastEl ?? 0, tiers) == tier);
-            filledCells += tierPhotos.Select(p => Math.Round(p.MastAz ?? 0)).Distinct().Count();
-        }
+        var filledCells = tierColumnCounts.Sum();
         var completeness = (float)filledCells / totalCells;
 
         if (completeness < MinGridCompleteness)
