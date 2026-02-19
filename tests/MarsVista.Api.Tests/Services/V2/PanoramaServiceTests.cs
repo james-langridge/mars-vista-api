@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using MarsVista.Core.Entities;
+using MarsVista.Api.DTOs.V2;
 using MarsVista.Api.Services.V2;
 using MarsVista.Api.Tests.Integration;
 
@@ -1004,5 +1005,431 @@ public class PanoramaServiceTests : IntegrationTestBase
         var panorama = result.Data.First();
         panorama.Attributes!.MarsTimeStart.Should().Be("M14:00:00");
         panorama.Attributes.MarsTimeEnd.Should().Be("M14:04:00");
+    }
+
+    // ===== Multi-Row Mosaic Detection Tests =====
+
+    [Fact]
+    public async Task GetPanoramasAsync_MultiRow_DetectsThreeRowMosaic()
+    {
+        // Arrange - 3 rows × 5 columns, elevation tiers 10° apart
+        DbContext.Photos.RemoveRange(DbContext.Photos);
+        var now = DateTime.UtcNow;
+
+        var elevations = new[] { -20.0f, -10.0f, 0.0f }; // 3 tiers, 10° gaps
+        var azimuths = new[] { 30.0f, 50.0f, 70.0f, 90.0f, 110.0f }; // 5 columns, 80° range
+        var clock = 2000000.0f;
+
+        for (int row = 0; row < elevations.Length; row++)
+        {
+            for (int col = 0; col < azimuths.Length; col++)
+            {
+                DbContext.Photos.Add(new Photo
+                {
+                    NasaId = $"MULTI_{row}_{col}",
+                    Sol = 7000,
+                    EarthDate = new DateTime(2025, 6, 1, 0, 0, 0, DateTimeKind.Utc),
+                    DateTakenUtc = new DateTime(2025, 6, 1, 10, 0, 0, DateTimeKind.Utc).AddSeconds(clock - 2000000),
+                    ImgSrcSmall = $"https://mars.nasa.gov/multi_{row}_{col}_s.jpg",
+                    ImgSrcMedium = $"https://mars.nasa.gov/multi_{row}_{col}_m.jpg",
+                    ImgSrcLarge = $"https://mars.nasa.gov/multi_{row}_{col}_l.jpg",
+                    ImgSrcFull = $"https://mars.nasa.gov/multi_{row}_{col}_f.jpg",
+                    Site = 300,
+                    Drive = 5000,
+                    MastAz = azimuths[col],
+                    MastEl = elevations[row],
+                    SpacecraftClock = clock,
+                    RoverId = 1,
+                    CameraId = 2,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                });
+                clock += 20.0f; // 20 seconds between photos
+            }
+        }
+        await DbContext.SaveChangesAsync();
+
+        // Act
+        var result = await _service.GetPanoramasAsync(
+            rovers: "curiosity",
+            solMin: 7000,
+            solMax: 7000,
+            pageNumber: 1,
+            pageSize: 25);
+
+        // Assert - Should detect as 1 multi_row mosaic
+        result.Data.Should().HaveCount(1);
+        var panorama = result.Data.First();
+        panorama.Attributes!.MosaicType.Should().Be("multi_row");
+        panorama.Attributes.ElevationRows.Should().Be(3);
+        panorama.Attributes.TotalPhotos.Should().Be(15);
+        panorama.Attributes.GridDimensions.Should().Be("3x5");
+        panorama.Attributes.ElevationRangeData.Should().NotBeNull();
+        panorama.Attributes.ElevationRangeData!.Min.Should().BeApproximately(-20.0f, 0.1f);
+        panorama.Attributes.ElevationRangeData.Max.Should().BeApproximately(0.0f, 0.1f);
+        panorama.Attributes.VerticalCoverageDegrees.Should().BeApproximately(20.0f, 0.1f);
+    }
+
+    [Fact]
+    public async Task GetPanoramasAsync_MultiRow_TimeGapSplitsTwoMosaics()
+    {
+        // Arrange - Two multi-row mosaics on same sol, >300s apart
+        DbContext.Photos.RemoveRange(DbContext.Photos);
+        var now = DateTime.UtcNow;
+
+        var elevations = new[] { -15.0f, 0.0f }; // 2 tiers
+        var azimuths = new[] { 30.0f, 60.0f, 90.0f }; // 3 columns
+        var clock = 3000000.0f;
+
+        // Mosaic A
+        for (int row = 0; row < elevations.Length; row++)
+        {
+            for (int col = 0; col < azimuths.Length; col++)
+            {
+                DbContext.Photos.Add(new Photo
+                {
+                    NasaId = $"TIMESPLIT_A_{row}_{col}",
+                    Sol = 7001,
+                    EarthDate = new DateTime(2025, 6, 2, 0, 0, 0, DateTimeKind.Utc),
+                    DateTakenUtc = new DateTime(2025, 6, 2, 10, 0, 0, DateTimeKind.Utc),
+                    ImgSrcSmall = $"https://mars.nasa.gov/ts_a_{row}_{col}_s.jpg",
+                    ImgSrcMedium = $"https://mars.nasa.gov/ts_a_{row}_{col}_m.jpg",
+                    ImgSrcLarge = $"https://mars.nasa.gov/ts_a_{row}_{col}_l.jpg",
+                    ImgSrcFull = $"https://mars.nasa.gov/ts_a_{row}_{col}_f.jpg",
+                    Site = 301,
+                    Drive = 5001,
+                    MastAz = azimuths[col],
+                    MastEl = elevations[row],
+                    SpacecraftClock = clock,
+                    RoverId = 1,
+                    CameraId = 2,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                });
+                clock += 20.0f;
+            }
+        }
+
+        clock += 500.0f; // 500s gap (> 300s threshold)
+
+        // Mosaic B
+        for (int row = 0; row < elevations.Length; row++)
+        {
+            for (int col = 0; col < azimuths.Length; col++)
+            {
+                DbContext.Photos.Add(new Photo
+                {
+                    NasaId = $"TIMESPLIT_B_{row}_{col}",
+                    Sol = 7001,
+                    EarthDate = new DateTime(2025, 6, 2, 0, 0, 0, DateTimeKind.Utc),
+                    DateTakenUtc = new DateTime(2025, 6, 2, 11, 0, 0, DateTimeKind.Utc),
+                    ImgSrcSmall = $"https://mars.nasa.gov/ts_b_{row}_{col}_s.jpg",
+                    ImgSrcMedium = $"https://mars.nasa.gov/ts_b_{row}_{col}_m.jpg",
+                    ImgSrcLarge = $"https://mars.nasa.gov/ts_b_{row}_{col}_l.jpg",
+                    ImgSrcFull = $"https://mars.nasa.gov/ts_b_{row}_{col}_f.jpg",
+                    Site = 301,
+                    Drive = 5001,
+                    MastAz = azimuths[col] + 120.0f, // Different azimuth range
+                    MastEl = elevations[row],
+                    SpacecraftClock = clock,
+                    RoverId = 1,
+                    CameraId = 2,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                });
+                clock += 20.0f;
+            }
+        }
+        await DbContext.SaveChangesAsync();
+
+        // Act
+        var result = await _service.GetPanoramasAsync(
+            rovers: "curiosity",
+            solMin: 7001,
+            solMax: 7001,
+            pageNumber: 1,
+            pageSize: 25);
+
+        // Assert - 2 separate multi-row mosaics
+        result.Data.Should().HaveCount(2);
+        result.Data.Should().OnlyContain(p => p.Attributes!.MosaicType == "multi_row");
+        result.Data.Should().OnlyContain(p => p.Attributes!.TotalPhotos == 6);
+    }
+
+    [Fact]
+    public async Task GetPanoramasAsync_SingleRow_HasCorrectNewFields()
+    {
+        // Act - Use seed data (5 photos, all at -10° elevation)
+        var result = await _service.GetPanoramasAsync(
+            rovers: "curiosity",
+            solMin: 1000,
+            solMax: 1000,
+            pageNumber: 1,
+            pageSize: 25);
+
+        // Assert - Single-row fields
+        result.Data.Should().NotBeNullOrEmpty();
+        var panorama = result.Data.First();
+        panorama.Attributes!.MosaicType.Should().Be("single_row");
+        panorama.Attributes.ElevationRows.Should().Be(1);
+        panorama.Attributes.ElevationRangeData.Should().BeNull();
+        panorama.Attributes.GridDimensions.Should().BeNull();
+        panorama.Attributes.VerticalCoverageDegrees.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task GetPanoramasAsync_MultiRow_RaggedGridUsesMaxColumns()
+    {
+        // Arrange - Ragged grid: row 0 has 5 columns, row 1 has 3 columns
+        DbContext.Photos.RemoveRange(DbContext.Photos);
+        var now = DateTime.UtcNow;
+        var clock = 4000000.0f;
+
+        // Row 0: 5 columns
+        for (int col = 0; col < 5; col++)
+        {
+            DbContext.Photos.Add(new Photo
+            {
+                NasaId = $"RAGGED_0_{col}",
+                Sol = 7002,
+                EarthDate = new DateTime(2025, 6, 3, 0, 0, 0, DateTimeKind.Utc),
+                DateTakenUtc = new DateTime(2025, 6, 3, 10, 0, 0, DateTimeKind.Utc),
+                ImgSrcSmall = $"https://mars.nasa.gov/ragged_0_{col}_s.jpg",
+                ImgSrcMedium = $"https://mars.nasa.gov/ragged_0_{col}_m.jpg",
+                ImgSrcLarge = $"https://mars.nasa.gov/ragged_0_{col}_l.jpg",
+                ImgSrcFull = $"https://mars.nasa.gov/ragged_0_{col}_f.jpg",
+                Site = 302,
+                Drive = 5002,
+                MastAz = 20.0f + (col * 20.0f), // 20, 40, 60, 80, 100
+                MastEl = -15.0f,
+                SpacecraftClock = clock,
+                RoverId = 1,
+                CameraId = 2,
+                CreatedAt = now,
+                UpdatedAt = now
+            });
+            clock += 20.0f;
+        }
+
+        // Row 1: 3 columns (subset of row 0's azimuth positions)
+        for (int col = 0; col < 3; col++)
+        {
+            DbContext.Photos.Add(new Photo
+            {
+                NasaId = $"RAGGED_1_{col}",
+                Sol = 7002,
+                EarthDate = new DateTime(2025, 6, 3, 0, 0, 0, DateTimeKind.Utc),
+                DateTakenUtc = new DateTime(2025, 6, 3, 10, 5, 0, DateTimeKind.Utc),
+                ImgSrcSmall = $"https://mars.nasa.gov/ragged_1_{col}_s.jpg",
+                ImgSrcMedium = $"https://mars.nasa.gov/ragged_1_{col}_m.jpg",
+                ImgSrcLarge = $"https://mars.nasa.gov/ragged_1_{col}_l.jpg",
+                ImgSrcFull = $"https://mars.nasa.gov/ragged_1_{col}_f.jpg",
+                Site = 302,
+                Drive = 5002,
+                MastAz = 40.0f + (col * 20.0f), // 40, 60, 80 (subset)
+                MastEl = 0.0f, // 15° gap from row 0 → separate tier
+                SpacecraftClock = clock,
+                RoverId = 1,
+                CameraId = 2,
+                CreatedAt = now,
+                UpdatedAt = now
+            });
+            clock += 20.0f;
+        }
+        await DbContext.SaveChangesAsync();
+
+        // Act
+        var result = await _service.GetPanoramasAsync(
+            rovers: "curiosity",
+            solMin: 7002,
+            solMax: 7002,
+            pageNumber: 1,
+            pageSize: 25);
+
+        // Assert - Grid dimensions use max columns (5), completeness = 8/(2*5) = 80%
+        result.Data.Should().HaveCount(1);
+        var panorama = result.Data.First();
+        panorama.Attributes!.MosaicType.Should().Be("multi_row");
+        panorama.Attributes.GridDimensions.Should().Be("2x5");
+        panorama.Attributes.TotalPhotos.Should().Be(8);
+    }
+
+    [Fact]
+    public async Task GetPanoramasAsync_MultiRow_TooFewUniquePositionsRejected()
+    {
+        // Arrange - 2 elevation tiers but only 2 unique azimuth positions (< 3 required)
+        DbContext.Photos.RemoveRange(DbContext.Photos);
+        var now = DateTime.UtcNow;
+        var clock = 5000000.0f;
+
+        var elevations = new[] { -20.0f, 0.0f };
+        var azimuths = new[] { 50.0f, 80.0f }; // Only 30° range, 2 positions
+        for (int row = 0; row < elevations.Length; row++)
+        {
+            for (int col = 0; col < azimuths.Length; col++)
+            {
+                DbContext.Photos.Add(new Photo
+                {
+                    NasaId = $"FEWPOS_{row}_{col}",
+                    Sol = 7003,
+                    EarthDate = new DateTime(2025, 6, 4, 0, 0, 0, DateTimeKind.Utc),
+                    DateTakenUtc = new DateTime(2025, 6, 4, 10, 0, 0, DateTimeKind.Utc),
+                    ImgSrcSmall = $"https://mars.nasa.gov/fewpos_{row}_{col}_s.jpg",
+                    ImgSrcMedium = $"https://mars.nasa.gov/fewpos_{row}_{col}_m.jpg",
+                    ImgSrcLarge = $"https://mars.nasa.gov/fewpos_{row}_{col}_l.jpg",
+                    ImgSrcFull = $"https://mars.nasa.gov/fewpos_{row}_{col}_f.jpg",
+                    Site = 303,
+                    Drive = 5003,
+                    MastAz = azimuths[col],
+                    MastEl = elevations[row],
+                    SpacecraftClock = clock,
+                    RoverId = 1,
+                    CameraId = 2,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                });
+                clock += 20.0f;
+            }
+        }
+        await DbContext.SaveChangesAsync();
+
+        // Act
+        var result = await _service.GetPanoramasAsync(
+            rovers: "curiosity",
+            solMin: 7003,
+            solMax: 7003,
+            pageNumber: 1,
+            pageSize: 25);
+
+        // Assert - Rejected: only 2 unique azimuth positions < 3 required
+        result.Data.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task GetPanoramasAsync_MultiRow_LowGridCompletenessRejected()
+    {
+        // Arrange - 4 elevation tiers with 3+ positions but < 40% grid completeness
+        // Tier 0 (-30°): 8 azimuth columns → defines max columns = 8
+        // Tier 1 (-15°): 1 column
+        // Tier 2 (0°): 1 column
+        // Tier 3 (15°): 1 column
+        // Grid = 4 rows × 8 cols = 32 cells, filled = 11 → 34% < 40%
+        DbContext.Photos.RemoveRange(DbContext.Photos);
+        var now = DateTime.UtcNow;
+        var clock = 5100000.0f;
+
+        // Tier 0: full row of 8 columns
+        for (int col = 0; col < 8; col++)
+        {
+            DbContext.Photos.Add(new Photo
+            {
+                NasaId = $"SPARSE_0_{col}",
+                Sol = 7010,
+                EarthDate = new DateTime(2025, 6, 10, 0, 0, 0, DateTimeKind.Utc),
+                DateTakenUtc = new DateTime(2025, 6, 10, 10, 0, 0, DateTimeKind.Utc),
+                ImgSrcSmall = $"https://mars.nasa.gov/sparse_0_{col}_s.jpg",
+                ImgSrcMedium = $"https://mars.nasa.gov/sparse_0_{col}_m.jpg",
+                ImgSrcLarge = $"https://mars.nasa.gov/sparse_0_{col}_l.jpg",
+                ImgSrcFull = $"https://mars.nasa.gov/sparse_0_{col}_f.jpg",
+                Site = 310,
+                Drive = 5010,
+                MastAz = 20.0f + (col * 15.0f), // 20..125° range
+                MastEl = -30.0f,
+                SpacecraftClock = clock,
+                RoverId = 1,
+                CameraId = 2,
+                CreatedAt = now,
+                UpdatedAt = now
+            });
+            clock += 20.0f;
+        }
+
+        // Tiers 1-3: only 1 column each (at azimuth 20°)
+        var sparseElevations = new[] { -15.0f, 0.0f, 15.0f };
+        for (int tier = 0; tier < sparseElevations.Length; tier++)
+        {
+            DbContext.Photos.Add(new Photo
+            {
+                NasaId = $"SPARSE_{tier + 1}_0",
+                Sol = 7010,
+                EarthDate = new DateTime(2025, 6, 10, 0, 0, 0, DateTimeKind.Utc),
+                DateTakenUtc = new DateTime(2025, 6, 10, 10, 5, 0, DateTimeKind.Utc),
+                ImgSrcSmall = $"https://mars.nasa.gov/sparse_{tier + 1}_0_s.jpg",
+                ImgSrcMedium = $"https://mars.nasa.gov/sparse_{tier + 1}_0_m.jpg",
+                ImgSrcLarge = $"https://mars.nasa.gov/sparse_{tier + 1}_0_l.jpg",
+                ImgSrcFull = $"https://mars.nasa.gov/sparse_{tier + 1}_0_f.jpg",
+                Site = 310,
+                Drive = 5010,
+                MastAz = 20.0f, // Only 1 column per tier
+                MastEl = sparseElevations[tier],
+                SpacecraftClock = clock,
+                RoverId = 1,
+                CameraId = 2,
+                CreatedAt = now,
+                UpdatedAt = now
+            });
+            clock += 20.0f;
+        }
+        await DbContext.SaveChangesAsync();
+
+        // Act
+        var result = await _service.GetPanoramasAsync(
+            rovers: "curiosity",
+            solMin: 7010,
+            solMax: 7010,
+            pageNumber: 1,
+            pageSize: 25);
+
+        // Assert - Rejected: 11/(4*8) = 34% grid completeness < 40% threshold
+        result.Data.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task GetPanoramasAsync_ElevationClustering_PhotosWithin5DegreesStayOneTier()
+    {
+        // Arrange - Elevations with all gaps < 5° should cluster into one tier (single_row)
+        DbContext.Photos.RemoveRange(DbContext.Photos);
+        var now = DateTime.UtcNow;
+
+        // Elevations: -12, -9, -5, -2, 1 → gaps: 3, 4, 3, 3 → all < 5 → 1 tier
+        var elevations = new[] { -12.0f, -9.0f, -5.0f, -2.0f, 1.0f };
+        for (int i = 0; i < elevations.Length; i++)
+        {
+            DbContext.Photos.Add(new Photo
+            {
+                NasaId = $"CLUSTER_{i}",
+                Sol = 7004,
+                EarthDate = new DateTime(2025, 6, 5, 0, 0, 0, DateTimeKind.Utc),
+                DateTakenUtc = new DateTime(2025, 6, 5, 10, i, 0, DateTimeKind.Utc),
+                ImgSrcSmall = $"https://mars.nasa.gov/cluster_{i}_s.jpg",
+                ImgSrcMedium = $"https://mars.nasa.gov/cluster_{i}_m.jpg",
+                ImgSrcLarge = $"https://mars.nasa.gov/cluster_{i}_l.jpg",
+                ImgSrcFull = $"https://mars.nasa.gov/cluster_{i}_f.jpg",
+                Site = 304,
+                Drive = 5004,
+                MastAz = 30.0f + (i * 30.0f), // 120° range, 5 positions
+                MastEl = elevations[i],
+                SpacecraftClock = 6000000.0f + (i * 60.0f),
+                RoverId = 1,
+                CameraId = 2,
+                CreatedAt = now,
+                UpdatedAt = now
+            });
+        }
+        await DbContext.SaveChangesAsync();
+
+        // Act
+        var result = await _service.GetPanoramasAsync(
+            rovers: "curiosity",
+            solMin: 7004,
+            solMax: 7004,
+            pageNumber: 1,
+            pageSize: 25);
+
+        // Assert - Should be single_row (all elevations within one tier)
+        result.Data.Should().HaveCount(1);
+        var panorama = result.Data.First();
+        panorama.Attributes!.MosaicType.Should().Be("single_row");
+        panorama.Attributes.ElevationRows.Should().Be(1);
     }
 }
