@@ -17,11 +17,14 @@ public class PanoramaService : IPanoramaService
     private readonly IPhotoQueryServiceV2 _photoService;
 
     // Panorama detection parameters
-    private const float ElevationToleranceDegrees = 15.0f; // Photos within 15 degrees elevation (terrain-following)
     private const float MinAzimuthRangeDegrees = 30.0f; // At least 30 degrees coverage
     private const int MinPhotosForPanorama = 3; // At least 3 photos
     private const int MinUniquePositions = 3; // At least 3 unique azimuth positions (stitchable)
     private const float MaxTimeDeltaSeconds = 300.0f; // Max 5 minutes between photos
+
+    // Multi-row mosaic detection parameters
+    private const float ElevationTierGapDegrees = 5.0f; // Min gap between sorted elevations to start a new tier
+    private const float MinGridCompleteness = 0.40f; // Multi-row mosaic must fill 40% of grid cells
 
     // Performance optimization: Limit sol range to prevent loading all photos into memory
     // TODO: Long-term solution should pre-compute panoramas in a dedicated table (see .claude/decisions/PANORAMA_OPTIMIZATION.md)
@@ -258,15 +261,15 @@ public class PanoramaService : IPanoramaService
     }
 
     /// <summary>
-    /// Optimized panorama detection that processes sol batches
+    /// Optimized panorama detection that processes sol batches.
+    /// Groups photos by location/camera, splits on time gaps, then classifies
+    /// as single-row or multi-row based on elevation tier clustering.
     /// </summary>
     private List<PanoramaSequence> DetectPanoramasOptimized(List<Photo> photos, int minPhotos, ref int panoramaIndex)
     {
         var panoramas = new List<PanoramaSequence>();
 
         // Group by rover, sol, site, drive, and camera
-        // Use IDs for grouping to avoid navigation property issues
-        // OrderBy ensures consistent group ordering for stable panorama IDs
         var allGroups = photos
             .GroupBy(p => new
             {
@@ -295,74 +298,207 @@ public class PanoramaService : IPanoramaService
 
         foreach (var group in groups)
         {
-            // Sort by spacecraft clock
-            var groupPhotos = group.OrderBy(p => p.SpacecraftClock).ToList();
+            var groupPhotos = group.OrderBy(p => p.SpacecraftClock).ThenBy(p => p.MastEl).ToList();
 
             _logger.LogDebug("Processing group: CameraId={CameraId}, Site={Site}, Drive={Drive}, {PhotoCount} photos",
                 group.Key.CameraId, group.Key.Site, group.Key.Drive, groupPhotos.Count);
 
-            var currentSequence = new List<Photo>();
-            float? baseElevation = null;
+            // Step 1: Split into time-contiguous blocks (no elevation check)
+            var blocks = BuildTimeContiguousBlocks(groupPhotos);
 
-            for (int i = 0; i < groupPhotos.Count; i++)
+            // Step 2: For each block, cluster elevations and classify
+            foreach (var block in blocks)
             {
-                var photo = groupPhotos[i];
+                if (block.Count < minPhotos)
+                    continue;
 
-                if (currentSequence.Count == 0)
+                var tiers = ClusterElevationTiers(block);
+
+                if (tiers.Count <= 1)
                 {
-                    // Start new sequence
-                    currentSequence.Add(photo);
-                    baseElevation = photo.MastEl;
+                    // Single-row: validate with existing criteria
+                    if (IsValidPanorama(block))
+                    {
+                        var uniqueAz = block
+                            .Select(p => Math.Round(p.MastAz ?? 0))
+                            .Distinct()
+                            .Count();
+
+                        panoramas.Add(new PanoramaSequence
+                        {
+                            Photos = new List<Photo>(block),
+                            Index = panoramaIndex++,
+                            IsMultiRow = false,
+                            ElevationTierCount = 1,
+                            AzimuthColumnCount = uniqueAz
+                        });
+                    }
                 }
                 else
                 {
-                    var lastPhoto = currentSequence[^1];
-
-                    // Check if this photo continues the sequence
-                    var elevationDiff = Math.Abs((photo.MastEl ?? 0) - (baseElevation ?? 0));
-                    var timeDelta = (photo.SpacecraftClock ?? 0) - (lastPhoto.SpacecraftClock ?? 0);
-
-                    if (elevationDiff <= ElevationToleranceDegrees &&
-                        timeDelta <= MaxTimeDeltaSeconds &&
-                        timeDelta >= 0) // >= 0 allows bracketed exposures (same spacecraft_clock)
+                    // Multi-row candidate: validate with mosaic criteria
+                    if (IsValidMosaic(block, tiers, out var mosaicMetrics))
                     {
-                        // Continue current sequence
-                        currentSequence.Add(photo);
-                    }
-                    else
-                    {
-                        // End current sequence, check if it's valid
-                        if (IsValidPanorama(currentSequence))
+                        var elevations = block.Select(p => p.MastEl ?? 0).ToList();
+
+                        panoramas.Add(new PanoramaSequence
                         {
-                            panoramas.Add(new PanoramaSequence
-                            {
-                                Photos = new List<Photo>(currentSequence),
-                                Index = panoramaIndex++
-                            });
-                        }
-
-                        // Start new sequence
-                        currentSequence.Clear();
-                        currentSequence.Add(photo);
-                        baseElevation = photo.MastEl;
+                            Photos = new List<Photo>(block),
+                            Index = panoramaIndex++,
+                            IsMultiRow = true,
+                            ElevationTierCount = tiers.Count,
+                            AzimuthColumnCount = mosaicMetrics!.MaxColumnsPerTier,
+                            MinElevation = elevations.Min(),
+                            MaxElevation = elevations.Max()
+                        });
                     }
                 }
-            }
-
-            // Check final sequence
-            _logger.LogDebug("Final sequence for group has {Count} photos. Validating...", currentSequence.Count);
-            if (IsValidPanorama(currentSequence))
-            {
-                _logger.LogDebug("Sequence validated as panorama!");
-                panoramas.Add(new PanoramaSequence
-                {
-                    Photos = new List<Photo>(currentSequence),
-                    Index = panoramaIndex++
-                });
             }
         }
 
         return panoramas;
+    }
+
+    /// <summary>
+    /// Split photos into time-contiguous blocks using only the time gap threshold.
+    /// No elevation check — multi-row mosaics sweep across elevation tiers continuously.
+    /// </summary>
+    private List<List<Photo>> BuildTimeContiguousBlocks(List<Photo> orderedPhotos)
+    {
+        var blocks = new List<List<Photo>>();
+        var current = new List<Photo>();
+
+        for (int i = 0; i < orderedPhotos.Count; i++)
+        {
+            if (current.Count == 0)
+            {
+                current.Add(orderedPhotos[i]);
+            }
+            else
+            {
+                var timeDelta = (orderedPhotos[i].SpacecraftClock ?? 0) - (current[^1].SpacecraftClock ?? 0);
+                if (timeDelta <= MaxTimeDeltaSeconds && timeDelta >= 0)
+                {
+                    current.Add(orderedPhotos[i]);
+                }
+                else
+                {
+                    blocks.Add(current);
+                    current = new List<Photo> { orderedPhotos[i] };
+                }
+            }
+        }
+
+        if (current.Count > 0)
+            blocks.Add(current);
+
+        return blocks;
+    }
+
+    /// <summary>
+    /// Cluster unique elevations into tiers using adaptive gap-based grouping.
+    /// Sorts unique rounded elevations, splits when consecutive gap >= ElevationTierGapDegrees.
+    /// Returns the center value of each tier.
+    /// </summary>
+    private static List<float> ClusterElevationTiers(List<Photo> photos)
+    {
+        var uniqueElevations = photos
+            .Select(p => MathF.Round(p.MastEl ?? 0))
+            .Distinct()
+            .OrderBy(e => e)
+            .ToList();
+
+        if (uniqueElevations.Count == 0)
+            return new List<float>();
+
+        var tiers = new List<float>();
+        var currentTier = new List<float> { uniqueElevations[0] };
+
+        for (int i = 1; i < uniqueElevations.Count; i++)
+        {
+            if (uniqueElevations[i] - uniqueElevations[i - 1] >= ElevationTierGapDegrees)
+            {
+                // Gap found — finalize current tier, start new one
+                tiers.Add(currentTier.Average());
+                currentTier = new List<float> { uniqueElevations[i] };
+            }
+            else
+            {
+                currentTier.Add(uniqueElevations[i]);
+            }
+        }
+
+        tiers.Add(currentTier.Average());
+        return tiers;
+    }
+
+    /// <summary>
+    /// Map a photo's elevation to its nearest tier center value.
+    /// </summary>
+    private static float GetElevationTier(float elevation, List<float> tiers)
+    {
+        return tiers.OrderBy(t => Math.Abs(t - elevation)).First();
+    }
+
+    private record MosaicMetrics(int MaxColumnsPerTier, int FilledCells, float Completeness);
+
+    /// <summary>
+    /// Validate a multi-row mosaic: azimuth range >= 30°, unique positions >= 3,
+    /// and grid completeness >= 40%. Returns computed grid metrics on success.
+    /// </summary>
+    private bool IsValidMosaic(List<Photo> photos, List<float> tiers, out MosaicMetrics? metrics)
+    {
+        metrics = null;
+
+        if (photos.Count < MinPhotosForPanorama)
+            return false;
+
+        var azimuths = photos.Select(p => p.MastAz ?? 0).ToList();
+        var azimuthRange = azimuths.Max() - azimuths.Min();
+
+        if (azimuthRange < MinAzimuthRangeDegrees)
+        {
+            _logger.LogDebug("IsValidMosaic: FAILED - azimuth range {Range}° < {Min}°", azimuthRange, MinAzimuthRangeDegrees);
+            return false;
+        }
+
+        var uniquePositions = photos
+            .Select(p => Math.Round(p.MastAz ?? 0))
+            .Distinct()
+            .Count();
+
+        if (uniquePositions < MinUniquePositions)
+        {
+            _logger.LogDebug("IsValidMosaic: FAILED - {UniquePos} unique positions < {Min}", uniquePositions, MinUniquePositions);
+            return false;
+        }
+
+        // Grid completeness: how many (tier, azimuth) cells are filled vs total possible
+        var maxColumnsPerTier = tiers.Max(tier =>
+        {
+            var tierPhotos = photos.Where(p => GetElevationTier(p.MastEl ?? 0, tiers) == tier);
+            return tierPhotos.Select(p => Math.Round(p.MastAz ?? 0)).Distinct().Count();
+        });
+        var totalCells = tiers.Count * maxColumnsPerTier;
+        var filledCells = 0;
+        foreach (var tier in tiers)
+        {
+            var tierPhotos = photos.Where(p => GetElevationTier(p.MastEl ?? 0, tiers) == tier);
+            filledCells += tierPhotos.Select(p => Math.Round(p.MastAz ?? 0)).Distinct().Count();
+        }
+        var completeness = (float)filledCells / totalCells;
+
+        if (completeness < MinGridCompleteness)
+        {
+            _logger.LogDebug("IsValidMosaic: FAILED - grid completeness {Completeness:P0} < {Min:P0}",
+                completeness, MinGridCompleteness);
+            return false;
+        }
+
+        _logger.LogDebug("IsValidMosaic: PASSED - {Count} photos, {Tiers} tiers, {Range}° azimuth, {Completeness:P0} grid fill",
+            photos.Count, tiers.Count, azimuthRange, completeness);
+        metrics = new MosaicMetrics(maxColumnsPerTier, filledCells, completeness);
+        return true;
     }
 
     /// <summary>
@@ -517,7 +653,18 @@ public class PanoramaService : IPanoramaService
                 AvgElevation = avgElevation,
                 UniquePositions = uniquePositions,
                 AvgPositionSpacing = avgPositionSpacing,
-                Quality = quality
+                Quality = quality,
+                MosaicType = sequence.IsMultiRow ? "multi_row" : "single_row",
+                ElevationRows = sequence.ElevationTierCount,
+                ElevationRangeData = sequence.IsMultiRow
+                    ? new ElevationRange { Min = sequence.MinElevation, Max = sequence.MaxElevation }
+                    : null,
+                GridDimensions = sequence.IsMultiRow
+                    ? $"{sequence.ElevationTierCount}x{sequence.AzimuthColumnCount}"
+                    : null,
+                VerticalCoverageDegrees = sequence.IsMultiRow
+                    ? sequence.MaxElevation - sequence.MinElevation
+                    : null
             },
             Links = new PanoramaLinks
             {
@@ -547,5 +694,10 @@ public class PanoramaService : IPanoramaService
     {
         public List<Photo> Photos { get; set; } = new();
         public int Index { get; set; }
+        public bool IsMultiRow { get; set; }
+        public int ElevationTierCount { get; set; } = 1;
+        public int AzimuthColumnCount { get; set; }
+        public float MinElevation { get; set; }
+        public float MaxElevation { get; set; }
     }
 }

@@ -41,6 +41,18 @@ public record PanoramaResource
 }
 
 /// <summary>
+/// Elevation range for multi-row mosaics
+/// </summary>
+public record ElevationRange
+{
+    [JsonPropertyName("min")]
+    public float Min { get; init; }
+
+    [JsonPropertyName("max")]
+    public float Max { get; init; }
+}
+
+/// <summary>
 /// Panorama attributes
 /// </summary>
 public record PanoramaAttributes
@@ -123,6 +135,39 @@ public record PanoramaAttributes
     /// </summary>
     [JsonPropertyName("quality")]
     public string Quality { get; init; } = "partial";
+
+    /// <summary>
+    /// Mosaic type: "single_row" or "multi_row"
+    /// </summary>
+    [JsonPropertyName("mosaic_type")]
+    public string MosaicType { get; init; } = "single_row";
+
+    /// <summary>
+    /// Number of distinct elevation rows (1 for single_row panoramas)
+    /// </summary>
+    [JsonPropertyName("elevation_rows")]
+    public int ElevationRows { get; init; } = 1;
+
+    /// <summary>
+    /// Elevation range in degrees (only for multi_row mosaics)
+    /// </summary>
+    [JsonPropertyName("elevation_range")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public ElevationRange? ElevationRangeData { get; init; }
+
+    /// <summary>
+    /// Grid dimensions as "rows x columns" (only for multi_row mosaics)
+    /// </summary>
+    [JsonPropertyName("grid_dimensions")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? GridDimensions { get; init; }
+
+    /// <summary>
+    /// Total vertical coverage in degrees (only for multi_row mosaics)
+    /// </summary>
+    [JsonPropertyName("vertical_coverage_degrees")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public float? VerticalCoverageDegrees { get; init; }
 }
 
 /// <summary>
