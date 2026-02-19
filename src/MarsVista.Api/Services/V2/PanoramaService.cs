@@ -485,12 +485,21 @@ public class PanoramaService : IPanoramaService
             return false;
         }
 
-        // Grid completeness: how many (tier, azimuth) cells are filled vs total possible
+        // Grid structure: each tier must have enough columns for stitching
         var maxColumnsPerTier = tiers.Max(tier =>
         {
             var tierPhotos = photos.Where(p => GetElevationTier(p.MastEl ?? 0, tiers) == tier);
             return tierPhotos.Select(p => Math.Round(p.MastAz ?? 0)).Distinct().Count();
         });
+
+        if (maxColumnsPerTier < MinUniquePositions)
+        {
+            _logger.LogDebug("IsValidMosaic: FAILED - max {Cols} columns per tier < {Min} required for stitching",
+                maxColumnsPerTier, MinUniquePositions);
+            return false;
+        }
+
+        // Grid completeness: how many (tier, azimuth) cells are filled vs total possible
         var totalCells = tiers.Count * maxColumnsPerTier;
         var filledCells = 0;
         foreach (var tier in tiers)
