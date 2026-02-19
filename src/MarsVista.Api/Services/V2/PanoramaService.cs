@@ -26,6 +26,15 @@ public class PanoramaService : IPanoramaService
     private const float ElevationTierGapDegrees = 5.0f; // Min gap between sorted elevations to start a new tier
     private const float MinGridCompleteness = 0.40f; // Multi-row mosaic must fill 40% of grid cells
 
+    // Only cameras designed for panoramic imaging — excludes spectrometers (ChemCam, SuperCam RMI),
+    // hazard cameras (fixed FOV), arm cameras (MAHLI, SHERLOC), and descent/EDL cameras
+    private static readonly HashSet<string> PanoramicCameras = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "MAST", "NAVCAM",                               // Curiosity
+        "MCZ_LEFT", "MCZ_RIGHT", "NAVCAM_LEFT", "NAVCAM_RIGHT", // Perseverance
+        "PANCAM"                                         // Opportunity, Spirit
+    };
+
     // Performance optimization: Limit sol range to prevent loading all photos into memory
     // TODO: Long-term solution should pre-compute panoramas in a dedicated table (see .claude/decisions/PANORAMA_OPTIMIZATION.md)
     private const int DefaultSolRangeLimit = 500; // Default to most recent 500 sols when no range specified
@@ -50,12 +59,14 @@ public class PanoramaService : IPanoramaService
         CancellationToken cancellationToken = default)
     {
         // Build query for photos that could be part of panoramas
+        // Only include cameras designed for panoramic imaging
         var query = _context.Photos
             .Where(p => p.Site.HasValue &&
                        p.Drive.HasValue &&
                        p.MastAz.HasValue &&
                        p.MastEl.HasValue &&
-                       p.SpacecraftClock.HasValue);
+                       p.SpacecraftClock.HasValue &&
+                       PanoramicCameras.Contains(p.Camera.Name));
 
         // Apply filters
         if (!string.IsNullOrWhiteSpace(rovers))
@@ -240,7 +251,8 @@ public class PanoramaService : IPanoramaService
                        p.Drive.HasValue &&
                        p.MastAz.HasValue &&
                        p.MastEl.HasValue &&
-                       p.SpacecraftClock.HasValue);
+                       p.SpacecraftClock.HasValue &&
+                       PanoramicCameras.Contains(p.Camera.Name));
 
         var photos = await query
             .Include(p => p.Rover)
