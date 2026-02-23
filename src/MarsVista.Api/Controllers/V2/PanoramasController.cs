@@ -1,4 +1,3 @@
-using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Mvc;
 using MarsVista.Api.DTOs.V2;
 using MarsVista.Api.Services.V2;
@@ -15,6 +14,19 @@ public class PanoramasController : ControllerBase
 {
     private readonly IPanoramaService _panoramaService;
     private readonly ILogger<PanoramasController> _logger;
+
+    private static readonly HashSet<string> ValidSorts = new(StringComparer.OrdinalIgnoreCase)
+        { "sol", "rating", "coverage", "photos" };
+    private static readonly HashSet<string> ValidOrders = new(StringComparer.OrdinalIgnoreCase)
+        { "asc", "desc" };
+    private static readonly HashSet<string> ValidStitchStatuses = new(StringComparer.OrdinalIgnoreCase)
+        { "completed", "failed", "processing", "not_started" };
+    private static readonly HashSet<string> ValidStitchMethods = new(StringComparer.OrdinalIgnoreCase)
+        { "feature_match", "telemetry_projection" };
+    private static readonly HashSet<string> ValidMosaicTypes = new(StringComparer.OrdinalIgnoreCase)
+        { "single_row", "multi_row" };
+    private static readonly HashSet<string> ValidQualities = new(StringComparer.OrdinalIgnoreCase)
+        { "partial", "half", "wide", "full" };
 
     public PanoramasController(
         IPanoramaService panoramaService,
@@ -60,42 +72,32 @@ public class PanoramasController : ControllerBase
         [FromQuery] int per_page = 25,
         CancellationToken cancellationToken = default)
     {
-        // Validate pagination
         if (page < 1)
-        {
-            return BadRequest(new ApiError
-            {
-                Type = "/errors/validation-error",
-                Title = "Validation Error",
-                Status = 400,
-                Detail = "Page number must be >= 1",
-                Instance = Request.Path
-            });
-        }
+            return ValidationError("Page number must be >= 1");
 
         if (per_page < 1 || per_page > 100)
-        {
-            return BadRequest(new ApiError
-            {
-                Type = "/errors/validation-error",
-                Title = "Validation Error",
-                Status = 400,
-                Detail = "Per page must be between 1 and 100",
-                Instance = Request.Path
-            });
-        }
+            return ValidationError("Per page must be between 1 and 100");
 
         if (min_rating.HasValue && (min_rating.Value < 1.0 || min_rating.Value > 5.0))
-        {
-            return BadRequest(new ApiError
-            {
-                Type = "/errors/validation-error",
-                Title = "Validation Error",
-                Status = 400,
-                Detail = "min_rating must be between 1.0 and 5.0",
-                Instance = Request.Path
-            });
-        }
+            return ValidationError("min_rating must be between 1.0 and 5.0");
+
+        if (sort != null && !ValidSorts.Contains(sort))
+            return ValidationError($"Invalid sort value '{sort}'. Valid values: sol, rating, coverage, photos");
+
+        if (order != null && !ValidOrders.Contains(order))
+            return ValidationError($"Invalid order value '{order}'. Valid values: asc, desc");
+
+        if (stitch_status != null && !ValidStitchStatuses.Contains(stitch_status))
+            return ValidationError($"Invalid stitch_status value '{stitch_status}'. Valid values: completed, failed, processing, not_started");
+
+        if (stitch_method != null && !ValidStitchMethods.Contains(stitch_method))
+            return ValidationError($"Invalid stitch_method value '{stitch_method}'. Valid values: feature_match, telemetry_projection");
+
+        if (mosaic_type != null && !ValidMosaicTypes.Contains(mosaic_type))
+            return ValidationError($"Invalid mosaic_type value '{mosaic_type}'. Valid values: single_row, multi_row");
+
+        if (quality != null && !ValidQualities.Contains(quality))
+            return ValidationError($"Invalid quality value '{quality}'. Valid values: partial, half, wide, full");
 
         var response = await _panoramaService.GetPanoramasAsync(
             rovers,
@@ -173,17 +175,11 @@ public class PanoramasController : ControllerBase
             });
         }
 
+        if (!IsValidPanoramaIdFormat(id))
+            return ValidationError("Invalid panorama ID format. Expected: pano_{rover}_{sol}_{index}");
+
         if (request.Rating < 1 || request.Rating > 5)
-        {
-            return BadRequest(new ApiError
-            {
-                Type = "/errors/validation-error",
-                Title = "Validation Error",
-                Status = 400,
-                Detail = "Rating must be between 1 and 5",
-                Instance = Request.Path
-            });
-        }
+            return ValidationError("Rating must be between 1 and 5");
 
         var result = await _panoramaService.UpsertRatingAsync(id, clientId, request.Rating, cancellationToken);
         return Ok(result);
@@ -204,23 +200,25 @@ public class PanoramasController : ControllerBase
         var result = await _panoramaService.GetRatingAsync(id, clientId, cancellationToken);
         return Ok(result);
     }
-}
 
-public record RatingRequest
-{
-    [JsonPropertyName("rating")]
-    public int Rating { get; init; }
-}
+    private static bool IsValidPanoramaIdFormat(string id)
+    {
+        var parts = id.Split('_');
+        return parts.Length >= 4 &&
+               parts[0] == "pano" &&
+               int.TryParse(parts[^2], out _) &&
+               int.TryParse(parts[^1], out _);
+    }
 
-public record RatingResponse
-{
-    [JsonPropertyName("average_rating")]
-    public double AverageRating { get; init; }
-
-    [JsonPropertyName("rating_count")]
-    public int RatingCount { get; init; }
-
-    [JsonPropertyName("user_rating")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public int? UserRating { get; init; }
+    private BadRequestObjectResult ValidationError(string detail)
+    {
+        return BadRequest(new ApiError
+        {
+            Type = "/errors/validation-error",
+            Title = "Validation Error",
+            Status = 400,
+            Detail = detail,
+            Instance = Request.Path
+        });
+    }
 }

@@ -173,8 +173,7 @@ public record PanoramaAttributes
     /// Stitch status, method, and rating information
     /// </summary>
     [JsonPropertyName("stitch")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public StitchInfo? Stitch { get; init; }
+    public StitchInfo Stitch { get; init; } = new();
 }
 
 /// <summary>

@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using MarsVista.Core.Data;
 using MarsVista.Core.Entities;
-using MarsVista.Api.Controllers.V2;
 using MarsVista.Api.DTOs.V2;
 using MarsVista.Core.Helpers;
 
@@ -866,24 +865,21 @@ public class PanoramaService : IPanoramaService
         }
 
         // Build StitchInfo from stitch status and rating aggregates
-        StitchInfo? stitchInfo = null;
+        // Always include StitchInfo for consistent API responses (never null)
         StitchedPanorama? stitchRecord = null;
         stitchStatuses?.TryGetValue(panoramaId, out stitchRecord);
         RatingAggregate? ratingAgg = null;
         ratingAggregates?.TryGetValue(panoramaId, out ratingAgg);
 
-        if (stitchRecord != null || ratingAgg != null)
+        var stitchInfo = new StitchInfo
         {
-            stitchInfo = new StitchInfo
-            {
-                Status = stitchRecord?.Status ?? "not_started",
-                Method = stitchRecord?.StitchMethod,
-                Width = stitchRecord?.Status == "completed" ? stitchRecord.ImageWidth : null,
-                Height = stitchRecord?.Status == "completed" ? stitchRecord.ImageHeight : null,
-                AverageRating = ratingAgg != null ? Math.Round(ratingAgg.Average, 1) : null,
-                RatingCount = ratingAgg?.Count
-            };
-        }
+            Status = stitchRecord?.Status ?? "not_started",
+            Method = stitchRecord?.StitchMethod,
+            Width = stitchRecord?.Status == "completed" ? stitchRecord.ImageWidth : null,
+            Height = stitchRecord?.Status == "completed" ? stitchRecord.ImageHeight : null,
+            AverageRating = ratingAgg != null ? Math.Round(ratingAgg.Average, 1) : null,
+            RatingCount = ratingAgg?.Count
+        };
 
         return new PanoramaResource
         {
