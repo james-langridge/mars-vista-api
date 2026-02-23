@@ -5,6 +5,7 @@ public class StitchedPanorama
     public Guid Id { get; set; }
     public string PanoramaId { get; set; } = string.Empty;
     public string Status { get; set; } = "processing"; // processing, completed, failed
+    public string? StitchMethod { get; set; } // feature_match, telemetry_projection
     public string? ImagePath { get; set; }
     public int? ImageWidth { get; set; }
     public int? ImageHeight { get; set; }
