@@ -15,6 +15,13 @@ public interface IPanoramaService
         int? solMin = null,
         int? solMax = null,
         int? minPhotos = null,
+        string? stitchStatus = null,
+        string? stitchMethod = null,
+        string? mosaicType = null,
+        string? quality = null,
+        double? minRating = null,
+        string? sort = null,
+        string? order = null,
         int pageNumber = 1,
         int pageSize = 25,
         CancellationToken cancellationToken = default);
@@ -24,5 +31,22 @@ public interface IPanoramaService
     /// </summary>
     Task<PanoramaResource?> GetPanoramaByIdAsync(
         string panoramaId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Create or update a rating for a panorama
+    /// </summary>
+    Task<RatingResponse> UpsertRatingAsync(
+        string panoramaId,
+        string clientId,
+        int rating,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Get rating information for a panorama
+    /// </summary>
+    Task<RatingResponse> GetRatingAsync(
+        string panoramaId,
+        string? clientId = null,
         CancellationToken cancellationToken = default);
 }

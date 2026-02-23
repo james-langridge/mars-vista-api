@@ -54,6 +54,13 @@ public class PanoramaService : IPanoramaService
         int? solMin = null,
         int? solMax = null,
         int? minPhotos = null,
+        string? stitchStatus = null,
+        string? stitchMethod = null,
+        string? mosaicType = null,
+        string? quality = null,
+        double? minRating = null,
+        string? sort = null,
+        string? order = null,
         int pageNumber = 1,
         int pageSize = 25,
         CancellationToken cancellationToken = default)
@@ -154,8 +161,101 @@ public class PanoramaService : IPanoramaService
             allPanoramas.AddRange(solPanoramas);
         }
 
-        // Use the detected panoramas
-        var panoramas = allPanoramas;
+        // Apply in-memory filters on detected panoramas
+        var filtered = (IEnumerable<PanoramaSequence>)allPanoramas;
+
+        if (!string.IsNullOrWhiteSpace(mosaicType))
+        {
+            var isMr = mosaicType.Equals("multi_row", StringComparison.OrdinalIgnoreCase);
+            filtered = filtered.Where(p => p.IsMultiRow == isMr);
+        }
+
+        if (!string.IsNullOrWhiteSpace(quality))
+        {
+            filtered = filtered.Where(p =>
+            {
+                var azimuths = p.Photos.Select(ph => ph.MastAz ?? 0);
+                var coverage = azimuths.Max() - azimuths.Min();
+                var positions = p.Photos.Select(ph => Math.Round(ph.MastAz ?? 0)).Distinct().Count();
+                return GetQualityTier(coverage, positions).Equals(quality, StringComparison.OrdinalIgnoreCase);
+            });
+        }
+
+        var panoramas = filtered.ToList();
+
+        // Build panorama IDs for all remaining panoramas (needed for stitch/rating filters)
+        var allPanoramaIds = panoramas.Select(p => GetPanoramaId(p)).ToList();
+
+        // Load stitch statuses and ratings for filtering
+        var allStitchStatuses = allPanoramaIds.Count > 0
+            ? await _context.StitchedPanoramas
+                .AsNoTracking()
+                .Where(s => allPanoramaIds.Contains(s.PanoramaId))
+                .ToDictionaryAsync(s => s.PanoramaId, cancellationToken)
+            : new Dictionary<string, StitchedPanorama>();
+
+        var allRatingAggregates = allPanoramaIds.Count > 0
+            ? await _context.PanoramaRatings
+                .AsNoTracking()
+                .Where(r => allPanoramaIds.Contains(r.PanoramaId))
+                .GroupBy(r => r.PanoramaId)
+                .Select(g => new { PanoramaId = g.Key, Avg = g.Average(r => r.Rating), Count = g.Count() })
+                .ToDictionaryAsync(
+                    r => r.PanoramaId,
+                    r => new RatingAggregate(r.Avg, r.Count),
+                    cancellationToken)
+            : new Dictionary<string, RatingAggregate>();
+
+        // Apply stitch/rating filters
+        if (!string.IsNullOrWhiteSpace(stitchStatus))
+        {
+            panoramas = panoramas.Where(p =>
+            {
+                var pid = GetPanoramaId(p);
+                if (stitchStatus.Equals("not_started", StringComparison.OrdinalIgnoreCase))
+                    return !allStitchStatuses.ContainsKey(pid);
+                return allStitchStatuses.TryGetValue(pid, out var s) &&
+                       s.Status.Equals(stitchStatus, StringComparison.OrdinalIgnoreCase);
+            }).ToList();
+        }
+
+        if (!string.IsNullOrWhiteSpace(stitchMethod))
+        {
+            panoramas = panoramas.Where(p =>
+            {
+                var pid = GetPanoramaId(p);
+                return allStitchStatuses.TryGetValue(pid, out var s) &&
+                       s.StitchMethod != null &&
+                       s.StitchMethod.Equals(stitchMethod, StringComparison.OrdinalIgnoreCase);
+            }).ToList();
+        }
+
+        if (minRating.HasValue)
+        {
+            panoramas = panoramas.Where(p =>
+            {
+                var pid = GetPanoramaId(p);
+                return allRatingAggregates.TryGetValue(pid, out var r) && r.Average >= minRating.Value;
+            }).ToList();
+        }
+
+        // Apply sorting
+        var sortField = sort?.ToLowerInvariant() ?? "sol";
+        var isAscending = order?.Equals("asc", StringComparison.OrdinalIgnoreCase) == true;
+
+        panoramas = sortField switch
+        {
+            "rating" => isAscending
+                ? panoramas.OrderBy(p => allRatingAggregates.TryGetValue(GetPanoramaId(p), out var r) ? r.Average : 0).ToList()
+                : panoramas.OrderByDescending(p => allRatingAggregates.TryGetValue(GetPanoramaId(p), out var r) ? r.Average : 0).ToList(),
+            "coverage" => isAscending
+                ? panoramas.OrderBy(p => p.Photos.Select(ph => ph.MastAz ?? 0).Max() - p.Photos.Select(ph => ph.MastAz ?? 0).Min()).ToList()
+                : panoramas.OrderByDescending(p => p.Photos.Select(ph => ph.MastAz ?? 0).Max() - p.Photos.Select(ph => ph.MastAz ?? 0).Min()).ToList(),
+            "photos" => isAscending
+                ? panoramas.OrderBy(p => p.Photos.Count).ToList()
+                : panoramas.OrderByDescending(p => p.Photos.Count).ToList(),
+            _ => panoramas // Default: sol order (already in sol order from detection)
+        };
 
         // Apply pagination
         var totalCount = panoramas.Count;
@@ -164,21 +264,19 @@ public class PanoramaService : IPanoramaService
             .Take(pageSize)
             .ToList();
 
-        // Batch-load stitch statuses to avoid N+1 queries
-        var panoramaIds = paginatedPanoramas.Select(p =>
-        {
-            var first = p.Photos.First();
-            var r = first.Rover.Name.ToLowerInvariant();
-            return $"pano_{r}_{first.Sol}_{p.Index}";
-        }).ToList();
+        // Build stitch/rating dictionaries for just the paginated results
+        var paginatedIds = new HashSet<string>(paginatedPanoramas.Select(p => GetPanoramaId(p)));
 
-        var stitchStatuses = await _context.StitchedPanoramas
-            .AsNoTracking()
-            .Where(s => panoramaIds.Contains(s.PanoramaId) && s.Status == "completed")
-            .ToDictionaryAsync(s => s.PanoramaId, cancellationToken);
+        var stitchStatuses = allStitchStatuses
+            .Where(kv => paginatedIds.Contains(kv.Key))
+            .ToDictionary(kv => kv.Key, kv => kv.Value);
+
+        var ratingAggregates = allRatingAggregates
+            .Where(kv => paginatedIds.Contains(kv.Key))
+            .ToDictionary(kv => kv.Key, kv => kv.Value);
 
         // Convert to resources
-        var resources = paginatedPanoramas.Select(p => ToPanoramaResource(p, stitchStatuses)).ToList();
+        var resources = paginatedPanoramas.Select(p => ToPanoramaResource(p, stitchStatuses, ratingAggregates: ratingAggregates)).ToList();
 
         var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
 
@@ -208,10 +306,22 @@ public class PanoramaService : IPanoramaService
 
         var stitchRecord = await _context.StitchedPanoramas
             .AsNoTracking()
-            .FirstOrDefaultAsync(s => s.PanoramaId == panoramaId && s.Status == "completed", cancellationToken);
+            .FirstOrDefaultAsync(s => s.PanoramaId == panoramaId, cancellationToken);
 
         var stitchStatuses = stitchRecord != null
             ? new Dictionary<string, StitchedPanorama> { { panoramaId, stitchRecord } }
+            : null;
+
+        // Load rating aggregate for this panorama
+        var ratingData = await _context.PanoramaRatings
+            .AsNoTracking()
+            .Where(r => r.PanoramaId == panoramaId)
+            .GroupBy(r => r.PanoramaId)
+            .Select(g => new { Avg = g.Average(r => r.Rating), Count = g.Count() })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        var ratingAggregates = ratingData != null
+            ? new Dictionary<string, RatingAggregate> { { panoramaId, new RatingAggregate(ratingData.Avg, ratingData.Count) } }
             : null;
 
         // Map constituent photos to PhotoResource for detail response
@@ -225,7 +335,65 @@ public class PanoramaService : IPanoramaService
         };
         var photoResources = await _photoService.GetPhotosByIdsAsync(photoIds, photoParams, cancellationToken);
 
-        return ToPanoramaResource(sequence, stitchStatuses, photoResources);
+        return ToPanoramaResource(sequence, stitchStatuses, photoResources, ratingAggregates);
+    }
+
+    public async Task<RatingResponse> UpsertRatingAsync(
+        string panoramaId,
+        string clientId,
+        int rating,
+        CancellationToken cancellationToken = default)
+    {
+        var existing = await _context.PanoramaRatings
+            .FirstOrDefaultAsync(r => r.PanoramaId == panoramaId && r.ClientId == clientId, cancellationToken);
+
+        if (existing != null)
+        {
+            existing.Rating = rating;
+        }
+        else
+        {
+            _context.PanoramaRatings.Add(new PanoramaRating
+            {
+                PanoramaId = panoramaId,
+                Rating = rating,
+                ClientId = clientId
+            });
+        }
+
+        await _context.SaveChangesAsync(cancellationToken);
+
+        return await GetRatingAsync(panoramaId, clientId, cancellationToken);
+    }
+
+    public async Task<RatingResponse> GetRatingAsync(
+        string panoramaId,
+        string? clientId = null,
+        CancellationToken cancellationToken = default)
+    {
+        var aggregate = await _context.PanoramaRatings
+            .AsNoTracking()
+            .Where(r => r.PanoramaId == panoramaId)
+            .GroupBy(r => r.PanoramaId)
+            .Select(g => new { Avg = g.Average(r => r.Rating), Count = g.Count() })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        int? userRating = null;
+        if (!string.IsNullOrEmpty(clientId))
+        {
+            userRating = await _context.PanoramaRatings
+                .AsNoTracking()
+                .Where(r => r.PanoramaId == panoramaId && r.ClientId == clientId)
+                .Select(r => (int?)r.Rating)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
+        return new RatingResponse
+        {
+            AverageRating = aggregate != null ? Math.Round(aggregate.Avg, 1) : 0,
+            RatingCount = aggregate?.Count ?? 0,
+            UserRating = userRating
+        };
     }
 
     private async Task<PanoramaSequence?> DetectPanoramaSequenceByIdAsync(
@@ -616,7 +784,8 @@ public class PanoramaService : IPanoramaService
     /// </summary>
     private PanoramaResource ToPanoramaResource(PanoramaSequence sequence,
         Dictionary<string, StitchedPanorama>? stitchStatuses = null,
-        List<PhotoResource>? photoResources = null)
+        List<PhotoResource>? photoResources = null,
+        Dictionary<string, RatingAggregate>? ratingAggregates = null)
     {
         var firstPhoto = sequence.Photos.First();
         var lastPhoto = sequence.Photos.Last();
@@ -695,6 +864,23 @@ public class PanoramaService : IPanoramaService
             };
         }
 
+        // Build StitchInfo from stitch status and rating aggregates
+        // Always include StitchInfo for consistent API responses (never null)
+        StitchedPanorama? stitchRecord = null;
+        stitchStatuses?.TryGetValue(panoramaId, out stitchRecord);
+        RatingAggregate? ratingAgg = null;
+        ratingAggregates?.TryGetValue(panoramaId, out ratingAgg);
+
+        var stitchInfo = new StitchInfo
+        {
+            Status = stitchRecord?.Status ?? "not_started",
+            Method = stitchRecord?.StitchMethod,
+            Width = stitchRecord?.Status == "completed" ? stitchRecord.ImageWidth : null,
+            Height = stitchRecord?.Status == "completed" ? stitchRecord.ImageHeight : null,
+            AverageRating = ratingAgg != null ? Math.Round(ratingAgg.Average, 1) : null,
+            RatingCount = ratingAgg?.Count
+        };
+
         return new PanoramaResource
         {
             Id = panoramaId,
@@ -724,16 +910,26 @@ public class PanoramaService : IPanoramaService
                     : null,
                 VerticalCoverageDegrees = sequence.IsMultiRow
                     ? sequence.MaxElevation - sequence.MinElevation
-                    : null
+                    : null,
+                Stitch = stitchInfo
             },
             Links = new PanoramaLinks
             {
-                StitchedPreview = stitchStatuses != null && stitchStatuses.ContainsKey(panoramaId)
+                StitchedPreview = stitchRecord?.Status == "completed"
                     ? $"/stitch/{panoramaId}/image"
                     : null,
                 DownloadSet = $"/api/v2/panoramas/{panoramaId}/download"
             }
         };
+    }
+
+    /// <summary>
+    /// Get panorama ID string from a sequence
+    /// </summary>
+    private static string GetPanoramaId(PanoramaSequence sequence)
+    {
+        var first = sequence.Photos.First();
+        return $"pano_{first.Rover.Name.ToLowerInvariant()}_{first.Sol}_{sequence.Index}";
     }
 
     /// <summary>
@@ -760,4 +956,9 @@ public class PanoramaService : IPanoramaService
         public float MinElevation { get; set; }
         public float MaxElevation { get; set; }
     }
+
+    /// <summary>
+    /// Rating aggregate for a panorama
+    /// </summary>
+    private record RatingAggregate(double Average, int Count);
 }

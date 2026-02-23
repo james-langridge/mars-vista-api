@@ -23,6 +23,7 @@ public class MarsVistaDbContext : DbContext
     public DbSet<RoverWaypoint> RoverWaypoints { get; set; }
     public DbSet<SolCompleteness> SolCompleteness { get; set; }
     public DbSet<StitchedPanorama> StitchedPanoramas { get; set; }
+    public DbSet<PanoramaRating> PanoramaRatings { get; set; }
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
@@ -320,8 +321,30 @@ public class MarsVistaDbContext : DbContext
             entity.Property(e => e.PanoramaId).HasMaxLength(100).IsRequired();
             entity.Property(e => e.Status).HasMaxLength(20).IsRequired()
                 .HasDefaultValue("processing");
+            entity.Property(e => e.StitchMethod).HasMaxLength(30);
             entity.Property(e => e.ImagePath).HasMaxLength(500);
             entity.Property(e => e.ErrorMessage).HasMaxLength(2000);
+
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+        });
+
+        // PanoramaRating configuration
+        modelBuilder.Entity<PanoramaRating>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.Id)
+                .HasDefaultValueSql("gen_random_uuid()");
+            entity.Property(e => e.PanoramaId).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.Rating).IsRequired();
+            entity.Property(e => e.ClientId).HasMaxLength(100).IsRequired();
+
+            // One rating per panorama per client
+            entity.HasIndex(e => new { e.PanoramaId, e.ClientId }).IsUnique();
+
+            // Fast lookup by panorama for aggregate queries
+            entity.HasIndex(e => e.PanoramaId);
 
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP");
