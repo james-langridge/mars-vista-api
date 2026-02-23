@@ -168,6 +168,42 @@ public record PanoramaAttributes
     [JsonPropertyName("vertical_coverage_degrees")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public float? VerticalCoverageDegrees { get; init; }
+
+    /// <summary>
+    /// Stitch status, method, and rating information
+    /// </summary>
+    [JsonPropertyName("stitch")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public StitchInfo? Stitch { get; init; }
+}
+
+/// <summary>
+/// Stitch processing information for a panorama
+/// </summary>
+public record StitchInfo
+{
+    [JsonPropertyName("status")]
+    public string Status { get; init; } = "not_started";
+
+    [JsonPropertyName("method")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Method { get; init; }
+
+    [JsonPropertyName("width")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? Width { get; init; }
+
+    [JsonPropertyName("height")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? Height { get; init; }
+
+    [JsonPropertyName("average_rating")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? AverageRating { get; init; }
+
+    [JsonPropertyName("rating_count")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? RatingCount { get; init; }
 }
 
 /// <summary>
