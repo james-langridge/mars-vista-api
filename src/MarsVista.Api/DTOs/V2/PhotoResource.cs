@@ -205,6 +205,14 @@ public record PhotoAttributes
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? ImgSrc { get; init; }
 
+    // Rating data
+    /// <summary>
+    /// Community rating information (included in single-photo responses and field_set=extended+)
+    /// </summary>
+    [JsonPropertyName("rating")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public PhotoRatingInfo? Rating { get; init; }
+
     // Raw NASA data (only included when field_set=complete)
     /// <summary>
     /// Raw NASA API response data (JSONB). Only included when field_set=complete.
@@ -213,6 +221,19 @@ public record PhotoAttributes
     [JsonPropertyName("raw_data")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public object? RawData { get; init; }
+}
+
+/// <summary>
+/// Photo rating information
+/// </summary>
+public record PhotoRatingInfo
+{
+    [JsonPropertyName("average")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? Average { get; init; }
+
+    [JsonPropertyName("count")]
+    public int Count { get; init; }
 }
 
 /// <summary>

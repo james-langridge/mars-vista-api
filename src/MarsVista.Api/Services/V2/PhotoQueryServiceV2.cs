@@ -50,8 +50,18 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
         // Execute query (everything happens in database now!)
         var photos = await paginatedQuery.ToListAsync(cancellationToken);
 
+        // Batch-load rating info when needed (extended+ field set, or rating filter/sort active)
+        var includeRatings = ShouldIncludeRatings(parameters);
+        var ratingsMap = new Dictionary<int, PhotoRatingInfo>();
+        if (includeRatings && photos.Count > 0)
+        {
+            var photoIds = photos.Select(p => p.Id).ToList();
+            ratingsMap = await GetRatingInfoBatchAsync(photoIds, cancellationToken);
+        }
+
         // Map to DTOs
-        var photoDtos = photos.Select(p => MapToPhotoResource(p, parameters)).ToList();
+        var photoDtos = photos.Select(p => MapToPhotoResource(p, parameters,
+            ratingsMap.GetValueOrDefault(p.Id))).ToList();
 
         // Build pagination metadata
         var totalPages = (int)Math.Ceiling(totalCount / (double)parameters.PageSize);
@@ -89,8 +99,12 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
         }
 
         var photo = await query.FirstOrDefaultAsync(cancellationToken);
+        if (photo == null) return null;
 
-        return photo == null ? null : MapToPhotoResource(photo, parameters);
+        // Always include rating data for single-photo responses
+        var ratingInfo = await GetRatingInfoAsync(id, cancellationToken);
+
+        return MapToPhotoResource(photo, parameters, ratingInfo);
     }
 
     public async Task<List<PhotoResource>> GetPhotosByIdsAsync(
@@ -245,6 +259,136 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
             Percentage = totalCount > 0 ? Math.Round((s.Count / (double)totalCount) * 100, 1) : 0,
             EarthDate = s.EarthDate?.ToString("yyyy-MM-dd")
         }).ToList();
+    }
+
+    private static bool ShouldIncludeRatings(PhotoQueryParameters parameters)
+    {
+        // Include when field_set is extended or higher
+        if (parameters.FieldSetParsed.HasValue && parameters.FieldSetParsed.Value >= FieldSetType.Extended)
+            return true;
+
+        // Include when rating filters or sort are active
+        if (parameters.MinRating.HasValue || parameters.MinRatingCount.HasValue)
+            return true;
+
+        if (parameters.SortFields.Any(s => s.Field is "rating" or "rating_count"))
+            return true;
+
+        return false;
+    }
+
+    private async Task<PhotoRatingInfo?> GetRatingInfoAsync(int photoId, CancellationToken cancellationToken)
+    {
+        var aggregate = await _context.PhotoRatings
+            .AsNoTracking()
+            .Where(r => r.PhotoId == photoId)
+            .GroupBy(r => r.PhotoId)
+            .Select(g => new { Avg = g.Average(r => r.Rating), Count = g.Count() })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (aggregate == null) return new PhotoRatingInfo { Average = null, Count = 0 };
+
+        return new PhotoRatingInfo
+        {
+            Average = Math.Round(aggregate.Avg, 1),
+            Count = aggregate.Count
+        };
+    }
+
+    private async Task<Dictionary<int, PhotoRatingInfo>> GetRatingInfoBatchAsync(
+        List<int> photoIds,
+        CancellationToken cancellationToken)
+    {
+        var aggregates = await _context.PhotoRatings
+            .AsNoTracking()
+            .Where(r => photoIds.Contains(r.PhotoId))
+            .GroupBy(r => r.PhotoId)
+            .Select(g => new { PhotoId = g.Key, Avg = g.Average(r => r.Rating), Count = g.Count() })
+            .ToListAsync(cancellationToken);
+
+        return aggregates.ToDictionary(
+            a => a.PhotoId,
+            a => new PhotoRatingInfo
+            {
+                Average = Math.Round(a.Avg, 1),
+                Count = a.Count
+            });
+    }
+
+    public async Task<bool> PhotoExistsAsync(int id, CancellationToken cancellationToken = default)
+    {
+        return await _context.Photos.AnyAsync(p => p.Id == id, cancellationToken);
+    }
+
+    public async Task<RatingResponse> UpsertRatingAsync(
+        int photoId,
+        string clientId,
+        int rating,
+        CancellationToken cancellationToken = default)
+    {
+        var existing = await _context.PhotoRatings
+            .FirstOrDefaultAsync(r => r.PhotoId == photoId && r.ClientId == clientId, cancellationToken);
+
+        if (existing != null)
+        {
+            existing.Rating = rating;
+            existing.UpdatedAt = DateTime.UtcNow;
+        }
+        else
+        {
+            _context.PhotoRatings.Add(new PhotoRating
+            {
+                PhotoId = photoId,
+                Rating = rating,
+                ClientId = clientId,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            });
+        }
+
+        try
+        {
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException) when (existing == null)
+        {
+            // Concurrent insert won the race — reload and update
+            _context.ChangeTracker.Clear();
+            var conflict = await _context.PhotoRatings
+                .FirstAsync(r => r.PhotoId == photoId && r.ClientId == clientId, cancellationToken);
+            conflict.Rating = rating;
+            conflict.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+
+        return await GetRatingAsync(photoId, clientId, cancellationToken);
+    }
+
+    public async Task<RatingResponse> GetRatingAsync(
+        int photoId,
+        string? clientId,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _context.PhotoRatings
+            .AsNoTracking()
+            .Where(r => r.PhotoId == photoId)
+            .GroupBy(r => 1)
+            .Select(g => new
+            {
+                Avg = g.Average(r => r.Rating),
+                Count = g.Count(),
+                UserRating = clientId != null
+                    ? g.Where(r => r.ClientId == clientId).Select(r => (int?)r.Rating).FirstOrDefault()
+                    : (int?)null
+            })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return new RatingResponse
+        {
+            AverageRating = result != null ? Math.Round(result.Avg, 1) : 0,
+            RatingCount = result?.Count ?? 0,
+            UserRating = result?.UserRating
+        };
     }
 
     /// <summary>
@@ -428,6 +572,18 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
             query = query.Where(p => p.MastAz.HasValue && p.MastAz.Value <= parameters.MastAzimuthMax.Value);
         }
 
+        // Filter by rating
+        if (parameters.MinRating.HasValue)
+        {
+            query = query.Where(p => p.Ratings.Any() &&
+                p.Ratings.Average(r => (double)r.Rating) >= parameters.MinRating.Value);
+        }
+
+        if (parameters.MinRatingCount.HasValue)
+        {
+            query = query.Where(p => p.Ratings.Count() >= parameters.MinRatingCount.Value);
+        }
+
         return query;
     }
 
@@ -460,6 +616,14 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
                     "date_taken_utc" => isDescending ? query.OrderByDescending(p => p.DateTakenUtc) : query.OrderBy(p => p.DateTakenUtc),
                     "camera" => isDescending ? query.OrderByDescending(p => p.Camera.Name) : query.OrderBy(p => p.Camera.Name),
                     "created_at" => isDescending ? query.OrderByDescending(p => p.CreatedAt) : query.OrderBy(p => p.CreatedAt),
+                    "rating" => isDescending
+                        ? query.OrderByDescending(p => p.Ratings.Average(r => (double?)r.Rating) ?? 0)
+                        : query.OrderBy(p => p.Ratings.Any()
+                            ? p.Ratings.Average(r => (double?)r.Rating)
+                            : (double?)double.MaxValue),
+                    "rating_count" => isDescending
+                        ? query.OrderByDescending(p => p.Ratings.Count())
+                        : query.OrderBy(p => p.Ratings.Count()),
                     _ => isDescending ? query.OrderByDescending(p => p.DateTakenUtc) : query.OrderBy(p => p.DateTakenUtc)
                 };
             }
@@ -473,6 +637,14 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
                     "date_taken_utc" => isDescending ? orderedQuery.ThenByDescending(p => p.DateTakenUtc) : orderedQuery.ThenBy(p => p.DateTakenUtc),
                     "camera" => isDescending ? orderedQuery.ThenByDescending(p => p.Camera.Name) : orderedQuery.ThenBy(p => p.Camera.Name),
                     "created_at" => isDescending ? orderedQuery.ThenByDescending(p => p.CreatedAt) : orderedQuery.ThenBy(p => p.CreatedAt),
+                    "rating" => isDescending
+                        ? orderedQuery.ThenByDescending(p => p.Ratings.Average(r => (double?)r.Rating) ?? 0)
+                        : orderedQuery.ThenBy(p => p.Ratings.Any()
+                            ? p.Ratings.Average(r => (double?)r.Rating)
+                            : (double?)double.MaxValue),
+                    "rating_count" => isDescending
+                        ? orderedQuery.ThenByDescending(p => p.Ratings.Count())
+                        : orderedQuery.ThenBy(p => p.Ratings.Count()),
                     _ => orderedQuery
                 };
             }
@@ -484,7 +656,7 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
     /// <summary>
     /// Map Photo entity to PhotoResource DTO with field selection
     /// </summary>
-    private PhotoResource MapToPhotoResource(Photo photo, PhotoQueryParameters parameters)
+    private PhotoResource MapToPhotoResource(Photo photo, PhotoQueryParameters parameters, PhotoRatingInfo? ratingInfo = null)
     {
         var hasFieldSelection = parameters.FieldList.Count > 0;
         var includeRover = parameters.IncludeList.Contains("rover");
@@ -590,6 +762,8 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
             Caption = ShouldInclude("caption") ? photo.Caption : null,
             Credit = ShouldInclude("credit") ? photo.Credit : null,
             CreatedAt = ShouldInclude("created_at") ? photo.CreatedAt : null,
+            // Rating info (single-photo or extended+ field set)
+            Rating = ratingInfo,
             // Legacy field for backwards compatibility
             ImgSrc = ShouldInclude("img_src") ? photo.ImgSrcLarge : null,
             // Raw NASA data (only for complete field set)
@@ -724,6 +898,13 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
 
         if (parameters.LocationRadius.HasValue)
             metadata["location_radius"] = parameters.LocationRadius.Value;
+
+        // Rating filters
+        if (parameters.MinRating.HasValue)
+            metadata["min_rating"] = parameters.MinRating.Value;
+
+        if (parameters.MinRatingCount.HasValue)
+            metadata["min_rating_count"] = parameters.MinRatingCount.Value;
 
         return metadata;
     }
