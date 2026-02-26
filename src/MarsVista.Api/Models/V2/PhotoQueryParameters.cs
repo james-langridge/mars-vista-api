@@ -253,6 +253,20 @@ public class PhotoQueryParameters
     [Range(0, 360, ErrorMessage = "mast_azimuth_max must be between 0 and 360")]
     public float? MastAzimuthMax { get; set; }
 
+    // Rating filters
+    /// <summary>
+    /// Minimum average rating (1.0-5.0)
+    /// </summary>
+    [FromQuery(Name = "min_rating")]
+    public double? MinRating { get; set; }
+
+    /// <summary>
+    /// Minimum number of ratings required
+    /// </summary>
+    [FromQuery(Name = "min_rating_count")]
+    [Range(1, int.MaxValue, ErrorMessage = "min_rating_count must be >= 1")]
+    public int? MinRatingCount { get; set; }
+
     // Field selection control
     /// <summary>
     /// Field set preset (minimal, standard, extended, scientific, complete)

@@ -39,4 +39,19 @@ public interface IPhotoQueryServiceV2
         PhotoQueryParameters parameters,
         string groupBy,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Check if a photo exists by ID
+    /// </summary>
+    Task<bool> PhotoExistsAsync(int id, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Submit or update a photo rating
+    /// </summary>
+    Task<RatingResponse> UpsertRatingAsync(int photoId, string clientId, int rating, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Get rating information for a photo
+    /// </summary>
+    Task<RatingResponse> GetRatingAsync(int photoId, string? clientId, CancellationToken cancellationToken = default);
 }

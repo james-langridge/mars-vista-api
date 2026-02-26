@@ -57,6 +57,7 @@ public class Photo : ITimestamped
     // Navigation properties
     public virtual Rover Rover { get; set; } = null!;
     public virtual Camera Camera { get; set; } = null!;
+    public virtual ICollection<PhotoRating> Ratings { get; set; } = new List<PhotoRating>();
 
     // JSONB storage for complete NASA response (30+ fields)
     // This stores the raw NASA JSON with all fields they provide

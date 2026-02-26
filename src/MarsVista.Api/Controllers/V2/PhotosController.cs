@@ -348,6 +348,88 @@ public class PhotosController : ControllerBase
     }
 
     /// <summary>
+    /// Rate a photo (1-5 stars). Requires API key. Same key can update their rating.
+    /// </summary>
+    [HttpPost("{id}/rating")]
+    [ProducesResponseType(typeof(RatingResponse), 200)]
+    [ProducesResponseType(typeof(ApiError), 400)]
+    [ProducesResponseType(typeof(ApiError), 401)]
+    [ProducesResponseType(typeof(ApiError), 404)]
+    public async Task<IActionResult> RatePhoto(
+        int id,
+        [FromBody] RatingRequest request,
+        CancellationToken cancellationToken)
+    {
+        var clientId = HttpContext.Items["ApiKeyId"]?.ToString();
+        if (string.IsNullOrEmpty(clientId))
+        {
+            return Unauthorized(new ApiError
+            {
+                Type = "/errors/unauthorized",
+                Title = "Unauthorized",
+                Status = 401,
+                Detail = "API key required to rate photos",
+                Instance = Request.Path
+            });
+        }
+
+        if (request.Rating < 1 || request.Rating > 5)
+        {
+            return BadRequest(new ApiError
+            {
+                Type = "/errors/validation-error",
+                Title = "Validation Error",
+                Status = 400,
+                Detail = "Rating must be between 1 and 5",
+                Instance = Request.Path
+            });
+        }
+
+        // Verify photo exists (lightweight check)
+        if (!await _photoQueryService.PhotoExistsAsync(id, cancellationToken))
+        {
+            return NotFound(new ApiError
+            {
+                Type = "/errors/not-found",
+                Title = "Not Found",
+                Status = 404,
+                Detail = $"Photo with ID {id} not found",
+                Instance = Request.Path
+            });
+        }
+
+        var result = await _photoQueryService.UpsertRatingAsync(id, clientId, request.Rating, cancellationToken);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Get rating information for a photo
+    /// </summary>
+    [HttpGet("{id}/rating")]
+    [ProducesResponseType(typeof(RatingResponse), 200)]
+    [ProducesResponseType(typeof(ApiError), 404)]
+    public async Task<IActionResult> GetRating(
+        int id,
+        CancellationToken cancellationToken)
+    {
+        if (!await _photoQueryService.PhotoExistsAsync(id, cancellationToken))
+        {
+            return NotFound(new ApiError
+            {
+                Type = "/errors/not-found",
+                Title = "Not Found",
+                Status = 404,
+                Detail = $"Photo with ID {id} not found",
+                Instance = Request.Path
+            });
+        }
+
+        var clientId = HttpContext.Items["ApiKeyId"]?.ToString();
+        var result = await _photoQueryService.GetRatingAsync(id, clientId, cancellationToken);
+        return Ok(result);
+    }
+
+    /// <summary>
     /// Determine if the query includes only active rovers
     /// If any inactive rover is included, treat as inactive for more aggressive caching
     /// </summary>

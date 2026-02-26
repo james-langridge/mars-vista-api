@@ -24,6 +24,7 @@ public class MarsVistaDbContext : DbContext
     public DbSet<SolCompleteness> SolCompleteness { get; set; }
     public DbSet<StitchedPanorama> StitchedPanoramas { get; set; }
     public DbSet<PanoramaRating> PanoramaRatings { get; set; }
+    public DbSet<PhotoRating> PhotoRatings { get; set; }
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
@@ -347,6 +348,34 @@ public class MarsVistaDbContext : DbContext
             entity.HasIndex(e => e.PanoramaId);
 
             entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+        });
+
+        // PhotoRating configuration
+        modelBuilder.Entity<PhotoRating>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.Id)
+                .HasDefaultValueSql("gen_random_uuid()");
+            entity.Property(e => e.Rating).IsRequired();
+            entity.Property(e => e.ClientId).HasMaxLength(100).IsRequired();
+
+            // One rating per photo per client
+            entity.HasIndex(e => new { e.PhotoId, e.ClientId }).IsUnique();
+
+            // Fast lookup by photo for aggregate queries
+            entity.HasIndex(e => e.PhotoId);
+
+            // Foreign key to Photo
+            entity.HasOne(e => e.Photo)
+                .WithMany(p => p.Ratings)
+                .HasForeignKey(e => e.PhotoId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.UpdatedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP");
         });
 

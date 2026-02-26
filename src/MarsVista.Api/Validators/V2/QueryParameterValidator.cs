@@ -24,7 +24,8 @@ public class QueryParameterValidator
 
     private static readonly HashSet<string> ValidSortFields = new(StringComparer.OrdinalIgnoreCase)
     {
-        "id", "sol", "earth_date", "date_taken_utc", "camera", "created_at"
+        "id", "sol", "earth_date", "date_taken_utc", "camera", "created_at",
+        "rating", "rating_count"
     };
 
     private static readonly HashSet<string> ValidPhotoFields = new(StringComparer.OrdinalIgnoreCase)
@@ -389,6 +390,18 @@ public class QueryParameterValidator
                 Value = parameters.MastAzimuthMin,
                 Message = "mast_azimuth_min must be <= mast_azimuth_max (wrap-around not yet supported)",
                 Example = "mast_azimuth_min=90&mast_azimuth_max=180"
+            });
+        }
+
+        // Validate rating parameters
+        if (parameters.MinRating.HasValue && (parameters.MinRating.Value < 1.0 || parameters.MinRating.Value > 5.0))
+        {
+            errors.Add(new ValidationError
+            {
+                Field = "min_rating",
+                Value = parameters.MinRating.Value,
+                Message = "min_rating must be between 1.0 and 5.0",
+                Example = "4.0"
             });
         }
 
