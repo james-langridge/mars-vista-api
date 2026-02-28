@@ -345,6 +345,7 @@ public class PanoramaService : IPanoramaService
         CancellationToken cancellationToken = default)
     {
         var existing = await _context.PanoramaRatings
+            .AsTracking()
             .FirstOrDefaultAsync(r => r.PanoramaId == panoramaId && r.ClientId == clientId, cancellationToken);
 
         if (existing != null)
