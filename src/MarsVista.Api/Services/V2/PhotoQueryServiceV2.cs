@@ -327,6 +327,7 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
         CancellationToken cancellationToken = default)
     {
         var existing = await _context.PhotoRatings
+            .AsTracking()
             .FirstOrDefaultAsync(r => r.PhotoId == photoId && r.ClientId == clientId, cancellationToken);
 
         if (existing != null)
@@ -355,6 +356,7 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
             // Concurrent insert won the race — reload and update
             _context.ChangeTracker.Clear();
             var conflict = await _context.PhotoRatings
+                .AsTracking()
                 .FirstAsync(r => r.PhotoId == photoId && r.ClientId == clientId, cancellationToken);
             conflict.Rating = rating;
             conflict.UpdatedAt = DateTime.UtcNow;
