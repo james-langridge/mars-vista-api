@@ -18,6 +18,7 @@ public abstract class IntegrationTestBase : IAsyncLifetime
 {
     protected MarsVistaDbContext DbContext { get; private set; } = null!;
     protected ServiceProvider ServiceProvider { get; private set; } = null!;
+    protected SqlCapturingInterceptor SqlCapture { get; } = new();
 
     private string _testDatabaseName = null!;
     private string _connectionString = null!;
@@ -122,6 +123,7 @@ public abstract class IntegrationTestBase : IAsyncLifetime
         {
             options.UseNpgsql(_connectionString)
                 .UseSnakeCaseNamingConvention()
+                .AddInterceptors(SqlCapture)
                 .ConfigureWarnings(warnings =>
                     warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
         });
