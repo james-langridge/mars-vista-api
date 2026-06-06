@@ -68,12 +68,25 @@ public class PhotoQueryService : IPhotoQueryService
 
         if (!string.IsNullOrWhiteSpace(camera))
         {
-            var cameraId = _referenceCache.GetCameraIdByName(camera);
-            if (cameraId == null)
+            // A camera name (FHAZ, NAVCAM, ...) can refer to multiple camera rows
+            // (one per rover that has that camera). After the rover_id filter above
+            // narrows to one rover, at most one of these camera ids actually matches
+            // any photo - but we still hand all of them to the planner so the SQL
+            // is correct regardless of which rover the user asked for.
+            var cameraIds = _referenceCache.GetCameraIdsByName(camera);
+            if (cameraIds.Count == 0)
             {
                 return (new List<PhotoDto>(), 0);
             }
-            query = query.Where(p => p.CameraId == cameraId.Value);
+            else if (cameraIds.Count == 1)
+            {
+                var cameraId = cameraIds[0];
+                query = query.Where(p => p.CameraId == cameraId);
+            }
+            else
+            {
+                query = query.Where(p => cameraIds.Contains(p.CameraId));
+            }
         }
 
         // Get total count before pagination

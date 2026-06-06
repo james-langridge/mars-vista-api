@@ -210,7 +210,21 @@ public abstract class IntegrationTestBase : IAsyncLifetime
             UpdatedAt = now
         };
 
-        DbContext.Cameras.AddRange(fhaz, mast, navcam);
+        // Duplicate-name camera: FHAZ exists on both rovers in production
+        // (Curiosity has FHAZ, so do Opportunity and Spirit). Seed at least one
+        // duplicate-name pair so any future cache-key bug like the
+        // ToDictionary(name) crash fails CI here instead of in production.
+        var fhazPerseverance = new Camera
+        {
+            Id = 4,
+            Name = "FHAZ",
+            FullName = "Front Hazard Avoidance Camera",
+            RoverId = 2,
+            CreatedAt = now,
+            UpdatedAt = now
+        };
+
+        DbContext.Cameras.AddRange(fhaz, mast, navcam, fhazPerseverance);
 
         await DbContext.SaveChangesAsync();
 
