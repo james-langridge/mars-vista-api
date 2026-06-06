@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using MarsVista.Api.Services;
 using MarsVista.Core.Data;
 using MarsVista.Core.Entities;
 using Npgsql;
@@ -126,6 +127,11 @@ public abstract class IntegrationTestBase : IAsyncLifetime
         });
 
         services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
+
+        // StaticReferenceCache is required by PhotoQueryService and PhotoQueryServiceV2 -
+        // any integration test that exercises those services needs it registered.
+        // Lazy init means it picks up the seeded rovers/cameras on first call.
+        services.AddSingleton<IStaticReferenceCache, StaticReferenceCache>();
 
         ConfigureServices(services);
 
