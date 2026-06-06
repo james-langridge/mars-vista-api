@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using MarsVista.Core.Data;
 using MarsVista.Api.DTOs.V2;
+using MarsVista.Api.Services;
 using MarsVista.Core.Entities;
 using MarsVista.Core.Helpers;
 using MarsVista.Api.Models.V2;
@@ -15,11 +16,16 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
 {
     private readonly MarsVistaDbContext _context;
     private readonly ILogger<PhotoQueryServiceV2> _logger;
+    private readonly IStaticReferenceCache _referenceCache;
 
-    public PhotoQueryServiceV2(MarsVistaDbContext context, ILogger<PhotoQueryServiceV2> logger)
+    public PhotoQueryServiceV2(
+        MarsVistaDbContext context,
+        ILogger<PhotoQueryServiceV2> logger,
+        IStaticReferenceCache referenceCache)
     {
         _context = context;
         _logger = logger;
+        _referenceCache = referenceCache;
     }
 
     public async Task<ApiResponse<List<PhotoResource>>> QueryPhotosAsync(
@@ -407,16 +413,46 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
             query = query.Where(p => EF.Functions.ILike(p.NasaId, $"%{nasaIdPattern}%"));
         }
 
-        // Filter by rovers
+        // Filter by rovers - resolve names to IDs and filter on rover_id directly.
+        // See story 052a: filtering via `p.Rover.Name.ToLower()` joined to rovers caused
+        // the planner to backward-scan ix_photos_sol (4 GB of buffer reads per call).
+        // Scalar = is also critical for the single-rover case (the planner does not
+        // use ix_photos_rover_id_sol_covering when it sees `rover_id = ANY(ARRAY[x])`).
         if (parameters.RoverList.Count > 0)
         {
-            query = query.Where(p => parameters.RoverList.Contains(p.Rover.Name.ToLower()));
+            var roverIds = _referenceCache.GetRoverIdsByNames(parameters.RoverList);
+            if (roverIds.Count == 0)
+            {
+                query = query.Where(p => false);
+            }
+            else if (roverIds.Count == 1)
+            {
+                var roverId = roverIds[0];
+                query = query.Where(p => p.RoverId == roverId);
+            }
+            else
+            {
+                query = query.Where(p => roverIds.Contains(p.RoverId));
+            }
         }
 
-        // Filter by cameras
+        // Filter by cameras - same pattern as rovers above.
         if (parameters.CameraList.Count > 0)
         {
-            query = query.Where(p => parameters.CameraList.Contains(p.Camera.Name.ToUpper()));
+            var cameraIds = _referenceCache.GetCameraIdsByNames(parameters.CameraList);
+            if (cameraIds.Count == 0)
+            {
+                query = query.Where(p => false);
+            }
+            else if (cameraIds.Count == 1)
+            {
+                var cameraId = cameraIds[0];
+                query = query.Where(p => p.CameraId == cameraId);
+            }
+            else
+            {
+                query = query.Where(p => cameraIds.Contains(p.CameraId));
+            }
         }
 
         // Filter by sol range
@@ -918,16 +954,42 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
     {
         var query = _context.Photos.AsQueryable();
 
-        // Filter by rovers
+        // Filter by rovers - resolve via cache, see story 052a (same fix as BuildQuery).
         if (parameters.RoverList.Count > 0)
         {
-            query = query.Where(p => parameters.RoverList.Contains(p.Rover.Name.ToLower()));
+            var roverIds = _referenceCache.GetRoverIdsByNames(parameters.RoverList);
+            if (roverIds.Count == 0)
+            {
+                query = query.Where(p => false);
+            }
+            else if (roverIds.Count == 1)
+            {
+                var roverId = roverIds[0];
+                query = query.Where(p => p.RoverId == roverId);
+            }
+            else
+            {
+                query = query.Where(p => roverIds.Contains(p.RoverId));
+            }
         }
 
-        // Filter by cameras
+        // Filter by cameras - same pattern as rovers.
         if (parameters.CameraList.Count > 0)
         {
-            query = query.Where(p => parameters.CameraList.Contains(p.Camera.Name.ToUpper()));
+            var cameraIds = _referenceCache.GetCameraIdsByNames(parameters.CameraList);
+            if (cameraIds.Count == 0)
+            {
+                query = query.Where(p => false);
+            }
+            else if (cameraIds.Count == 1)
+            {
+                var cameraId = cameraIds[0];
+                query = query.Where(p => p.CameraId == cameraId);
+            }
+            else
+            {
+                query = query.Where(p => cameraIds.Contains(p.CameraId));
+            }
         }
 
         // Filter by sol range

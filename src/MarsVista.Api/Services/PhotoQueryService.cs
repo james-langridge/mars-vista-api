@@ -8,13 +8,16 @@ public class PhotoQueryService : IPhotoQueryService
 {
     private readonly MarsVistaDbContext _context;
     private readonly ILogger<PhotoQueryService> _logger;
+    private readonly IStaticReferenceCache _referenceCache;
 
     public PhotoQueryService(
         MarsVistaDbContext context,
-        ILogger<PhotoQueryService> logger)
+        ILogger<PhotoQueryService> logger,
+        IStaticReferenceCache referenceCache)
     {
         _context = context;
         _logger = logger;
+        _referenceCache = referenceCache;
     }
 
     public async Task<(List<PhotoDto> Photos, int TotalCount)> QueryPhotosAsync(
@@ -30,11 +33,21 @@ public class PhotoQueryService : IPhotoQueryService
         page = Math.Max(1, page);
         perPage = Math.Clamp(perPage, 1, 100);
 
+        // Resolve rover name -> id up-front. Filtering by p.Rover.Name.ToLower() joined
+        // to rovers caused the planner to backward-scan ix_photos_sol (see story 052a)
+        // and pull 4 GB of buffer pages per call. Filtering by rover_id directly uses
+        // ix_photos_rover_id_sol_covering.
+        var roverId = _referenceCache.GetRoverIdByName(roverName);
+        if (roverId == null)
+        {
+            return (new List<PhotoDto>(), 0);
+        }
+
         // Start with base query - NO Include()! Direct Select() projection is more efficient
         // EF Core will automatically join the related tables when referenced in Select()
         var query = _context.Photos
             .AsNoTracking() // Don't track entities for read-only operations
-            .Where(p => p.Rover.Name.ToLower() == roverName.ToLower());
+            .Where(p => p.RoverId == roverId.Value);
 
         // Apply filters
         if (sol.HasValue)
@@ -55,7 +68,12 @@ public class PhotoQueryService : IPhotoQueryService
 
         if (!string.IsNullOrWhiteSpace(camera))
         {
-            query = query.Where(p => p.Camera.Name.ToLower() == camera.ToLower());
+            var cameraId = _referenceCache.GetCameraIdByName(camera);
+            if (cameraId == null)
+            {
+                return (new List<PhotoDto>(), 0);
+            }
+            query = query.Where(p => p.CameraId == cameraId.Value);
         }
 
         // Get total count before pagination
@@ -106,9 +124,17 @@ public class PhotoQueryService : IPhotoQueryService
         int perPage = 25,
         CancellationToken cancellationToken = default)
     {
+        // Resolve rover name -> id up-front so the MAX(sol) probe uses
+        // ix_photos_rover_id_sol_covering instead of a join scan. See story 052a.
+        var roverId = _referenceCache.GetRoverIdByName(roverName);
+        if (roverId == null)
+        {
+            return (new List<PhotoDto>(), 0);
+        }
+
         // Find the maximum sol for this rover
         var maxSol = await _context.Photos
-            .Where(p => p.Rover.Name.ToLower() == roverName.ToLower())
+            .Where(p => p.RoverId == roverId.Value)
             .MaxAsync(p => (int?)p.Sol, cancellationToken);
 
         if (!maxSol.HasValue)
