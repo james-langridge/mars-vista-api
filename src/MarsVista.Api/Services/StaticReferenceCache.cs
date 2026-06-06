@@ -49,8 +49,12 @@ public class StaticReferenceCache : IStaticReferenceCache
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<StaticReferenceCache> _logger;
     private readonly SemaphoreSlim _loadSemaphore = new(1, 1);
-    private IReadOnlyDictionary<string, int>? _roversByName;
-    private IReadOnlyDictionary<string, IReadOnlyList<int>>? _camerasByName;
+    // volatile so the lock-free fast path on GetRoversOrLoad / GetCamerasOrLoad
+    // observes the populated dictionary contents (not just the reference write)
+    // on weakly-ordered architectures. On x86_64 this is a no-op; the keyword
+    // documents intent and removes the spec-level race.
+    private volatile IReadOnlyDictionary<string, int>? _roversByName;
+    private volatile IReadOnlyDictionary<string, IReadOnlyList<int>>? _camerasByName;
 
     public StaticReferenceCache(IServiceScopeFactory scopeFactory, ILogger<StaticReferenceCache> logger)
     {
