@@ -170,9 +170,12 @@ builder.Services.AddHttpClient("NASA", client =>
 .AddPolicyHandler(GetRetryPolicy())
 .AddPolicyHandler(GetCircuitBreakerPolicy());
 
-// Static reference cache (rover and camera name -> id mappings, see story 052a)
-// Singleton: data is loaded lazily once and never changes during process lifetime.
+// Static reference cache (rover and camera name -> id mappings).
+// Singleton: data is loaded once at startup via StaticReferenceCacheWarmer and
+// never changes during process lifetime. The warmer eliminates the cold-start
+// DB roundtrip on the first photo request.
 builder.Services.AddSingleton<IStaticReferenceCache, StaticReferenceCache>();
+builder.Services.AddHostedService<StaticReferenceCacheWarmer>();
 
 // Query services (calculation layer - pure business logic)
 // v1 services
