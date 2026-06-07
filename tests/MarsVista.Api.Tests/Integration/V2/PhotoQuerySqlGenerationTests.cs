@@ -213,4 +213,114 @@ public class PhotoQuerySqlGenerationTests : IntegrationTestBase
         // which returns an empty result instead of trying to translate the unknown name.
         response.Meta!.TotalCount.Should().Be(0);
     }
+
+    [Fact]
+    public async Task MinRatingCountFilter_EmitsAggregatedSubquery_NotCorrelated()
+    {
+        // Seed two photos and two ratings on the second so a min_rating_count=2
+        // filter can return exactly one. The same data lets us verify that the
+        // generated SQL uses GROUP BY photo_id once, not a per-row correlated
+        // subquery (which previously caused a 5.5 s / 23 GB scan on production).
+        var now = DateTime.UtcNow;
+        var p1 = new Photo
+        {
+            NasaId = "R-NO-RATINGS", ImgSrcFull = "x", ImgSrcLarge = "x", ImgSrcMedium = "x", ImgSrcSmall = "x",
+            Sol = 10, EarthDate = new DateTime(2013, 5, 1, 0, 0, 0, DateTimeKind.Utc),
+            DateTakenUtc = new DateTime(2013, 5, 1, 0, 0, 0, DateTimeKind.Utc),
+            SampleType = "Full", RoverId = 1, CameraId = 1,
+            CreatedAt = now, UpdatedAt = now,
+        };
+        var p2 = new Photo
+        {
+            NasaId = "R-TWO-RATINGS", ImgSrcFull = "x", ImgSrcLarge = "x", ImgSrcMedium = "x", ImgSrcSmall = "x",
+            Sol = 11, EarthDate = new DateTime(2013, 5, 2, 0, 0, 0, DateTimeKind.Utc),
+            DateTakenUtc = new DateTime(2013, 5, 2, 0, 0, 0, DateTimeKind.Utc),
+            SampleType = "Full", RoverId = 1, CameraId = 1,
+            CreatedAt = now, UpdatedAt = now,
+        };
+        DbContext.Photos.AddRange(p1, p2);
+        await DbContext.SaveChangesAsync();
+        DbContext.PhotoRatings.AddRange(
+            new PhotoRating { PhotoId = p2.Id, Rating = 4, ClientId = "client-a", CreatedAt = now, UpdatedAt = now },
+            new PhotoRating { PhotoId = p2.Id, Rating = 5, ClientId = "client-b", CreatedAt = now, UpdatedAt = now });
+        await DbContext.SaveChangesAsync();
+
+        SqlCapture.Clear();
+
+        var parameters = new PhotoQueryParameters
+        {
+            MinRatingCount = 2,
+            Page = 1, PerPage = 10,
+        };
+
+        var response = await _photoQueryService.QueryPhotosAsync(parameters, default);
+
+        // Correctness: only p2 (2 ratings) qualifies, p1 (0 ratings) and the
+        // sql-generation-seed photos do not.
+        response.Data.Should().ContainSingle();
+        response.Data.Single().Attributes!.NasaId.Should().Be("R-TWO-RATINGS");
+
+        // SQL shape: the predicate must aggregate once, not per outer row.
+        var ratingSqls = SqlCapture.ExecutedSql
+            .Where(s => s.Contains("photo_ratings", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        ratingSqls.Should().NotBeEmpty();
+        foreach (var sql in ratingSqls)
+        {
+            sql.Should().Contain("GROUP BY",
+                "MinRatingCount must compile to an aggregated subquery, not a correlated per-row COUNT");
+        }
+    }
+
+    [Fact]
+    public async Task MinRatingFilter_EmitsAggregatedSubquery_NotCorrelated()
+    {
+        var now = DateTime.UtcNow;
+        var pLow = new Photo
+        {
+            NasaId = "AVG-LOW", ImgSrcFull = "x", ImgSrcLarge = "x", ImgSrcMedium = "x", ImgSrcSmall = "x",
+            Sol = 20, EarthDate = new DateTime(2013, 6, 1, 0, 0, 0, DateTimeKind.Utc),
+            DateTakenUtc = new DateTime(2013, 6, 1, 0, 0, 0, DateTimeKind.Utc),
+            SampleType = "Full", RoverId = 1, CameraId = 1,
+            CreatedAt = now, UpdatedAt = now,
+        };
+        var pHigh = new Photo
+        {
+            NasaId = "AVG-HIGH", ImgSrcFull = "x", ImgSrcLarge = "x", ImgSrcMedium = "x", ImgSrcSmall = "x",
+            Sol = 21, EarthDate = new DateTime(2013, 6, 2, 0, 0, 0, DateTimeKind.Utc),
+            DateTakenUtc = new DateTime(2013, 6, 2, 0, 0, 0, DateTimeKind.Utc),
+            SampleType = "Full", RoverId = 1, CameraId = 1,
+            CreatedAt = now, UpdatedAt = now,
+        };
+        DbContext.Photos.AddRange(pLow, pHigh);
+        await DbContext.SaveChangesAsync();
+        DbContext.PhotoRatings.AddRange(
+            new PhotoRating { PhotoId = pLow.Id,  Rating = 2, ClientId = "c1", CreatedAt = now, UpdatedAt = now },
+            new PhotoRating { PhotoId = pHigh.Id, Rating = 5, ClientId = "c2", CreatedAt = now, UpdatedAt = now });
+        await DbContext.SaveChangesAsync();
+
+        SqlCapture.Clear();
+
+        var parameters = new PhotoQueryParameters
+        {
+            MinRating = 4.0,
+            Page = 1, PerPage = 10,
+        };
+
+        var response = await _photoQueryService.QueryPhotosAsync(parameters, default);
+
+        // Correctness: only pHigh (avg 5) qualifies; pLow (avg 2) does not.
+        response.Data.Should().ContainSingle();
+        response.Data.Single().Attributes!.NasaId.Should().Be("AVG-HIGH");
+
+        var ratingSqls = SqlCapture.ExecutedSql
+            .Where(s => s.Contains("photo_ratings", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        ratingSqls.Should().NotBeEmpty();
+        foreach (var sql in ratingSqls)
+        {
+            sql.Should().Contain("GROUP BY",
+                "MinRating must compile to an aggregated subquery, not a correlated per-row AVG");
+        }
+    }
 }
