@@ -667,6 +667,12 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
                     "date_taken_utc" => isDescending ? query.OrderByDescending(p => p.DateTakenUtc) : query.OrderBy(p => p.DateTakenUtc),
                     "camera" => isDescending ? query.OrderByDescending(p => p.Camera.Name) : query.OrderBy(p => p.Camera.Name),
                     "created_at" => isDescending ? query.OrderByDescending(p => p.CreatedAt) : query.OrderBy(p => p.CreatedAt),
+                    // TODO: same correlated-aggregate antipattern as the
+                    // rating filter above - p.Ratings.Average / .Count
+                    // compiles to a per-row subquery. Tolerable today because
+                    // photo_ratings has < 100 rows and no current traffic
+                    // uses sort=rating. Rewrite via a projected join when
+                    // the table grows.
                     "rating" => isDescending
                         ? query.OrderByDescending(p => p.Ratings.Average(r => (double?)r.Rating) ?? 0)
                         : query.OrderBy(p => p.Ratings.Any()
@@ -688,6 +694,8 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
                     "date_taken_utc" => isDescending ? orderedQuery.ThenByDescending(p => p.DateTakenUtc) : orderedQuery.ThenBy(p => p.DateTakenUtc),
                     "camera" => isDescending ? orderedQuery.ThenByDescending(p => p.Camera.Name) : orderedQuery.ThenBy(p => p.Camera.Name),
                     "created_at" => isDescending ? orderedQuery.ThenByDescending(p => p.CreatedAt) : orderedQuery.ThenBy(p => p.CreatedAt),
+                    // TODO: same correlated-aggregate antipattern as the
+                    // primary-sort branch above - see note there.
                     "rating" => isDescending
                         ? orderedQuery.ThenByDescending(p => p.Ratings.Average(r => (double?)r.Rating) ?? 0)
                         : orderedQuery.ThenBy(p => p.Ratings.Any()

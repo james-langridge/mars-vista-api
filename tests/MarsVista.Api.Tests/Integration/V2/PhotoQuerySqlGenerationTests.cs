@@ -255,8 +255,10 @@ public class PhotoQuerySqlGenerationTests : IntegrationTestBase
 
         var response = await _photoQueryService.QueryPhotosAsync(parameters, default);
 
-        // Correctness: only p2 (2 ratings) qualifies, p1 (0 ratings) and the
-        // sql-generation-seed photos do not.
+        // Correctness: only p2 (2 ratings) qualifies. p1 (0 ratings) and the
+        // three base-seed photos (Q-CUR-FHAZ, Q-PER-NAVCAM, Q-PER-FHAZ - see
+        // SeedAdditionalDataAsync above) have no photo_ratings rows so they
+        // do not appear in the GroupBy result the subquery filters on.
         response.Data.Should().ContainSingle();
         response.Data.Single().Attributes!.NasaId.Should().Be("R-TWO-RATINGS");
 
@@ -310,6 +312,9 @@ public class PhotoQuerySqlGenerationTests : IntegrationTestBase
         var response = await _photoQueryService.QueryPhotosAsync(parameters, default);
 
         // Correctness: only pHigh (avg 5) qualifies; pLow (avg 2) does not.
+        // The three base-seed photos (Q-CUR-FHAZ, Q-PER-NAVCAM, Q-PER-FHAZ -
+        // see SeedAdditionalDataAsync above) have no photo_ratings rows so
+        // they are excluded by the GroupBy subquery.
         response.Data.Should().ContainSingle();
         response.Data.Single().Attributes!.NasaId.Should().Be("AVG-HIGH");
 
