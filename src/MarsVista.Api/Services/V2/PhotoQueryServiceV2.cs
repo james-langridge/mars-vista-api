@@ -610,16 +610,29 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
             query = query.Where(p => p.MastAz.HasValue && p.MastAz.Value <= parameters.MastAzimuthMax.Value);
         }
 
-        // Filter by rating
+        // Filter by rating - pre-aggregate qualifying photo_ids in a single subquery
+        // (HashAggregate over photo_ratings) instead of the correlated form
+        // `p.Ratings.Average(...) >= X`, which EF Core translates to a per-row
+        // subquery executed once per photo in the outer query. With 1.58M photos
+        // that was ~5.5 s and ~23 GB of buffer reads to return zero rows.
         if (parameters.MinRating.HasValue)
         {
-            query = query.Where(p => p.Ratings.Any() &&
-                p.Ratings.Average(r => (double)r.Rating) >= parameters.MinRating.Value);
+            var minRating = parameters.MinRating.Value;
+            var qualifyingByRating = _context.PhotoRatings
+                .GroupBy(r => r.PhotoId)
+                .Where(g => g.Average(r => (double)r.Rating) >= minRating)
+                .Select(g => g.Key);
+            query = query.Where(p => qualifyingByRating.Contains(p.Id));
         }
 
         if (parameters.MinRatingCount.HasValue)
         {
-            query = query.Where(p => p.Ratings.Count() >= parameters.MinRatingCount.Value);
+            var minCount = parameters.MinRatingCount.Value;
+            var qualifyingByCount = _context.PhotoRatings
+                .GroupBy(r => r.PhotoId)
+                .Where(g => g.Count() >= minCount)
+                .Select(g => g.Key);
+            query = query.Where(p => qualifyingByCount.Contains(p.Id));
         }
 
         return query;
@@ -654,6 +667,12 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
                     "date_taken_utc" => isDescending ? query.OrderByDescending(p => p.DateTakenUtc) : query.OrderBy(p => p.DateTakenUtc),
                     "camera" => isDescending ? query.OrderByDescending(p => p.Camera.Name) : query.OrderBy(p => p.Camera.Name),
                     "created_at" => isDescending ? query.OrderByDescending(p => p.CreatedAt) : query.OrderBy(p => p.CreatedAt),
+                    // TODO: same correlated-aggregate antipattern as the
+                    // rating filter above - p.Ratings.Average / .Count
+                    // compiles to a per-row subquery. Tolerable today because
+                    // photo_ratings has < 100 rows and no current traffic
+                    // uses sort=rating. Rewrite via a projected join when
+                    // the table grows.
                     "rating" => isDescending
                         ? query.OrderByDescending(p => p.Ratings.Average(r => (double?)r.Rating) ?? 0)
                         : query.OrderBy(p => p.Ratings.Any()
@@ -675,6 +694,8 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
                     "date_taken_utc" => isDescending ? orderedQuery.ThenByDescending(p => p.DateTakenUtc) : orderedQuery.ThenBy(p => p.DateTakenUtc),
                     "camera" => isDescending ? orderedQuery.ThenByDescending(p => p.Camera.Name) : orderedQuery.ThenBy(p => p.Camera.Name),
                     "created_at" => isDescending ? orderedQuery.ThenByDescending(p => p.CreatedAt) : orderedQuery.ThenBy(p => p.CreatedAt),
+                    // TODO: same correlated-aggregate antipattern as the
+                    // primary-sort branch above - see note there.
                     "rating" => isDescending
                         ? orderedQuery.ThenByDescending(p => p.Ratings.Average(r => (double?)r.Rating) ?? 0)
                         : orderedQuery.ThenBy(p => p.Ratings.Any()
