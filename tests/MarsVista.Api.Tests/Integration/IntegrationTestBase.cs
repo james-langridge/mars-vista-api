@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using MarsVista.Api.Services;
 using MarsVista.Core.Data;
 using MarsVista.Core.Entities;
 using Npgsql;
@@ -127,6 +128,11 @@ public abstract class IntegrationTestBase : IAsyncLifetime
 
         services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
 
+        // StaticReferenceCache is required by PhotoQueryService and PhotoQueryServiceV2 -
+        // any integration test that exercises those services needs it registered.
+        // Lazy init means it picks up the seeded rovers/cameras on first call.
+        services.AddSingleton<IStaticReferenceCache, StaticReferenceCache>();
+
         ConfigureServices(services);
 
         return services.BuildServiceProvider();
@@ -204,7 +210,21 @@ public abstract class IntegrationTestBase : IAsyncLifetime
             UpdatedAt = now
         };
 
-        DbContext.Cameras.AddRange(fhaz, mast, navcam);
+        // Duplicate-name camera: FHAZ exists on both rovers in production
+        // (Curiosity has FHAZ, so do Opportunity and Spirit). Seed at least one
+        // duplicate-name pair so any future cache-key bug like the
+        // ToDictionary(name) crash fails CI here instead of in production.
+        var fhazPerseverance = new Camera
+        {
+            Id = 4,
+            Name = "FHAZ",
+            FullName = "Front Hazard Avoidance Camera",
+            RoverId = 2,
+            CreatedAt = now,
+            UpdatedAt = now
+        };
+
+        DbContext.Cameras.AddRange(fhaz, mast, navcam, fhazPerseverance);
 
         await DbContext.SaveChangesAsync();
 
