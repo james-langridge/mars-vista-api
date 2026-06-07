@@ -132,12 +132,13 @@ public class MarsVistaDbContext : DbContext
             entity.Property(e => e.RawData)
                 .HasColumnType("jsonb");
 
-            // Computed column for aspect ratio (stored, indexed)
-            // DECIMAL(10,3) defined in migration SQL to handle extreme panoramas
+            // Computed column for aspect ratio (stored).
+            // DECIMAL(10,3) defined in migration SQL to handle extreme panoramas.
+            // Index on this column was removed in 2026-06 (story 052a): partial index
+            // `idx_photos_aspect_ratio WHERE aspect_ratio IS NOT NULL` had zero scans
+            // and 78 MB of dead weight in the buffer cache.
             entity.Property(e => e.AspectRatio)
                 .HasComputedColumnSql("CASE WHEN height IS NOT NULL AND height > 0 THEN ROUND((width::decimal / height), 3) ELSE NULL END", stored: true);
-
-            entity.HasIndex(e => e.AspectRatio);
 
             // Foreign keys
             entity.HasOne(e => e.Rover)
