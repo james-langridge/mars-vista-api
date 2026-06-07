@@ -11,23 +11,30 @@ namespace MarsVista.Api.Data;
 /// <see cref="Middleware.ResponseTimingMiddleware"/> can emit
 /// <c>X-DB-Time</c> and <c>X-DB-Query-Count</c> response headers.
 ///
-/// Thread safety: a single request can issue multiple concurrent EF callbacks
-/// (e.g. split-query <c>Include()</c> loading, or any fire-and-forget save
-/// running while the main pipeline is still active). The previous
-/// implementation stored a single stopwatch in <c>HttpContext.Items</c> and
-/// called <c>Items.Remove(...)</c> on it, which raced under that load and
-/// corrupted the underlying <see cref="Dictionary{TKey,TValue}"/>, producing
-/// <see cref="InvalidOperationException"/> ("Operations that change
-/// non-concurrent collections must have exclusive access...").
+/// Thread safety: an EF Core interceptor's Reader/NonQuery/Scalar callbacks
+/// can overlap within a single HTTP request whenever the application produces
+/// a continuation that runs on a thread-pool thread distinct from the one
+/// that issued the command (e.g. an unawaited <c>Task</c> path that lets the
+/// next callback fire before the previous one returns). The previous
+/// implementation stored a single stopwatch in <c>HttpContext.Items</c> under
+/// the key <c>"__CurrentQueryStopwatch"</c> and called <c>Items.Remove(...)</c>
+/// on it in StopTiming. <c>HttpContext.Items</c> is backed by a plain
+/// <see cref="Dictionary{TKey,TValue}"/>, not <see cref="ConcurrentDictionary{TKey,TValue}"/>,
+/// so two overlapping callbacks could race the dictionary's bucket structure
+/// and throw
+///
+///   System.InvalidOperationException: Operations that change non-concurrent
+///   collections must have exclusive access...
+///
+/// at <c>Dictionary.Remove</c> - reproduced in production via Sentry.
 ///
 /// This implementation tracks per-command start timestamps in a
 /// <see cref="ConcurrentDictionary{TKey,TValue}"/> keyed by
 /// <see cref="CommandEventData.CommandId"/>, accumulates the running totals
 /// with <see cref="Interlocked"/>, and snapshots them into
-/// <c>HttpContext.Items</c> under a per-instance lock. Because the
-/// interceptor is registered as Scoped, the lock and the instance fields are
-/// per-request, so contention is bounded to a single request's overlapping
-/// DB callbacks (typically 1-3).
+/// <c>HttpContext.Items</c> under a per-instance lock. Because the interceptor
+/// is registered as Scoped, the lock and the instance fields are per-request,
+/// so contention is bounded to a single request's overlapping DB callbacks.
 /// </summary>
 public class QueryTimingInterceptor : DbCommandInterceptor
 {
@@ -47,7 +54,7 @@ public class QueryTimingInterceptor : DbCommandInterceptor
         CommandEventData eventData,
         InterceptionResult<DbDataReader> result)
     {
-        StartTiming(eventData);
+        RecordStart(eventData.CommandId);
         return result;
     }
 
@@ -56,7 +63,7 @@ public class QueryTimingInterceptor : DbCommandInterceptor
         CommandExecutedEventData eventData,
         DbDataReader result)
     {
-        StopTiming(eventData);
+        RecordStop(eventData.CommandId);
         return result;
     }
 
@@ -66,7 +73,7 @@ public class QueryTimingInterceptor : DbCommandInterceptor
         InterceptionResult<DbDataReader> result,
         CancellationToken cancellationToken = default)
     {
-        StartTiming(eventData);
+        RecordStart(eventData.CommandId);
         return new ValueTask<InterceptionResult<DbDataReader>>(result);
     }
 
@@ -76,7 +83,7 @@ public class QueryTimingInterceptor : DbCommandInterceptor
         DbDataReader result,
         CancellationToken cancellationToken = default)
     {
-        StopTiming(eventData);
+        RecordStop(eventData.CommandId);
         return new ValueTask<DbDataReader>(result);
     }
 
@@ -85,7 +92,7 @@ public class QueryTimingInterceptor : DbCommandInterceptor
         CommandEventData eventData,
         InterceptionResult<int> result)
     {
-        StartTiming(eventData);
+        RecordStart(eventData.CommandId);
         return result;
     }
 
@@ -94,7 +101,7 @@ public class QueryTimingInterceptor : DbCommandInterceptor
         CommandExecutedEventData eventData,
         int result)
     {
-        StopTiming(eventData);
+        RecordStop(eventData.CommandId);
         return result;
     }
 
@@ -104,7 +111,7 @@ public class QueryTimingInterceptor : DbCommandInterceptor
         InterceptionResult<int> result,
         CancellationToken cancellationToken = default)
     {
-        StartTiming(eventData);
+        RecordStart(eventData.CommandId);
         return new ValueTask<InterceptionResult<int>>(result);
     }
 
@@ -114,7 +121,7 @@ public class QueryTimingInterceptor : DbCommandInterceptor
         int result,
         CancellationToken cancellationToken = default)
     {
-        StopTiming(eventData);
+        RecordStop(eventData.CommandId);
         return new ValueTask<int>(result);
     }
 
@@ -123,7 +130,7 @@ public class QueryTimingInterceptor : DbCommandInterceptor
         CommandEventData eventData,
         InterceptionResult<object> result)
     {
-        StartTiming(eventData);
+        RecordStart(eventData.CommandId);
         return result;
     }
 
@@ -132,7 +139,7 @@ public class QueryTimingInterceptor : DbCommandInterceptor
         CommandExecutedEventData eventData,
         object result)
     {
-        StopTiming(eventData);
+        RecordStop(eventData.CommandId);
         return result;
     }
 
@@ -142,7 +149,7 @@ public class QueryTimingInterceptor : DbCommandInterceptor
         InterceptionResult<object> result,
         CancellationToken cancellationToken = default)
     {
-        StartTiming(eventData);
+        RecordStart(eventData.CommandId);
         return new ValueTask<InterceptionResult<object>>(result);
     }
 
@@ -152,46 +159,54 @@ public class QueryTimingInterceptor : DbCommandInterceptor
         object result,
         CancellationToken cancellationToken = default)
     {
-        StopTiming(eventData);
+        RecordStop(eventData.CommandId);
         return new ValueTask<object>(result);
     }
 
-    private void StartTiming(CommandEventData eventData)
+    /// <summary>
+    /// Record the start of a database command. Internal to allow concurrent
+    /// regression tests to drive the timing logic without constructing EF's
+    /// <see cref="CommandEventData"/>.
+    /// </summary>
+    internal void RecordStart(Guid commandId)
     {
-        // Record the start timestamp under the command's unique id. Concurrent
-        // commands within one request use distinct CommandId values, so they
-        // do not contend on the same dictionary slot.
-        _startTimestamps[eventData.CommandId] = Stopwatch.GetTimestamp();
+        // Each concurrent command gets its own dictionary slot keyed by its
+        // unique CommandId, so concurrent commands never contend on the same
+        // slot.
+        _startTimestamps[commandId] = Stopwatch.GetTimestamp();
     }
 
-    private void StopTiming(CommandExecutedEventData eventData)
+    /// <summary>
+    /// Record the end of a database command. See <see cref="RecordStart(Guid)"/>.
+    /// </summary>
+    internal void RecordStop(Guid commandId)
     {
-        if (!_startTimestamps.TryRemove(eventData.CommandId, out var startTicks))
+        if (!_startTimestamps.TryRemove(commandId, out var startTimestamp))
         {
             // No matching Start - e.g. the interceptor pipeline produced
             // an Executed event without an Executing one. Ignore.
             return;
         }
 
-        var rawElapsed = Stopwatch.GetTimestamp() - startTicks;
-        var elapsedTimeSpanTicks = rawElapsed * TimeSpan.TicksPerSecond / Stopwatch.Frequency;
-
-        var newTotalTicks = Interlocked.Add(ref _totalElapsedTicks, elapsedTimeSpanTicks);
-        var newQueryCount = Interlocked.Increment(ref _queryCount);
+        var elapsed = Stopwatch.GetElapsedTime(startTimestamp);
+        Interlocked.Add(ref _totalElapsedTicks, elapsed.Ticks);
+        Interlocked.Increment(ref _queryCount);
 
         var httpContext = _httpContextAccessor.HttpContext;
         if (httpContext == null) return;
 
-        // HttpContext.Items is a Dictionary - concurrent writes to it from
+        // HttpContext.Items is a Dictionary - concurrent writes from
         // overlapping callbacks within the same request would corrupt the
-        // dictionary. Guard the snapshot writes with the per-instance lock.
-        // Because the interceptor is Scoped (one instance per request) and a
-        // single request rarely has more than a handful of concurrent
-        // commands, this lock has negligible contention.
+        // dictionary. Guard the snapshot writes with the per-instance lock,
+        // and read the current totals *inside* the lock so the last lock
+        // holder always publishes the most recent state (the Interlocked
+        // ordering of Add/Increment is independent of lock acquisition
+        // order, so capturing the return values outside the lock would let
+        // an earlier holder overwrite a later one's snapshot).
         lock (_itemsWriteLock)
         {
-            httpContext.Items["__TotalDbTime"] = new TimeSpan(newTotalTicks);
-            httpContext.Items["__DbQueryCount"] = newQueryCount;
+            httpContext.Items["__TotalDbTime"] = new TimeSpan(Interlocked.Read(ref _totalElapsedTicks));
+            httpContext.Items["__DbQueryCount"] = Volatile.Read(ref _queryCount);
         }
     }
 }
