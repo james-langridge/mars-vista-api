@@ -14,6 +14,7 @@ public class PanoramasIntegrationTests : IntegrationTestBase
     protected override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IPhotoQueryServiceV2, PhotoQueryServiceV2>();
+        services.AddScoped<MarsVista.Core.Services.PanoramaDetector>();
         services.AddScoped<IPanoramaService, PanoramaService>();
     }
 
