@@ -187,6 +187,7 @@ builder.Services.AddScoped<IStatisticsService, StatisticsService>();
 builder.Services.AddScoped<MarsVista.Api.Services.V2.IPhotoQueryServiceV2, MarsVista.Api.Services.V2.PhotoQueryServiceV2>();
 builder.Services.AddScoped<MarsVista.Api.Services.V2.IRoverQueryServiceV2, MarsVista.Api.Services.V2.RoverQueryServiceV2>();
 builder.Services.AddSingleton<MarsVista.Api.Services.V2.ICachingServiceV2, MarsVista.Api.Services.V2.CachingServiceV2>();
+builder.Services.AddScoped<MarsVista.Api.Services.V2.IQueryCountCache, MarsVista.Api.Services.V2.QueryCountCache>();
 
 // Cache warming and metrics services
 builder.Services.Configure<MarsVista.Api.Services.V2.CacheWarmingOptions>(

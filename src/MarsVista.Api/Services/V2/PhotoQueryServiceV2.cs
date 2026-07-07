@@ -17,15 +17,18 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
     private readonly MarsVistaDbContext _context;
     private readonly ILogger<PhotoQueryServiceV2> _logger;
     private readonly IStaticReferenceCache _referenceCache;
+    private readonly IQueryCountCache _countCache;
 
     public PhotoQueryServiceV2(
         MarsVistaDbContext context,
         ILogger<PhotoQueryServiceV2> logger,
-        IStaticReferenceCache referenceCache)
+        IStaticReferenceCache referenceCache,
+        IQueryCountCache countCache)
     {
         _context = context;
         _logger = logger;
         _referenceCache = referenceCache;
+        _countCache = countCache;
     }
 
     public async Task<ApiResponse<List<PhotoResource>>> QueryPhotosAsync(
@@ -35,8 +38,8 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
         // Build query with ALL filters (including Mars time) at the database level
         var query = BuildQuery(parameters);
 
-        // Get total count for pagination metadata
-        var totalCount = await query.CountAsync(cancellationToken);
+        // Get total count for pagination metadata (cached; see IQueryCountCache)
+        var totalCount = await _countCache.GetOrSetCountAsync(query, cancellationToken);
 
         // Apply sorting
         query = ApplySorting(query, parameters);

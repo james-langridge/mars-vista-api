@@ -135,6 +135,18 @@ public abstract class IntegrationTestBase : IAsyncLifetime
         // Lazy init means it picks up the seeded rovers/cameras on first call.
         services.AddSingleton<IStaticReferenceCache, StaticReferenceCache>();
 
+        // Count cache is required by the photo query services (v1 and v2) and the
+        // manifest services. Registered with a null Redis multiplexer so tests run
+        // on the L1 (memory) level only - the same graceful-degradation path
+        // production takes when Redis is down.
+        services.AddMemoryCache();
+        services.AddSingleton<MarsVista.Api.Services.V2.ICachingServiceV2>(sp =>
+            new MarsVista.Api.Services.V2.CachingServiceV2(
+                sp.GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>(),
+                null,
+                sp.GetRequiredService<ILogger<MarsVista.Api.Services.V2.CachingServiceV2>>()));
+        services.AddScoped<MarsVista.Api.Services.V2.IQueryCountCache, MarsVista.Api.Services.V2.QueryCountCache>();
+
         ConfigureServices(services);
 
         return services.BuildServiceProvider();
