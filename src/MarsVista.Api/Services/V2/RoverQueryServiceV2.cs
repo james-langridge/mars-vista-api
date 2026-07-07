@@ -12,15 +12,18 @@ public class RoverQueryServiceV2 : IRoverQueryServiceV2
     private readonly MarsVistaDbContext _context;
     private readonly ICachingServiceV2 _cachingService;
     private readonly ILogger<RoverQueryServiceV2> _logger;
+    private readonly IQueryCountCache _countCache;
 
     public RoverQueryServiceV2(
         MarsVistaDbContext context,
         ICachingServiceV2 cachingService,
-        ILogger<RoverQueryServiceV2> logger)
+        ILogger<RoverQueryServiceV2> logger,
+        IQueryCountCache countCache)
     {
         _context = context;
         _cachingService = cachingService;
         _logger = logger;
+        _countCache = countCache;
     }
 
     public async Task<List<RoverResource>> GetAllRoversAsync(CancellationToken cancellationToken = default)
@@ -134,8 +137,11 @@ public class RoverQueryServiceV2 : IRoverQueryServiceV2
         // Determine if this is an active rover for cache duration
         var isActiveRover = rover.Status?.ToLowerInvariant() == "active";
 
-        // Include photo count in cache key for auto-invalidation when new photos are added
-        var photoCount = await _context.Photos.CountAsync(p => p.RoverId == rover.Id, cancellationToken);
+        // Include photo count in cache key for auto-invalidation when new photos are added.
+        // The count itself is served from the count cache, so invalidation lags the daily
+        // scrape by at most the count TTL (1 h) instead of costing a COUNT(*) per request.
+        var photoCount = await _countCache.GetOrSetCountAsync(
+            _context.Photos.Where(p => p.RoverId == rover.Id), cancellationToken);
         var cacheKey = _cachingService.GenerateCacheKey("manifest", slug.ToLowerInvariant(), photoCount);
 
         var manifest = await _cachingService.GetOrSetAsync(
