@@ -197,6 +197,7 @@ builder.Services.AddHostedService<MarsVista.Api.Services.V2.CacheWarmingBackgrou
 builder.Services.AddHostedService<MarsVista.Api.Services.V2.CacheStatsLoggingService>();
 
 // v2 Phase 2 advanced features services
+builder.Services.AddScoped<MarsVista.Core.Services.PanoramaDetector>();
 builder.Services.AddScoped<MarsVista.Api.Services.V2.IPanoramaService, MarsVista.Api.Services.V2.PanoramaService>();
 builder.Services.AddScoped<MarsVista.Api.Services.V2.ILocationService, MarsVista.Api.Services.V2.LocationService>();
 builder.Services.AddScoped<MarsVista.Api.Services.V2.IJourneyService, MarsVista.Api.Services.V2.JourneyService>();

@@ -21,6 +21,7 @@ public class PanoramaFilterAndRatingTests : IntegrationTestBase
 
         services.AddSingleton(_mockLogger.Object);
         services.AddSingleton(_mockPhotoService.Object);
+        services.AddScoped<MarsVista.Core.Services.PanoramaDetector>();
         services.AddScoped<PanoramaService>();
     }
 
