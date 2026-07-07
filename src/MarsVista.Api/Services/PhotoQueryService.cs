@@ -1,5 +1,6 @@
 using MarsVista.Core.Data;
 using MarsVista.Api.DTOs;
+using MarsVista.Api.Services.V2;
 using Microsoft.EntityFrameworkCore;
 
 namespace MarsVista.Api.Services;
@@ -9,15 +10,18 @@ public class PhotoQueryService : IPhotoQueryService
     private readonly MarsVistaDbContext _context;
     private readonly ILogger<PhotoQueryService> _logger;
     private readonly IStaticReferenceCache _referenceCache;
+    private readonly IQueryCountCache _countCache;
 
     public PhotoQueryService(
         MarsVistaDbContext context,
         ILogger<PhotoQueryService> logger,
-        IStaticReferenceCache referenceCache)
+        IStaticReferenceCache referenceCache,
+        IQueryCountCache countCache)
     {
         _context = context;
         _logger = logger;
         _referenceCache = referenceCache;
+        _countCache = countCache;
     }
 
     public async Task<(List<PhotoDto> Photos, int TotalCount)> QueryPhotosAsync(
@@ -89,8 +93,8 @@ public class PhotoQueryService : IPhotoQueryService
             }
         }
 
-        // Get total count before pagination
-        var totalCount = await query.CountAsync(cancellationToken);
+        // Get total count before pagination (cached; see IQueryCountCache)
+        var totalCount = await _countCache.GetOrSetCountAsync(query, cancellationToken);
 
         // Order by camera and ID for consistent results, then apply pagination and projection
         // By removing Include() and going straight to Select(), we only fetch the columns we need
