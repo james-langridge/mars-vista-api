@@ -214,7 +214,7 @@
           {
             "name": "min_photos",
             "in": "query",
-            "description": "Minimum number of photos in panorama",
+            "description": "Only return panoramas with at least this many photos",
             "schema": {
               "type": "integer",
               "format": "int32"

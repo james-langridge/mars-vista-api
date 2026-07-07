@@ -42,7 +42,7 @@ public class PanoramasController : ControllerBase
     /// <param name="rovers">Comma-separated list of rover names (curiosity, perseverance, etc.)</param>
     /// <param name="sol_min">Minimum sol</param>
     /// <param name="sol_max">Maximum sol</param>
-    /// <param name="min_photos">Minimum number of photos in panorama</param>
+    /// <param name="min_photos">Only return panoramas with at least this many photos</param>
     /// <param name="stitch_status">Filter by stitch status: completed, failed, processing, not_started</param>
     /// <param name="stitch_method">Filter by stitch method: feature_match, telemetry_projection</param>
     /// <param name="mosaic_type">Filter by mosaic type: single_row, multi_row</param>

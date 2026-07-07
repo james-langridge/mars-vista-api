@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using MarsVista.Core.Data;
 using MarsVista.Core.Entities;
-using MarsVista.Core.Services;
 using MarsVista.Api.Services;
 using MarsVista.Api.DTOs.V2;
 using MarsVista.Core.Helpers;
@@ -18,7 +17,6 @@ public class PanoramaService : IPanoramaService
     private readonly MarsVistaDbContext _context;
     private readonly ILogger<PanoramaService> _logger;
     private readonly IPhotoQueryServiceV2 _photoService;
-    private readonly PanoramaDetector _detector;
     private readonly IStaticReferenceCache _referenceCache;
 
     // When no sol range is given, default to the most recent N sols per the
@@ -29,13 +27,11 @@ public class PanoramaService : IPanoramaService
         MarsVistaDbContext context,
         ILogger<PanoramaService> logger,
         IPhotoQueryServiceV2 photoService,
-        PanoramaDetector detector,
         IStaticReferenceCache referenceCache)
     {
         _context = context;
         _logger = logger;
         _photoService = photoService;
-        _detector = detector;
         _referenceCache = referenceCache;
     }
 
@@ -318,50 +314,6 @@ public class PanoramaService : IPanoramaService
         };
     }
 
-    private async Task<PanoramaSequence?> DetectPanoramaSequenceByIdAsync(
-        string panoramaId,
-        CancellationToken cancellationToken)
-    {
-        // Parse panorama ID (format: "pano_curiosity_1000_14")
-        var parts = panoramaId.Split('_');
-        if (parts.Length != 4 || parts[0] != "pano")
-            return null;
-
-        var rover = parts[1];
-        if (!int.TryParse(parts[2], out var sol))
-            return null;
-        if (!int.TryParse(parts[3], out var sequenceIndex))
-            return null;
-
-        // Get all panoramas for this rover and sol
-        var query = _context.Photos
-            .Where(p => p.Rover.Name.ToLower() == rover &&
-                       p.Sol == sol &&
-                       p.Site.HasValue &&
-                       p.Drive.HasValue &&
-                       p.MastAz.HasValue &&
-                       p.MastEl.HasValue &&
-                       p.SpacecraftClock.HasValue &&
-                       PanoramaDetector.PanoramicCameras.Contains(p.Camera.Name));
-
-        var photos = await query
-            .Include(p => p.Rover)
-            .Include(p => p.Camera)
-            .OrderBy(p => p.RoverId)
-            .ThenBy(p => p.Site)
-            .ThenBy(p => p.Drive)
-            .ThenBy(p => p.SpacecraftClock)
-            .ThenBy(p => p.MastEl) // Must match GetPanoramasAsync ordering for consistent IDs
-            .ToListAsync(cancellationToken);
-
-        var panoramas = _detector.DetectPanoramas(photos, PanoramaDetector.MinPhotosForPanorama);
-
-        if (sequenceIndex < 0 || sequenceIndex >= panoramas.Count)
-            return null;
-
-        return panoramas[sequenceIndex];
-    }
-
     /// <summary>
     /// Map a stored panorama entity to a resource DTO. The entity already holds
     /// the presentation values (coverage, quality, mosaic geometry, normalized
@@ -448,159 +400,6 @@ public class PanoramaService : IPanoramaService
                 DownloadSet = $"/api/v2/panoramas/{p.PanoramaId}/download"
             }
         };
-    }
-
-    /// <summary>
-    /// Convert panorama sequence to resource DTO
-    /// </summary>
-    private PanoramaResource ToPanoramaResource(PanoramaSequence sequence,
-        Dictionary<string, StitchedPanorama>? stitchStatuses = null,
-        List<PhotoResource>? photoResources = null,
-        Dictionary<string, RatingAggregate>? ratingAggregates = null)
-    {
-        var firstPhoto = sequence.Photos.First();
-        var lastPhoto = sequence.Photos.Last();
-        var rover = firstPhoto.Rover.Name.ToLowerInvariant();
-        var sol = firstPhoto.Sol;
-
-        // Generate panorama ID using sequence index
-        var panoramaId = $"pano_{rover}_{sol}_{sequence.Index}";
-
-        // Calculate coverage
-        var azimuths = sequence.Photos.Select(p => p.MastAz ?? 0).ToList();
-        var coverageDegrees = azimuths.Max() - azimuths.Min();
-
-        // Calculate unique positions (distinct camera angles, rounded to nearest degree)
-        var uniqueAzimuths = sequence.Photos
-            .Select(p => Math.Round(p.MastAz ?? 0))
-            .Distinct()
-            .OrderBy(a => a)
-            .ToList();
-        var uniquePositions = uniqueAzimuths.Count;
-
-        // Calculate average spacing between positions
-        float? avgPositionSpacing = null;
-        if (uniquePositions > 1)
-        {
-            var totalSpacing = 0.0;
-            for (int i = 1; i < uniqueAzimuths.Count; i++)
-            {
-                totalSpacing += uniqueAzimuths[i] - uniqueAzimuths[i - 1];
-            }
-            avgPositionSpacing = (float)(totalSpacing / (uniquePositions - 1));
-        }
-
-        // Calculate quality tier
-        var quality = PanoramaDetector.GetQualityTier(coverageDegrees, uniquePositions);
-
-        // Get Mars time range (normalize so start <= end for reverse-sweep panoramas)
-        string? marsTimeStart = null;
-        string? marsTimeEnd = null;
-        TimeSpan parsedStart = default, parsedEnd = default;
-        bool hasStart = !string.IsNullOrEmpty(firstPhoto.DateTakenMars) &&
-            MarsTimeHelper.TryExtractTimeFromTimestamp(firstPhoto.DateTakenMars, out parsedStart);
-        bool hasEnd = !string.IsNullOrEmpty(lastPhoto.DateTakenMars) &&
-            MarsTimeHelper.TryExtractTimeFromTimestamp(lastPhoto.DateTakenMars, out parsedEnd);
-        if (hasStart) marsTimeStart = MarsTimeHelper.FormatMarsTime(parsedStart);
-        if (hasEnd) marsTimeEnd = MarsTimeHelper.FormatMarsTime(parsedEnd);
-        if (hasStart && hasEnd && parsedStart > parsedEnd)
-        {
-            (marsTimeStart, marsTimeEnd) = (marsTimeEnd, marsTimeStart);
-        }
-
-        // Average elevation
-        var avgElevation = sequence.Photos.Average(p => p.MastEl ?? 0);
-
-        // Build location
-        PhotoLocation? location = null;
-        if (firstPhoto.Site.HasValue && firstPhoto.Drive.HasValue)
-        {
-            PhotoCoordinates? coordinates = null;
-            if (!string.IsNullOrEmpty(firstPhoto.Xyz) &&
-                MarsTimeHelper.TryParseXYZ(firstPhoto.Xyz, out var parsed))
-            {
-                coordinates = new PhotoCoordinates
-                {
-                    X = parsed.X,
-                    Y = parsed.Y,
-                    Z = parsed.Z
-                };
-            }
-
-            location = new PhotoLocation
-            {
-                Site = firstPhoto.Site,
-                Drive = firstPhoto.Drive,
-                Coordinates = coordinates
-            };
-        }
-
-        // Build StitchInfo from stitch status and rating aggregates
-        // Always include StitchInfo for consistent API responses (never null)
-        StitchedPanorama? stitchRecord = null;
-        stitchStatuses?.TryGetValue(panoramaId, out stitchRecord);
-        RatingAggregate? ratingAgg = null;
-        ratingAggregates?.TryGetValue(panoramaId, out ratingAgg);
-
-        var stitchInfo = new StitchInfo
-        {
-            Status = stitchRecord?.Status ?? "not_started",
-            Method = stitchRecord?.StitchMethod,
-            Width = stitchRecord?.Status == "completed" ? stitchRecord.ImageWidth : null,
-            Height = stitchRecord?.Status == "completed" ? stitchRecord.ImageHeight : null,
-            AverageRating = ratingAgg != null ? Math.Round(ratingAgg.Average, 1) : null,
-            RatingCount = ratingAgg?.Count
-        };
-
-        return new PanoramaResource
-        {
-            Id = panoramaId,
-            Type = "panorama",
-            Photos = photoResources,
-            Attributes = new PanoramaAttributes
-            {
-                Rover = rover,
-                Sol = sol,
-                MarsTimeStart = marsTimeStart,
-                MarsTimeEnd = marsTimeEnd,
-                TotalPhotos = sequence.Photos.Count,
-                CoverageDegrees = coverageDegrees,
-                Location = location,
-                Camera = firstPhoto.Camera.Name,
-                AvgElevation = avgElevation,
-                UniquePositions = uniquePositions,
-                AvgPositionSpacing = avgPositionSpacing,
-                Quality = quality,
-                MosaicType = sequence.IsMultiRow ? "multi_row" : "single_row",
-                ElevationRows = sequence.ElevationTierCount,
-                ElevationRangeData = sequence.IsMultiRow
-                    ? new ElevationRange { Min = sequence.MinElevation, Max = sequence.MaxElevation }
-                    : null,
-                GridDimensions = sequence.IsMultiRow
-                    ? $"{sequence.ElevationTierCount}x{sequence.AzimuthColumnCount}"
-                    : null,
-                VerticalCoverageDegrees = sequence.IsMultiRow
-                    ? sequence.MaxElevation - sequence.MinElevation
-                    : null,
-                Stitch = stitchInfo
-            },
-            Links = new PanoramaLinks
-            {
-                StitchedPreview = stitchRecord?.Status == "completed"
-                    ? $"/stitch/{panoramaId}/image"
-                    : null,
-                DownloadSet = $"/api/v2/panoramas/{panoramaId}/download"
-            }
-        };
-    }
-
-    /// <summary>
-    /// Get panorama ID string from a sequence
-    /// </summary>
-    private static string GetPanoramaId(PanoramaSequence sequence)
-    {
-        var first = sequence.Photos.First();
-        return $"pano_{first.Rover.Name.ToLowerInvariant()}_{first.Sol}_{sequence.Index}";
     }
 
     /// <summary>
