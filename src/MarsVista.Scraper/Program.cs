@@ -15,6 +15,9 @@ using Serilog.Formatting.Compact;
 // Configure Serilog
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
+    // Silence EF Core's per-command logging (matches the API config) so scrape
+    // and backfill progress is not buried under a flood of SQL command logs.
+    .MinimumLevel.Override("Microsoft.EntityFrameworkCore", Serilog.Events.LogEventLevel.Warning)
     .Enrich.FromLogContext()
     .WriteTo.Console(new CompactJsonFormatter())
     .CreateLogger();
