@@ -218,19 +218,23 @@ public class PanoramaService : IPanoramaService
         string panoramaId,
         CancellationToken cancellationToken = default)
     {
-        var sequence = await DetectPanoramaSequenceByIdAsync(panoramaId, cancellationToken);
-        if (sequence == null)
+        var entity = await _context.Panoramas
+            .AsNoTracking()
+            .Include(p => p.Rover)
+            .Include(p => p.Camera)
+            .FirstOrDefaultAsync(p => p.PanoramaId == panoramaId, cancellationToken);
+
+        if (entity == null)
             return null;
 
         var stitchRecord = await _context.StitchedPanoramas
             .AsNoTracking()
             .FirstOrDefaultAsync(s => s.PanoramaId == panoramaId, cancellationToken);
 
-        var stitchStatuses = stitchRecord != null
+        var stitchMap = stitchRecord != null
             ? new Dictionary<string, StitchedPanorama> { { panoramaId, stitchRecord } }
-            : null;
+            : new Dictionary<string, StitchedPanorama>();
 
-        // Load rating aggregate for this panorama
         var ratingData = await _context.PanoramaRatings
             .AsNoTracking()
             .Where(r => r.PanoramaId == panoramaId)
@@ -238,12 +242,11 @@ public class PanoramaService : IPanoramaService
             .Select(g => new { Avg = g.Average(r => r.Rating), Count = g.Count() })
             .FirstOrDefaultAsync(cancellationToken);
 
-        var ratingAggregates = ratingData != null
+        var ratingMap = ratingData != null
             ? new Dictionary<string, RatingAggregate> { { panoramaId, new RatingAggregate(ratingData.Avg, ratingData.Count) } }
-            : null;
+            : new Dictionary<string, RatingAggregate>();
 
-        // Map constituent photos to PhotoResource for detail response
-        var photoIds = sequence.Photos.Select(p => p.Id).ToList();
+        // Load the constituent photos (by the stored photo_ids) for the detail response
         var photoParams = new Models.V2.PhotoQueryParameters
         {
             Include = "rover,camera",
@@ -251,9 +254,9 @@ public class PanoramaService : IPanoramaService
             IncludeList = new List<string> { "rover", "camera" },
             FieldSetParsed = Models.V2.FieldSetType.Extended
         };
-        var photoResources = await _photoService.GetPhotosByIdsAsync(photoIds, photoParams, cancellationToken);
+        var photoResources = await _photoService.GetPhotosByIdsAsync(entity.PhotoIds.ToList(), photoParams, cancellationToken);
 
-        return ToPanoramaResource(sequence, stitchStatuses, photoResources, ratingAggregates);
+        return MapEntityToResource(entity, stitchMap, ratingMap, photoResources);
     }
 
     public async Task<RatingResponse> UpsertRatingAsync(
