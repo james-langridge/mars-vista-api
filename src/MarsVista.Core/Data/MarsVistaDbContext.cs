@@ -17,6 +17,7 @@ public class MarsVistaDbContext : DbContext
     public DbSet<ApiKey> ApiKeys { get; set; }
     public DbSet<RateLimit> RateLimits { get; set; }
     public DbSet<UsageEvent> UsageEvents { get; set; }
+    public DbSet<UsageEventMonthly> UsageEventsMonthly { get; set; }
     public DbSet<ScraperState> ScraperStates { get; set; }
     public DbSet<ScraperJobHistory> ScraperJobHistories { get; set; }
     public DbSet<ScraperJobRoverDetails> ScraperJobRoverDetails { get; set; }
@@ -218,6 +219,30 @@ public class MarsVistaDbContext : DbContext
 
             // Timestamp with default value
             entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+        });
+
+        // UsageEventMonthly configuration (retention rollup of usage_events)
+        modelBuilder.Entity<UsageEventMonthly>(entity =>
+        {
+            entity.ToTable("usage_events_monthly");
+
+            entity.HasKey(e => e.Id);
+
+            // The retention job's ON CONFLICT target: one row per
+            // (month, user, endpoint, tier) that accumulates across runs.
+            entity.HasIndex(e => new { e.Month, e.UserEmail, e.Endpoint, e.Tier })
+                .IsUnique();
+
+            // String length constraints (match usage_events)
+            entity.Property(e => e.UserEmail).HasMaxLength(255).IsRequired();
+            entity.Property(e => e.Endpoint).HasMaxLength(500).IsRequired();
+            entity.Property(e => e.Tier).HasMaxLength(20).IsRequired();
+
+            // Timestamps with default values
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.UpdatedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP");
         });
 
