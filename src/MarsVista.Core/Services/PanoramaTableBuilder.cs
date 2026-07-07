@@ -69,20 +69,31 @@ public class PanoramaTableBuilder : IPanoramaTableBuilder
         await WarnOnOrphanedStitchesAsync(roverId, sol, rows, cancellationToken);
 
         // Idempotent replace: drop the sol's existing rows and insert the fresh
-        // set atomically so a reader never sees a half-rebuilt sol.
-        await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
-
-        await _context.Panoramas
-            .Where(p => p.RoverId == roverId && p.Sol == sol)
-            .ExecuteDeleteAsync(cancellationToken);
-
-        if (rows.Count > 0)
+        // set atomically so a reader never sees a half-rebuilt sol. The whole
+        // unit runs inside an execution strategy because the API/scraper
+        // DbContext enables retry-on-failure, which forbids a bare
+        // BeginTransactionAsync - the strategy re-runs the lambda on a transient
+        // failure, so the change tracker is cleared each attempt to keep retries
+        // clean.
+        var strategy = _context.Database.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(async () =>
         {
-            _context.Panoramas.AddRange(rows);
-            await _context.SaveChangesAsync(cancellationToken);
-        }
+            _context.ChangeTracker.Clear();
 
-        await transaction.CommitAsync(cancellationToken);
+            await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+
+            await _context.Panoramas
+                .Where(p => p.RoverId == roverId && p.Sol == sol)
+                .ExecuteDeleteAsync(cancellationToken);
+
+            if (rows.Count > 0)
+            {
+                _context.Panoramas.AddRange(rows);
+                await _context.SaveChangesAsync(cancellationToken);
+            }
+
+            await transaction.CommitAsync(cancellationToken);
+        });
 
         _logger.LogDebug("Rebuilt {Count} panoramas for rover {RoverId} sol {Sol}", rows.Count, roverId, sol);
         return rows.Count;
