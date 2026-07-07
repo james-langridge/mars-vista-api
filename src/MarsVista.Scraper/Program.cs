@@ -72,6 +72,11 @@ try
     builder.Services.AddScoped<ISolCompletenessRepository, SolCompletenessRepository>();
     builder.Services.AddScoped<IIncrementalScraperService, IncrementalScraperService>();
 
+    // Daily maintenance: prune usage_events past the retention window into the
+    // monthly rollup. Runs after the scrape as a best-effort step.
+    builder.Services.AddScoped<MarsVista.Core.Services.IUsageEventRetentionService,
+        MarsVista.Core.Services.UsageEventRetentionService>();
+
     // Configure scraper schedule options
     builder.Services.Configure<ScraperScheduleOptions>(
         builder.Configuration.GetSection(ScraperScheduleOptions.SectionName));
@@ -131,6 +136,31 @@ try
             string.Join(", ", succeeded),
             string.Join(", ", failed));
         Environment.ExitCode = 1; // Non-zero exit code for Railway monitoring
+    }
+
+    // Best-effort daily maintenance. Wrapped so a retention failure is logged
+    // but never changes the scrape's exit code - the scrape is the job that
+    // Railway monitors, not the cleanup.
+    try
+    {
+        var retentionDays = 90;
+        var retentionEnv = Environment.GetEnvironmentVariable("USAGE_EVENTS_RETENTION_DAYS");
+        if (!string.IsNullOrEmpty(retentionEnv) && int.TryParse(retentionEnv, out var configuredDays))
+        {
+            retentionDays = configuredDays;
+        }
+
+        using var retentionScope = host.Services.CreateScope();
+        var retentionService = retentionScope.ServiceProvider
+            .GetRequiredService<MarsVista.Core.Services.IUsageEventRetentionService>();
+        var purged = await retentionService.PurgeAndRollUpAsync(retentionDays);
+        Log.Information(
+            "Usage-event retention complete: purged {Purged} events older than {RetentionDays} days into monthly rollup",
+            purged, retentionDays);
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "Usage-event retention failed (scrape result unaffected)");
     }
 
     Log.Information("Mars Vista Scraper finished");
