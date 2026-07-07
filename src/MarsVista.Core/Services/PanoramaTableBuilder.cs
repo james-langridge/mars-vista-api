@@ -21,6 +21,13 @@ public interface IPanoramaTableBuilder
     /// panoramas written.
     /// </summary>
     Task<int> RebuildSolAsync(int roverId, int sol, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Rebuilds every sol in [startSol, endSol] for one rover. Used by the daily
+    /// scraper to refresh the sols it just scraped. Returns the total number of
+    /// panoramas written across the window.
+    /// </summary>
+    Task<int> RebuildSolRangeAsync(int roverId, int startSol, int endSol, CancellationToken cancellationToken = default);
 }
 
 public class PanoramaTableBuilder : IPanoramaTableBuilder
@@ -97,6 +104,16 @@ public class PanoramaTableBuilder : IPanoramaTableBuilder
 
         _logger.LogDebug("Rebuilt {Count} panoramas for rover {RoverId} sol {Sol}", rows.Count, roverId, sol);
         return rows.Count;
+    }
+
+    public async Task<int> RebuildSolRangeAsync(int roverId, int startSol, int endSol, CancellationToken cancellationToken = default)
+    {
+        var total = 0;
+        for (var sol = startSol; sol <= endSol; sol++)
+        {
+            total += await RebuildSolAsync(roverId, sol, cancellationToken);
+        }
+        return total;
     }
 
     /// <summary>
