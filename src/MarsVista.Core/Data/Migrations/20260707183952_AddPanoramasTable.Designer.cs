@@ -4,6 +4,7 @@ using System.Text.Json;
 using MarsVista.Core.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MarsVista.Core.Data.Migrations
 {
     [DbContext(typeof(MarsVistaDbContext))]
-    partial class MarsVistaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260707183952_AddPanoramasTable")]
+    partial class AddPanoramasTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1184,75 +1187,6 @@ namespace MarsVista.Core.Data.Migrations
                         .HasDatabaseName("ix_usage_events_user_email_created_at");
 
                     b.ToTable("usage_events", (string)null);
-                });
-
-            modelBuilder.Entity("MarsVista.Core.Entities.UsageEventMonthly", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<string>("Endpoint")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("endpoint");
-
-                    b.Property<long>("ErrorCount")
-                        .HasColumnType("bigint")
-                        .HasColumnName("error_count");
-
-                    b.Property<DateTime>("Month")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("month");
-
-                    b.Property<long>("RequestCount")
-                        .HasColumnType("bigint")
-                        .HasColumnName("request_count");
-
-                    b.Property<string>("Tier")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasColumnName("tier");
-
-                    b.Property<long>("TotalPhotosReturned")
-                        .HasColumnType("bigint")
-                        .HasColumnName("total_photos_returned");
-
-                    b.Property<long>("TotalResponseTimeMs")
-                        .HasColumnType("bigint")
-                        .HasColumnName("total_response_time_ms");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<string>("UserEmail")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)")
-                        .HasColumnName("user_email");
-
-                    b.HasKey("Id")
-                        .HasName("pk_usage_events_monthly");
-
-                    b.HasIndex("Month", "UserEmail", "Endpoint", "Tier")
-                        .IsUnique()
-                        .HasDatabaseName("ix_usage_events_monthly_month_user_email_endpoint_tier");
-
-                    b.ToTable("usage_events_monthly", (string)null);
                 });
 
             modelBuilder.Entity("MarsVista.Core.Entities.Camera", b =>

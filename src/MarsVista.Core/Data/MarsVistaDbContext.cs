@@ -25,6 +25,7 @@ public class MarsVistaDbContext : DbContext
     public DbSet<SolCompleteness> SolCompleteness { get; set; }
     public DbSet<StitchedPanorama> StitchedPanoramas { get; set; }
     public DbSet<PanoramaRating> PanoramaRatings { get; set; }
+    public DbSet<Panorama> Panoramas { get; set; }
     public DbSet<PhotoRating> PhotoRatings { get; set; }
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
@@ -353,6 +354,42 @@ public class MarsVistaDbContext : DbContext
             entity.Property(e => e.ErrorMessage).HasMaxLength(2000);
 
             entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+        });
+
+        // Panorama configuration (pre-computed detection results)
+        modelBuilder.Entity<Panorama>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            // Stable string id the stitch service and ratings resolve against
+            entity.HasIndex(e => e.PanoramaId).IsUnique();
+
+            // Canonical identity: one row per (rover, sol, sequence index)
+            entity.HasIndex(e => new { e.RoverId, e.Sol, e.SequenceIndex }).IsUnique();
+
+            // Query-path indexes: default window (recent sols per rover),
+            // min-photos filter, and coverage sort
+            entity.HasIndex(e => new { e.RoverId, e.Sol });
+            entity.HasIndex(e => e.TotalPhotos);
+            entity.HasIndex(e => e.CoverageDegrees);
+
+            entity.Property(e => e.PanoramaId).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.MarsTimeStart).HasMaxLength(20);
+            entity.Property(e => e.MarsTimeEnd).HasMaxLength(20);
+            entity.Property(e => e.QualityTier).HasMaxLength(20).IsRequired();
+
+            entity.HasOne(e => e.Rover)
+                .WithMany()
+                .HasForeignKey(e => e.RoverId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Camera)
+                .WithMany()
+                .HasForeignKey(e => e.CameraId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.Property(e => e.DetectedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP");
         });
 
