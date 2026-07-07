@@ -63,13 +63,15 @@ public class PanoramaTableBuilderTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task BuilderRow_MatchesLiveDetection()
+    public async Task BuilderRow_MatchesServedResource()
     {
+        // Build the table, then read it back through the (now table-backed) service:
+        // the served DTO must reflect the stored row field-for-field.
+        await _builder.RebuildSolAsync(RoverId, Sol);
+
         var live = await _panoramaService.GetPanoramasAsync(
             rovers: "curiosity", solMin: Sol, solMax: Sol, pageSize: 50);
-        live.Data.Should().NotBeEmpty("the seed forms a detectable panorama");
-
-        await _builder.RebuildSolAsync(RoverId, Sol);
+        live.Data.Should().NotBeEmpty("the built table has a panorama for this sol");
 
         foreach (var dto in live.Data!)
         {

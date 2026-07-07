@@ -26,6 +26,32 @@ public class PanoramaServiceTests : IntegrationTestBase
         services.AddScoped<PanoramaService>();
     }
 
+    // Populates the panoramas table from the seeded photos (as the scraper does),
+    // then delegates to the now table-backed GetPanoramasAsync. Lets the existing
+    // detection-behaviour assertions run against the pre-computed read path.
+    private async Task RebuildPanoramaTableAsync()
+    {
+        var detector = ServiceProvider.GetRequiredService<MarsVista.Core.Services.PanoramaDetector>();
+        var builder = new MarsVista.Core.Services.PanoramaTableBuilder(
+            DbContext, detector,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<MarsVista.Core.Services.PanoramaTableBuilder>.Instance);
+        var runner = new MarsVista.Core.Services.PanoramaBackfillRunner(
+            DbContext, builder,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<MarsVista.Core.Services.PanoramaBackfillRunner>.Instance);
+        await runner.RunAsync();
+    }
+
+    private async Task<ApiResponse<List<PanoramaResource>>> RebuildThenList(
+        string? rovers = null, int? solMin = null, int? solMax = null, int? minPhotos = null,
+        string? stitchStatus = null, string? stitchMethod = null, string? mosaicType = null,
+        string? quality = null, double? minRating = null, string? sort = null, string? order = null,
+        int pageNumber = 1, int pageSize = 25, CancellationToken cancellationToken = default)
+    {
+        await RebuildPanoramaTableAsync();
+        return await _service.GetPanoramasAsync(rovers, solMin, solMax, minPhotos, stitchStatus,
+            stitchMethod, mosaicType, quality, minRating, sort, order, pageNumber, pageSize, cancellationToken);
+    }
+
     protected override async Task SeedAdditionalDataAsync()
     {
         // Get service after initialization
@@ -113,7 +139,7 @@ public class PanoramaServiceTests : IntegrationTestBase
     public async Task GetPanoramasAsync_WithValidData_DetectsPanorama()
     {
         // Act
-        var result = await _service.GetPanoramasAsync(
+        var result = await RebuildThenList(
             rovers: "curiosity",
             pageNumber: 1,
             pageSize: 25);
@@ -163,7 +189,7 @@ public class PanoramaServiceTests : IntegrationTestBase
         await DbContext.SaveChangesAsync();
 
         // Act - Filter for sol 1000 only
-        var result = await _service.GetPanoramasAsync(
+        var result = await RebuildThenList(
             rovers: "curiosity",
             solMin: 1000,
             solMax: 1000,
@@ -179,7 +205,7 @@ public class PanoramaServiceTests : IntegrationTestBase
     public async Task GetPanoramasAsync_WithMinPhotosFilter_FiltersCorrectly()
     {
         // Act - Require at least 10 photos (should exclude our 5-photo panorama)
-        var result = await _service.GetPanoramasAsync(
+        var result = await RebuildThenList(
             rovers: "curiosity",
             minPhotos: 10,
             pageNumber: 1,
@@ -224,7 +250,7 @@ public class PanoramaServiceTests : IntegrationTestBase
         await DbContext.SaveChangesAsync();
 
         // Act - Get page 2 with page size 10
-        var result = await _service.GetPanoramasAsync(
+        var result = await RebuildThenList(
             rovers: "curiosity",
             pageNumber: 2,
             pageSize: 10);
@@ -267,7 +293,7 @@ public class PanoramaServiceTests : IntegrationTestBase
         await DbContext.SaveChangesAsync();
 
         // Act
-        var result = await _service.GetPanoramasAsync(
+        var result = await RebuildThenList(
             rovers: "curiosity",
             pageNumber: 1,
             pageSize: 25);
@@ -284,7 +310,7 @@ public class PanoramaServiceTests : IntegrationTestBase
         var panoramaId = "pano_curiosity_1000_0";
 
         // First, get all panoramas to find the actual ID
-        var allPanoramas = await _service.GetPanoramasAsync(
+        var allPanoramas = await RebuildThenList(
             rovers: "curiosity",
             pageNumber: 1,
             pageSize: 25);
@@ -375,7 +401,7 @@ public class PanoramaServiceTests : IntegrationTestBase
         await DbContext.SaveChangesAsync();
 
         // Act - Get panoramas list first
-        var allPanoramas = await _service.GetPanoramasAsync(
+        var allPanoramas = await RebuildThenList(
             rovers: "curiosity",
             solMin: 6000,
             solMax: 6000,
@@ -456,7 +482,7 @@ public class PanoramaServiceTests : IntegrationTestBase
         await DbContext.SaveChangesAsync();
 
         // Act
-        var result = await _service.GetPanoramasAsync(
+        var result = await RebuildThenList(
             rovers: "curiosity",
             solMin: 1000,
             solMax: 1000,
@@ -500,7 +526,7 @@ public class PanoramaServiceTests : IntegrationTestBase
         await DbContext.SaveChangesAsync();
 
         // Act
-        var result = await _service.GetPanoramasAsync(
+        var result = await RebuildThenList(
             rovers: "curiosity",
             solMin: 4000,
             solMax: 4000,
@@ -567,7 +593,7 @@ public class PanoramaServiceTests : IntegrationTestBase
         await DbContext.SaveChangesAsync();
 
         // Act
-        var result = await _service.GetPanoramasAsync(
+        var result = await RebuildThenList(
             rovers: "curiosity",
             solMin: 5000,
             solMax: 5000,
@@ -611,7 +637,7 @@ public class PanoramaServiceTests : IntegrationTestBase
         await DbContext.SaveChangesAsync();
 
         // Act
-        var result = await _service.GetPanoramasAsync(
+        var result = await RebuildThenList(
             solMin: 1000,
             solMax: 1000,
             pageNumber: 1,
@@ -631,7 +657,7 @@ public class PanoramaServiceTests : IntegrationTestBase
         await DbContext.SaveChangesAsync();
 
         // Act
-        var result = await _service.GetPanoramasAsync(
+        var result = await RebuildThenList(
             rovers: "curiosity",
             pageNumber: 1,
             pageSize: 25);
@@ -684,7 +710,7 @@ public class PanoramaServiceTests : IntegrationTestBase
         await DbContext.SaveChangesAsync();
 
         // Act
-        var result = await _service.GetPanoramasAsync(
+        var result = await RebuildThenList(
             rovers: "curiosity",
             solMin: 4278,
             solMax: 4278,
@@ -734,7 +760,7 @@ public class PanoramaServiceTests : IntegrationTestBase
         await DbContext.SaveChangesAsync();
 
         // Act
-        var result = await _service.GetPanoramasAsync(
+        var result = await RebuildThenList(
             rovers: "curiosity",
             solMin: 4279,
             solMax: 4279,
@@ -787,7 +813,7 @@ public class PanoramaServiceTests : IntegrationTestBase
         await DbContext.SaveChangesAsync();
 
         // Act
-        var result = await _service.GetPanoramasAsync(
+        var result = await RebuildThenList(
             rovers: "curiosity",
             solMin: 4280,
             solMax: 4280,
@@ -802,7 +828,7 @@ public class PanoramaServiceTests : IntegrationTestBase
     public async Task GetPanoramasAsync_ReturnsQualityMetadata()
     {
         // Act
-        var result = await _service.GetPanoramasAsync(
+        var result = await RebuildThenList(
             rovers: "curiosity",
             pageNumber: 1,
             pageSize: 25);
@@ -847,7 +873,7 @@ public class PanoramaServiceTests : IntegrationTestBase
         await DbContext.SaveChangesAsync();
 
         // Act
-        var result = await _service.GetPanoramasAsync(
+        var result = await RebuildThenList(
             rovers: "curiosity",
             solMin: 4281,
             solMax: 4281,
@@ -893,7 +919,7 @@ public class PanoramaServiceTests : IntegrationTestBase
         await DbContext.SaveChangesAsync();
 
         // Act
-        var result = await _service.GetPanoramasAsync(
+        var result = await RebuildThenList(
             rovers: "curiosity",
             solMin: 4282,
             solMax: 4282,
@@ -911,7 +937,7 @@ public class PanoramaServiceTests : IntegrationTestBase
     public async Task GetPanoramasAsync_IncludesLocationInformation()
     {
         // Act
-        var result = await _service.GetPanoramasAsync(
+        var result = await RebuildThenList(
             rovers: "curiosity",
             pageNumber: 1,
             pageSize: 25);
@@ -929,7 +955,7 @@ public class PanoramaServiceTests : IntegrationTestBase
     public async Task GetPanoramasAsync_CalculatesAverageElevation()
     {
         // Act
-        var result = await _service.GetPanoramasAsync(
+        var result = await RebuildThenList(
             rovers: "curiosity",
             pageNumber: 1,
             pageSize: 25);
@@ -943,7 +969,7 @@ public class PanoramaServiceTests : IntegrationTestBase
     public async Task GetPanoramasAsync_IncludesDownloadLink()
     {
         // Act
-        var result = await _service.GetPanoramasAsync(
+        var result = await RebuildThenList(
             rovers: "curiosity",
             pageNumber: 1,
             pageSize: 25);
@@ -992,7 +1018,7 @@ public class PanoramaServiceTests : IntegrationTestBase
         await DbContext.SaveChangesAsync();
 
         // Act
-        var result = await _service.GetPanoramasAsync(
+        var result = await RebuildThenList(
             rovers: "curiosity",
             solMin: 4500,
             solMax: 4500,
@@ -1051,7 +1077,7 @@ public class PanoramaServiceTests : IntegrationTestBase
         await DbContext.SaveChangesAsync();
 
         // Act
-        var result = await _service.GetPanoramasAsync(
+        var result = await RebuildThenList(
             rovers: "curiosity",
             solMin: 7000,
             solMax: 7000,
@@ -1144,7 +1170,7 @@ public class PanoramaServiceTests : IntegrationTestBase
         await DbContext.SaveChangesAsync();
 
         // Act
-        var result = await _service.GetPanoramasAsync(
+        var result = await RebuildThenList(
             rovers: "curiosity",
             solMin: 7001,
             solMax: 7001,
@@ -1161,7 +1187,7 @@ public class PanoramaServiceTests : IntegrationTestBase
     public async Task GetPanoramasAsync_SingleRow_HasCorrectNewFields()
     {
         // Act - Use seed data (5 photos, all at -10° elevation)
-        var result = await _service.GetPanoramasAsync(
+        var result = await RebuildThenList(
             rovers: "curiosity",
             solMin: 1000,
             solMax: 1000,
@@ -1240,7 +1266,7 @@ public class PanoramaServiceTests : IntegrationTestBase
         await DbContext.SaveChangesAsync();
 
         // Act
-        var result = await _service.GetPanoramasAsync(
+        var result = await RebuildThenList(
             rovers: "curiosity",
             solMin: 7002,
             solMax: 7002,
@@ -1295,7 +1321,7 @@ public class PanoramaServiceTests : IntegrationTestBase
         await DbContext.SaveChangesAsync();
 
         // Act
-        var result = await _service.GetPanoramasAsync(
+        var result = await RebuildThenList(
             rovers: "curiosity",
             solMin: 7003,
             solMax: 7003,
@@ -1375,7 +1401,7 @@ public class PanoramaServiceTests : IntegrationTestBase
         await DbContext.SaveChangesAsync();
 
         // Act
-        var result = await _service.GetPanoramasAsync(
+        var result = await RebuildThenList(
             rovers: "curiosity",
             solMin: 7010,
             solMax: 7010,
@@ -1456,7 +1482,7 @@ public class PanoramaServiceTests : IntegrationTestBase
         await DbContext.SaveChangesAsync();
 
         // Act
-        var result = await _service.GetPanoramasAsync(
+        var result = await RebuildThenList(
             rovers: "curiosity",
             solMin: 7011,
             solMax: 7011,
@@ -1507,7 +1533,7 @@ public class PanoramaServiceTests : IntegrationTestBase
         await DbContext.SaveChangesAsync();
 
         // Act
-        var result = await _service.GetPanoramasAsync(
+        var result = await RebuildThenList(
             rovers: "curiosity",
             solMin: 7004,
             solMax: 7004,

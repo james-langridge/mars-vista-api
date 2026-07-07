@@ -2,14 +2,16 @@ using Microsoft.EntityFrameworkCore;
 using MarsVista.Core.Data;
 using MarsVista.Core.Entities;
 using MarsVista.Core.Services;
+using MarsVista.Api.Services;
 using MarsVista.Api.DTOs.V2;
 using MarsVista.Core.Helpers;
 
 namespace MarsVista.Api.Services.V2;
 
 /// <summary>
-/// Implementation of panorama detection service
-/// Detects panoramic sequences based on location, time, and camera telemetry
+/// Reads pre-computed panoramas from the panoramas table (populated by the
+/// scraper via PanoramaTableBuilder) and maps them to API resources. Filtering,
+/// sorting, and pagination all happen at the database level.
 /// </summary>
 public class PanoramaService : IPanoramaService
 {
@@ -17,21 +19,24 @@ public class PanoramaService : IPanoramaService
     private readonly ILogger<PanoramaService> _logger;
     private readonly IPhotoQueryServiceV2 _photoService;
     private readonly PanoramaDetector _detector;
+    private readonly IStaticReferenceCache _referenceCache;
 
-    // Performance optimization: Limit sol range to prevent loading all photos into memory
-    // TODO: Long-term solution should pre-compute panoramas in a dedicated table (see .claude/decisions/PANORAMA_OPTIMIZATION.md)
-    private const int DefaultSolRangeLimit = 500; // Default to most recent 500 sols when no range specified
+    // When no sol range is given, default to the most recent N sols per the
+    // rover-filtered result, matching the previous detection-path default.
+    private const int DefaultSolRangeLimit = 500;
 
     public PanoramaService(
         MarsVistaDbContext context,
         ILogger<PanoramaService> logger,
         IPhotoQueryServiceV2 photoService,
-        PanoramaDetector detector)
+        PanoramaDetector detector,
+        IStaticReferenceCache referenceCache)
     {
         _context = context;
         _logger = logger;
         _photoService = photoService;
         _detector = detector;
+        _referenceCache = referenceCache;
     }
 
     public async Task<ApiResponse<List<PanoramaResource>>> GetPanoramasAsync(
@@ -50,43 +55,37 @@ public class PanoramaService : IPanoramaService
         int pageSize = 25,
         CancellationToken cancellationToken = default)
     {
-        // Build query for photos that could be part of panoramas
-        // Only include cameras designed for panoramic imaging
-        var query = _context.Photos
-            .Where(p => p.Site.HasValue &&
-                       p.Drive.HasValue &&
-                       p.MastAz.HasValue &&
-                       p.MastEl.HasValue &&
-                       p.SpacecraftClock.HasValue &&
-                       PanoramaDetector.PanoramicCameras.Contains(p.Camera.Name));
+        // Query the pre-computed panoramas table; all filtering, sorting, and
+        // pagination happen in the database.
+        var query = _context.Panoramas.AsNoTracking();
 
-        // Apply filters
+        // Rover filter via the static reference cache (rover_id, not a name join -
+        // see story 052a). Unknown rover names resolve to nothing -> empty result.
         if (!string.IsNullOrWhiteSpace(rovers))
         {
-            var roverList = rovers.Split(',')
+            var roverIds = rovers.Split(',')
                 .Select(r => r.Trim())
                 .Where(r => !string.IsNullOrWhiteSpace(r))
+                .Select(r => _referenceCache.GetRoverIdByName(r))
+                .Where(id => id.HasValue)
+                .Select(id => id!.Value)
+                .Distinct()
                 .ToList();
 
-            // Use case-insensitive comparison via ILIKE (PostgreSQL)
-            // EF Core will auto-join to Rover table for this filter
-            query = query.Where(p => roverList.Any(r => EF.Functions.ILike(p.Rover.Name, r)));
+            if (roverIds.Count == 0)
+            {
+                return EmptyResponse(pageNumber, pageSize);
+            }
+
+            query = roverIds.Count == 1
+                ? query.Where(p => p.RoverId == roverIds[0])
+                : query.Where(p => roverIds.Contains(p.RoverId));
         }
 
-        if (solMin.HasValue)
-        {
-            query = query.Where(p => p.Sol >= solMin.Value);
-            _logger.LogDebug("Applied solMin filter: {SolMin}", solMin.Value);
-        }
+        if (solMin.HasValue) query = query.Where(p => p.Sol >= solMin.Value);
+        if (solMax.HasValue) query = query.Where(p => p.Sol <= solMax.Value);
 
-        if (solMax.HasValue)
-        {
-            query = query.Where(p => p.Sol <= solMax.Value);
-            _logger.LogDebug("Applied solMax filter: {SolMax}", solMax.Value);
-        }
-
-        // Performance optimization: If no sol range specified, default to recent sols
-        // This prevents loading 200k+ photos into memory (which takes 2-3 minutes)
+        // No sol range -> default to the most recent N sols of the filtered set.
         if (!solMin.HasValue && !solMax.HasValue)
         {
             var maxSol = await query.MaxAsync(p => (int?)p.Sol, cancellationToken);
@@ -94,174 +93,101 @@ public class PanoramaService : IPanoramaService
             {
                 var defaultSolMin = Math.Max(0, maxSol.Value - DefaultSolRangeLimit);
                 query = query.Where(p => p.Sol >= defaultSolMin);
-
-                _logger.LogDebug(
-                    "No sol range specified, defaulting to recent {SolCount} sols (sol {MinSol} to {MaxSol})",
-                    DefaultSolRangeLimit, defaultSolMin, maxSol.Value);
             }
         }
 
-        // OPTIMIZATION: Process panoramas in batches by sol to avoid loading all photos into memory
-        // Get distinct sols that have potential panorama photos
-        var sols = await query
-            .Select(p => p.Sol)
-            .Distinct()
-            .OrderBy(s => s)
-            .ToListAsync(cancellationToken);
-
-        _logger.LogDebug("Found {SolCount} distinct sols to process. First 5: [{Sols}]",
-            sols.Count,
-            string.Join(", ", sols.Take(5)));
-
-        var allPanoramas = new List<PanoramaSequence>();
-
-        // Process each sol independently to limit memory usage
-        foreach (var sol in sols)
-        {
-            // Order by time, then by elevation to group photos at similar angles together
-            // This prevents non-deterministic ordering when photos have the same spacecraft_clock
-            // (bracketed exposures or multi-camera captures at the same instant)
-            var solPhotos = await query
-                .Where(p => p.Sol == sol)
-                .Include(p => p.Rover)
-                .Include(p => p.Camera)
-                .AsNoTracking() // Don't track entities for read-only operations
-                .OrderBy(p => p.RoverId)
-                .ThenBy(p => p.Site)
-                .ThenBy(p => p.Drive)
-                .ThenBy(p => p.SpacecraftClock)
-                .ThenBy(p => p.MastEl) // Group photos at similar elevations when same clock
-                .ToListAsync(cancellationToken);
-
-            // Detect panoramas for this sol - index resets per sol for stable IDs
-            var panoramaIndex = 0;
-            var solPanoramas = _detector.DetectPanoramasOptimized(solPhotos, minPhotos ?? PanoramaDetector.MinPhotosForPanorama, ref panoramaIndex);
-
-            if (sols.Count <= 5 || solPanoramas.Count > 0)
-            {
-                _logger.LogDebug("Sol {Sol}: {PhotoCount} photos, {PanoramaCount} panoramas detected",
-                    sol, solPhotos.Count, solPanoramas.Count);
-            }
-
-            allPanoramas.AddRange(solPanoramas);
-        }
-
-        // Apply in-memory filters on detected panoramas
-        var filtered = (IEnumerable<PanoramaSequence>)allPanoramas;
+        // min_photos is now a filter over the stored panoramas (total_photos >= N),
+        // not a re-detection - so the panorama set and its ids are stable.
+        if (minPhotos.HasValue) query = query.Where(p => p.TotalPhotos >= minPhotos.Value);
 
         if (!string.IsNullOrWhiteSpace(mosaicType))
         {
-            var isMr = mosaicType.Equals("multi_row", StringComparison.OrdinalIgnoreCase);
-            filtered = filtered.Where(p => p.IsMultiRow == isMr);
+            var isMultiRow = mosaicType.Equals("multi_row", StringComparison.OrdinalIgnoreCase);
+            query = query.Where(p => p.IsMultiRow == isMultiRow);
         }
 
         if (!string.IsNullOrWhiteSpace(quality))
         {
-            filtered = filtered.Where(p =>
-            {
-                var azimuths = p.Photos.Select(ph => ph.MastAz ?? 0);
-                var coverage = azimuths.Max() - azimuths.Min();
-                var positions = p.Photos.Select(ph => Math.Round(ph.MastAz ?? 0)).Distinct().Count();
-                return PanoramaDetector.GetQualityTier(coverage, positions).Equals(quality, StringComparison.OrdinalIgnoreCase);
-            });
+            var qualityTier = quality.ToLowerInvariant();
+            query = query.Where(p => p.QualityTier == qualityTier);
         }
 
-        var panoramas = filtered.ToList();
-
-        // Build panorama IDs for all remaining panoramas (needed for stitch/rating filters)
-        var allPanoramaIds = panoramas.Select(p => GetPanoramaId(p)).ToList();
-
-        // Load stitch statuses and ratings for filtering
-        var allStitchStatuses = allPanoramaIds.Count > 0
-            ? await _context.StitchedPanoramas
-                .AsNoTracking()
-                .Where(s => allPanoramaIds.Contains(s.PanoramaId))
-                .ToDictionaryAsync(s => s.PanoramaId, cancellationToken)
-            : new Dictionary<string, StitchedPanorama>();
-
-        var allRatingAggregates = allPanoramaIds.Count > 0
-            ? await _context.PanoramaRatings
-                .AsNoTracking()
-                .Where(r => allPanoramaIds.Contains(r.PanoramaId))
-                .GroupBy(r => r.PanoramaId)
-                .Select(g => new { PanoramaId = g.Key, Avg = g.Average(r => r.Rating), Count = g.Count() })
-                .ToDictionaryAsync(
-                    r => r.PanoramaId,
-                    r => new RatingAggregate(r.Avg, r.Count),
-                    cancellationToken)
-            : new Dictionary<string, RatingAggregate>();
-
-        // Apply stitch/rating filters
+        // Stitch status/method filters via the stitched_panoramas table
         if (!string.IsNullOrWhiteSpace(stitchStatus))
         {
-            panoramas = panoramas.Where(p =>
+            if (stitchStatus.Equals("not_started", StringComparison.OrdinalIgnoreCase))
             {
-                var pid = GetPanoramaId(p);
-                if (stitchStatus.Equals("not_started", StringComparison.OrdinalIgnoreCase))
-                    return !allStitchStatuses.ContainsKey(pid);
-                return allStitchStatuses.TryGetValue(pid, out var s) &&
-                       s.Status.Equals(stitchStatus, StringComparison.OrdinalIgnoreCase);
-            }).ToList();
+                query = query.Where(p => !_context.StitchedPanoramas.Any(s => s.PanoramaId == p.PanoramaId));
+            }
+            else
+            {
+                var status = stitchStatus.ToLowerInvariant();
+                query = query.Where(p => _context.StitchedPanoramas.Any(s => s.PanoramaId == p.PanoramaId && s.Status == status));
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(stitchMethod))
         {
-            panoramas = panoramas.Where(p =>
-            {
-                var pid = GetPanoramaId(p);
-                return allStitchStatuses.TryGetValue(pid, out var s) &&
-                       s.StitchMethod != null &&
-                       s.StitchMethod.Equals(stitchMethod, StringComparison.OrdinalIgnoreCase);
-            }).ToList();
+            var method = stitchMethod.ToLowerInvariant();
+            query = query.Where(p => _context.StitchedPanoramas.Any(s => s.PanoramaId == p.PanoramaId && s.StitchMethod == method));
         }
 
+        // min_rating filter via a pre-aggregated (non-correlated) subquery on ratings
         if (minRating.HasValue)
         {
-            panoramas = panoramas.Where(p =>
-            {
-                var pid = GetPanoramaId(p);
-                return allRatingAggregates.TryGetValue(pid, out var r) && r.Average >= minRating.Value;
-            }).ToList();
+            var qualifyingIds = _context.PanoramaRatings
+                .GroupBy(r => r.PanoramaId)
+                .Where(g => g.Average(r => r.Rating) >= minRating.Value)
+                .Select(g => g.Key);
+            query = query.Where(p => qualifyingIds.Contains(p.PanoramaId));
         }
 
-        // Apply sorting
+        // Sorting
         var sortField = sort?.ToLowerInvariant() ?? "sol";
         var isAscending = order?.Equals("asc", StringComparison.OrdinalIgnoreCase) == true;
 
-        panoramas = sortField switch
+        query = sortField switch
         {
-            "rating" => isAscending
-                ? panoramas.OrderBy(p => allRatingAggregates.TryGetValue(GetPanoramaId(p), out var r) ? r.Average : 0).ToList()
-                : panoramas.OrderByDescending(p => allRatingAggregates.TryGetValue(GetPanoramaId(p), out var r) ? r.Average : 0).ToList(),
             "coverage" => isAscending
-                ? panoramas.OrderBy(p => p.Photos.Select(ph => ph.MastAz ?? 0).Max() - p.Photos.Select(ph => ph.MastAz ?? 0).Min()).ToList()
-                : panoramas.OrderByDescending(p => p.Photos.Select(ph => ph.MastAz ?? 0).Max() - p.Photos.Select(ph => ph.MastAz ?? 0).Min()).ToList(),
+                ? query.OrderBy(p => p.CoverageDegrees)
+                : query.OrderByDescending(p => p.CoverageDegrees),
             "photos" => isAscending
-                ? panoramas.OrderBy(p => p.Photos.Count).ToList()
-                : panoramas.OrderByDescending(p => p.Photos.Count).ToList(),
-            _ => panoramas // Default: sol order (already in sol order from detection)
+                ? query.OrderBy(p => p.TotalPhotos)
+                : query.OrderByDescending(p => p.TotalPhotos),
+            "rating" => isAscending
+                ? query.OrderBy(p => _context.PanoramaRatings.Where(r => r.PanoramaId == p.PanoramaId).Average(r => (double?)r.Rating) ?? 0.0)
+                : query.OrderByDescending(p => _context.PanoramaRatings.Where(r => r.PanoramaId == p.PanoramaId).Average(r => (double?)r.Rating) ?? 0.0),
+            // Default: canonical order (sol, then rover-scoped sequence index)
+            _ => query.OrderBy(p => p.Sol).ThenBy(p => p.RoverId).ThenBy(p => p.SequenceIndex)
         };
 
-        // Apply pagination
-        var totalCount = panoramas.Count;
-        var paginatedPanoramas = panoramas
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        var pageEntities = await query
+            .Include(p => p.Rover)
+            .Include(p => p.Camera)
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
-            .ToList();
+            .ToListAsync(cancellationToken);
 
-        // Build stitch/rating dictionaries for just the paginated results
-        var paginatedIds = new HashSet<string>(paginatedPanoramas.Select(p => GetPanoramaId(p)));
+        // Decorate the page with stitch status and rating aggregates
+        var pageIds = pageEntities.Select(p => p.PanoramaId).ToList();
 
-        var stitchStatuses = allStitchStatuses
-            .Where(kv => paginatedIds.Contains(kv.Key))
-            .ToDictionary(kv => kv.Key, kv => kv.Value);
+        var stitchMap = pageIds.Count > 0
+            ? await _context.StitchedPanoramas.AsNoTracking()
+                .Where(s => pageIds.Contains(s.PanoramaId))
+                .ToDictionaryAsync(s => s.PanoramaId, cancellationToken)
+            : new Dictionary<string, StitchedPanorama>();
 
-        var ratingAggregates = allRatingAggregates
-            .Where(kv => paginatedIds.Contains(kv.Key))
-            .ToDictionary(kv => kv.Key, kv => kv.Value);
+        var ratingMap = pageIds.Count > 0
+            ? await _context.PanoramaRatings.AsNoTracking()
+                .Where(r => pageIds.Contains(r.PanoramaId))
+                .GroupBy(r => r.PanoramaId)
+                .Select(g => new { PanoramaId = g.Key, Avg = g.Average(r => r.Rating), Count = g.Count() })
+                .ToDictionaryAsync(x => x.PanoramaId, x => new RatingAggregate(x.Avg, x.Count), cancellationToken)
+            : new Dictionary<string, RatingAggregate>();
 
-        // Convert to resources
-        var resources = paginatedPanoramas.Select(p => ToPanoramaResource(p, stitchStatuses, ratingAggregates: ratingAggregates)).ToList();
+        var resources = pageEntities.Select(p => MapEntityToResource(p, stitchMap, ratingMap)).ToList();
 
         var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
 
@@ -280,6 +206,13 @@ public class PanoramaService : IPanoramaService
             }
         };
     }
+
+    private static ApiResponse<List<PanoramaResource>> EmptyResponse(int pageNumber, int pageSize) =>
+        new(new List<PanoramaResource>())
+        {
+            Meta = new ResponseMeta { TotalCount = 0, ReturnedCount = 0 },
+            Pagination = new PaginationInfo { Page = pageNumber, PerPage = pageSize, TotalPages = 0 }
+        };
 
     public async Task<PanoramaResource?> GetPanoramaByIdAsync(
         string panoramaId,
@@ -424,6 +357,94 @@ public class PanoramaService : IPanoramaService
             return null;
 
         return panoramas[sequenceIndex];
+    }
+
+    /// <summary>
+    /// Map a stored panorama entity to a resource DTO. The entity already holds
+    /// the presentation values (coverage, quality, mosaic geometry, normalized
+    /// mars times, location), so no per-photo computation is needed.
+    /// </summary>
+    private static PanoramaResource MapEntityToResource(
+        Panorama p,
+        IReadOnlyDictionary<string, StitchedPanorama> stitchMap,
+        IReadOnlyDictionary<string, RatingAggregate> ratingMap,
+        List<PhotoResource>? photoResources = null)
+    {
+        stitchMap.TryGetValue(p.PanoramaId, out var stitchRecord);
+        ratingMap.TryGetValue(p.PanoramaId, out var ratingAgg);
+
+        PhotoLocation? location = null;
+        if (p.Site.HasValue && p.Drive.HasValue)
+        {
+            PhotoCoordinates? coordinates = null;
+            if (p.CoordinateX.HasValue && p.CoordinateY.HasValue && p.CoordinateZ.HasValue)
+            {
+                coordinates = new PhotoCoordinates
+                {
+                    X = p.CoordinateX.Value,
+                    Y = p.CoordinateY.Value,
+                    Z = p.CoordinateZ.Value
+                };
+            }
+
+            location = new PhotoLocation
+            {
+                Site = p.Site,
+                Drive = p.Drive,
+                Coordinates = coordinates
+            };
+        }
+
+        var stitchInfo = new StitchInfo
+        {
+            Status = stitchRecord?.Status ?? "not_started",
+            Method = stitchRecord?.StitchMethod,
+            Width = stitchRecord?.Status == "completed" ? stitchRecord.ImageWidth : null,
+            Height = stitchRecord?.Status == "completed" ? stitchRecord.ImageHeight : null,
+            AverageRating = ratingAgg != null ? Math.Round(ratingAgg.Average, 1) : null,
+            RatingCount = ratingAgg?.Count
+        };
+
+        return new PanoramaResource
+        {
+            Id = p.PanoramaId,
+            Type = "panorama",
+            Photos = photoResources,
+            Attributes = new PanoramaAttributes
+            {
+                Rover = p.Rover.Name.ToLowerInvariant(),
+                Sol = p.Sol,
+                MarsTimeStart = p.MarsTimeStart,
+                MarsTimeEnd = p.MarsTimeEnd,
+                TotalPhotos = p.TotalPhotos,
+                CoverageDegrees = p.CoverageDegrees,
+                Location = location,
+                Camera = p.Camera.Name,
+                AvgElevation = p.AvgElevation,
+                UniquePositions = p.UniquePositions,
+                AvgPositionSpacing = p.AvgPositionSpacing,
+                Quality = p.QualityTier,
+                MosaicType = p.IsMultiRow ? "multi_row" : "single_row",
+                ElevationRows = p.ElevationTierCount,
+                ElevationRangeData = p.IsMultiRow
+                    ? new ElevationRange { Min = p.MinElevation ?? 0, Max = p.MaxElevation ?? 0 }
+                    : null,
+                GridDimensions = p.IsMultiRow
+                    ? $"{p.ElevationTierCount}x{p.AzimuthColumnCount}"
+                    : null,
+                VerticalCoverageDegrees = p.IsMultiRow
+                    ? (p.MaxElevation - p.MinElevation)
+                    : null,
+                Stitch = stitchInfo
+            },
+            Links = new PanoramaLinks
+            {
+                StitchedPreview = stitchRecord?.Status == "completed"
+                    ? $"/stitch/{p.PanoramaId}/image"
+                    : null,
+                DownloadSet = $"/api/v2/panoramas/{p.PanoramaId}/download"
+            }
+        };
     }
 
     /// <summary>
