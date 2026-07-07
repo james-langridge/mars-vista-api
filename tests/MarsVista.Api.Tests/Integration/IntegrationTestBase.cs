@@ -121,7 +121,12 @@ public abstract class IntegrationTestBase : IAsyncLifetime
 
         services.AddDbContext<MarsVistaDbContext>(options =>
         {
-            options.UseNpgsql(_connectionString)
+            // Enable retry-on-failure to match the API and scraper DbContext config.
+            // Under a retrying execution strategy EF forbids user-initiated
+            // transactions, so any service that opens one must go through
+            // Database.CreateExecutionStrategy() - keeping this here means the
+            // integration tests exercise the same constraint production does.
+            options.UseNpgsql(_connectionString, npgsql => npgsql.EnableRetryOnFailure())
                 .UseSnakeCaseNamingConvention()
                 .AddInterceptors(SqlCapture)
                 .ConfigureWarnings(warnings =>
