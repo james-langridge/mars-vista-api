@@ -77,6 +77,12 @@ try
     builder.Services.AddScoped<MarsVista.Core.Services.IUsageEventRetentionService,
         MarsVista.Core.Services.UsageEventRetentionService>();
 
+    // Panorama pre-compute services (backfill mode + daily incremental refresh)
+    builder.Services.AddScoped<MarsVista.Core.Services.PanoramaDetector>();
+    builder.Services.AddScoped<MarsVista.Core.Services.IPanoramaTableBuilder,
+        MarsVista.Core.Services.PanoramaTableBuilder>();
+    builder.Services.AddScoped<MarsVista.Core.Services.PanoramaBackfillRunner>();
+
     // Configure scraper schedule options
     builder.Services.Configure<ScraperScheduleOptions>(
         builder.Configuration.GetSection(ScraperScheduleOptions.SectionName));
@@ -91,6 +97,37 @@ try
         Log.Information("Applying pending database migrations...");
         await dbContext.Database.MigrateAsync();
         Log.Information("Database migrations complete");
+    }
+
+    // Panorama backfill mode: populate the panoramas table for every existing
+    // (rover, sol) and exit without scraping. Run as a one-off job.
+    var backfillMode = Environment.GetEnvironmentVariable("PANORAMA_BACKFILL");
+    if (string.Equals(backfillMode, "true", StringComparison.OrdinalIgnoreCase))
+    {
+        List<int>? backfillRoverIds = null;
+        var roverIdsEnv = Environment.GetEnvironmentVariable("BACKFILL_ROVER_IDS");
+        if (!string.IsNullOrWhiteSpace(roverIdsEnv))
+        {
+            backfillRoverIds = roverIdsEnv
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Where(s => int.TryParse(s, out _))
+                .Select(int.Parse)
+                .ToList();
+        }
+
+        Log.Information("PANORAMA_BACKFILL=true - running panorama table backfill (rovers: {Rovers})",
+            backfillRoverIds != null ? string.Join(", ", backfillRoverIds) : "all");
+
+        using var backfillScope = host.Services.CreateScope();
+        var runner = backfillScope.ServiceProvider
+            .GetRequiredService<MarsVista.Core.Services.PanoramaBackfillRunner>();
+        var summary = await runner.RunAsync(backfillRoverIds);
+
+        Log.Information(
+            "Panorama backfill finished: {Processed}/{Total} sols processed, {Panoramas} panoramas written, {Failures} failures",
+            summary.Processed, summary.TotalPairs, summary.PanoramasWritten, summary.Failures);
+        Environment.ExitCode = summary.Failures == 0 ? 0 : 1;
+        return;
     }
 
     // Get configuration
