@@ -95,6 +95,39 @@ public class PanoramaTableBuilderTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task RebuildSolRange_RebuildsEverySolInWindow()
+    {
+        // Seed a second panorama at sol 1001 (the base seed covers sol 1000).
+        var now = DateTime.UtcNow;
+        for (int i = 0; i < 5; i++)
+        {
+            DbContext.Photos.Add(new Photo
+            {
+                NasaId = $"NRF_1001_{i:D4}",
+                Sol = 1001,
+                EarthDate = new DateTime(2015, 5, 31, 0, 0, 0, DateTimeKind.Utc),
+                DateTakenUtc = new DateTime(2015, 5, 31, 10, i, 0, DateTimeKind.Utc),
+                DateTakenMars = $"Sol-1001M14:0{i}:00",
+                ImgSrcSmall = "s", ImgSrcMedium = "m", ImgSrcLarge = "l", ImgSrcFull = "f",
+                Site = 79, Drive = 1204,
+                MastAz = 45.0f + (i * 10.0f),
+                MastEl = -10.0f,
+                SpacecraftClock = 813073000.0f + (i * 100.0f),
+                RoverId = RoverId, CameraId = 2,
+                CreatedAt = now, UpdatedAt = now,
+            });
+        }
+        await DbContext.SaveChangesAsync();
+
+        // Range spans an empty trailing sol (1002) to prove it is handled without error.
+        var written = await _builder.RebuildSolRangeAsync(RoverId, Sol, 1002);
+
+        written.Should().Be(2, "sols 1000 and 1001 each form one panorama; 1002 has none");
+        DbContext.Panoramas.AsEnumerable().Select(p => p.Sol).OrderBy(s => s)
+            .Should().Equal(1000, 1001);
+    }
+
+    [Fact]
     public async Task Rebuild_IsIdempotent()
     {
         var first = await _builder.RebuildSolAsync(RoverId, Sol);

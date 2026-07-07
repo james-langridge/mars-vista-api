@@ -178,6 +178,38 @@ try
         Environment.ExitCode = 1; // Non-zero exit code for Railway monitoring
     }
 
+    // Best-effort: refresh the panoramas table for the sols each rover scraped,
+    // so new photos are reflected in pre-computed panoramas. Own try/catch so a
+    // refresh failure is logged but never changes the scrape's exit code.
+    try
+    {
+        using var panoramaScope = host.Services.CreateScope();
+        var panoramaContext = panoramaScope.ServiceProvider.GetRequiredService<MarsVistaDbContext>();
+        var panoramaBuilder = panoramaScope.ServiceProvider
+            .GetRequiredService<MarsVista.Core.Services.IPanoramaTableBuilder>();
+
+        var totalRefreshed = 0;
+        foreach (var roverResult in result.RoverResults.Where(r => r.Success))
+        {
+            var rover = await panoramaContext.Rovers
+                .FirstOrDefaultAsync(r => r.Name.ToLower() == roverResult.RoverName.ToLower());
+            if (rover == null)
+            {
+                Log.Warning("Panorama refresh: unknown rover {Rover}, skipping", roverResult.RoverName);
+                continue;
+            }
+
+            totalRefreshed += await panoramaBuilder.RebuildSolRangeAsync(
+                rover.Id, roverResult.StartSol, roverResult.EndSol);
+        }
+
+        Log.Information("Panorama refresh complete: {Count} panoramas rebuilt across scraped sols", totalRefreshed);
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "Panorama refresh failed (scrape result unaffected)");
+    }
+
     // Best-effort daily maintenance. Wrapped so a retention failure is logged
     // but never changes the scrape's exit code - the scrape is the job that
     // Railway monitors, not the cleanup.
