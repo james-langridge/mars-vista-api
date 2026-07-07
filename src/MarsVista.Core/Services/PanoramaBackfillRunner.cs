@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using MarsVista.Core.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -17,6 +18,10 @@ public record PanoramaBackfillSummary(int TotalPairs, int Processed, int Panoram
 /// </summary>
 public class PanoramaBackfillRunner
 {
+    // Log a progress line (with rate + ETA) every this many sols. ~4,400 sols
+    // total, so this yields a progress update roughly every 20-30 seconds.
+    private const int ProgressLogInterval = 50;
+
     private readonly MarsVistaDbContext _context;
     private readonly IPanoramaTableBuilder _builder;
     private readonly ILogger<PanoramaBackfillRunner> _logger;
@@ -60,6 +65,7 @@ public class PanoramaBackfillRunner
         var processed = 0;
         var panoramas = 0;
         var failures = 0;
+        var stopwatch = Stopwatch.StartNew();
 
         foreach (var pair in pairs)
         {
@@ -68,11 +74,17 @@ public class PanoramaBackfillRunner
                 panoramas += await _builder.RebuildSolAsync(pair.RoverId, pair.Sol, cancellationToken);
                 processed++;
 
-                if (processed % 100 == 0)
+                if (processed % ProgressLogInterval == 0 || processed == pairs.Count)
                 {
+                    var elapsed = stopwatch.Elapsed;
+                    var solsPerSecond = processed / elapsed.TotalSeconds;
+                    var remaining = pairs.Count - processed;
+                    var etaMinutes = solsPerSecond > 0 ? remaining / solsPerSecond / 60.0 : 0;
+
                     _logger.LogInformation(
-                        "Backfill progress: {Processed}/{Total} sols, {Panoramas} panoramas written",
-                        processed, pairs.Count, panoramas);
+                        "Backfill progress: {Processed}/{Total} sols ({Percent:F0}%), {Panoramas} panoramas, {Rate:F1} sols/s, elapsed {ElapsedMin:F1}m, ETA {EtaMin:F1}m",
+                        processed, pairs.Count, 100.0 * processed / pairs.Count, panoramas,
+                        solsPerSecond, elapsed.TotalMinutes, etaMinutes);
                 }
             }
             catch (Exception ex)
@@ -84,9 +96,10 @@ public class PanoramaBackfillRunner
             }
         }
 
+        stopwatch.Stop();
         _logger.LogInformation(
-            "Panorama backfill complete: {Processed}/{Total} sols processed, {Panoramas} panoramas written, {Failures} failures",
-            processed, pairs.Count, panoramas, failures);
+            "Panorama backfill complete: {Processed}/{Total} sols processed, {Panoramas} panoramas written, {Failures} failures in {ElapsedMin:F1}m",
+            processed, pairs.Count, panoramas, failures, stopwatch.Elapsed.TotalMinutes);
 
         return new PanoramaBackfillSummary(pairs.Count, processed, panoramas, failures);
     }
