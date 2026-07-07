@@ -18,6 +18,31 @@ public class PanoramasIntegrationTests : IntegrationTestBase
         services.AddScoped<IPanoramaService, PanoramaService>();
     }
 
+    // Populates the panoramas table from the seeded photos (as the scraper does),
+    // then delegates to the table-backed GetPanoramasAsync.
+    private async Task RebuildPanoramaTableAsync()
+    {
+        var detector = ServiceProvider.GetRequiredService<MarsVista.Core.Services.PanoramaDetector>();
+        var builder = new MarsVista.Core.Services.PanoramaTableBuilder(
+            DbContext, detector,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<MarsVista.Core.Services.PanoramaTableBuilder>.Instance);
+        var runner = new MarsVista.Core.Services.PanoramaBackfillRunner(
+            DbContext, builder,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<MarsVista.Core.Services.PanoramaBackfillRunner>.Instance);
+        await runner.RunAsync();
+    }
+
+    private async Task<ApiResponse<List<PanoramaResource>>> RebuildThenList(
+        string? rovers = null, int? solMin = null, int? solMax = null, int? minPhotos = null,
+        string? stitchStatus = null, string? stitchMethod = null, string? mosaicType = null,
+        string? quality = null, double? minRating = null, string? sort = null, string? order = null,
+        int pageNumber = 1, int pageSize = 25, CancellationToken cancellationToken = default)
+    {
+        await RebuildPanoramaTableAsync();
+        return await _panoramaService.GetPanoramasAsync(rovers, solMin, solMax, minPhotos, stitchStatus,
+            stitchMethod, mosaicType, quality, minRating, sort, order, pageNumber, pageSize, cancellationToken);
+    }
+
     protected override async Task SeedAdditionalDataAsync()
     {
         _panoramaService = ServiceProvider.GetRequiredService<IPanoramaService>();
@@ -110,10 +135,31 @@ public class PanoramasIntegrationTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task GetPanoramas_ReadsTable_WithDbLevelPagination_NoPhotoScan()
+    {
+        await RebuildPanoramaTableAsync();
+        SqlCapture.Clear();
+
+        await _panoramaService.GetPanoramasAsync(
+            rovers: "curiosity", solMin: 0, solMax: 2000, pageNumber: 1, pageSize: 2);
+
+        var sqls = SqlCapture.ExecutedSql;
+        sqls.Should().Contain(
+            s => s.Contains("FROM panoramas", StringComparison.OrdinalIgnoreCase)
+                 && s.Contains("LIMIT", StringComparison.OrdinalIgnoreCase),
+            "the list endpoint reads the pre-computed table with DB-level pagination");
+        sqls.Should().NotContain(
+            s => s.Contains("FROM photos", StringComparison.OrdinalIgnoreCase),
+            "the list path must not scan the photos table - detection is pre-computed");
+        sqls.Count.Should().BeLessThan(8,
+            "a bounded number of statements, not a per-sol detection loop");
+    }
+
+    [Fact]
     public async Task GetPanoramas_ReturnsDetectedPanoramas()
     {
         // Act
-        var response = await _panoramaService.GetPanoramasAsync(
+        var response = await RebuildThenList(
             rovers: null, // All rovers
             solMin: 0, // Explicit range to include all test data (overrides default 500-sol limit)
             solMax: 2000,
@@ -131,7 +177,7 @@ public class PanoramasIntegrationTests : IntegrationTestBase
     public async Task GetPanoramas_WithRoverFilter_FiltersCorrectly()
     {
         // Act
-        var response = await _panoramaService.GetPanoramasAsync(
+        var response = await RebuildThenList(
             rovers: "curiosity",
             pageNumber: 1,
             pageSize: 25);
@@ -145,7 +191,7 @@ public class PanoramasIntegrationTests : IntegrationTestBase
     public async Task GetPanoramas_WithSolFilter_FiltersCorrectly()
     {
         // Act
-        var response = await _panoramaService.GetPanoramasAsync(
+        var response = await RebuildThenList(
             rovers: "curiosity",
             solMin: 1000,
             solMax: 1000,
@@ -161,7 +207,7 @@ public class PanoramasIntegrationTests : IntegrationTestBase
     public async Task GetPanoramas_WithMinPhotosFilter_FiltersCorrectly()
     {
         // Act - Require at least 5 photos
-        var response = await _panoramaService.GetPanoramasAsync(
+        var response = await RebuildThenList(
             rovers: null,
             solMin: 0, // Explicit range to include all test data (overrides default 500-sol limit)
             solMax: 2000,
@@ -178,7 +224,7 @@ public class PanoramasIntegrationTests : IntegrationTestBase
     public async Task GetPanoramas_ReturnsCompleteStructure()
     {
         // Act
-        var response = await _panoramaService.GetPanoramasAsync(
+        var response = await RebuildThenList(
             rovers: "curiosity",
             pageNumber: 1,
             pageSize: 25);
@@ -201,7 +247,7 @@ public class PanoramasIntegrationTests : IntegrationTestBase
     public async Task GetPanoramas_IncludesLocationData()
     {
         // Act
-        var response = await _panoramaService.GetPanoramasAsync(
+        var response = await RebuildThenList(
             rovers: "curiosity",
             pageNumber: 1,
             pageSize: 25);
@@ -218,7 +264,7 @@ public class PanoramasIntegrationTests : IntegrationTestBase
     public async Task GetPanoramas_WithPagination_ReturnsCorrectPage()
     {
         // Act - Get first page
-        var page1 = await _panoramaService.GetPanoramasAsync(
+        var page1 = await RebuildThenList(
             rovers: null,
             solMin: 0, // Explicit range to include all test data (overrides default 500-sol limit)
             solMax: 2000,
@@ -236,7 +282,7 @@ public class PanoramasIntegrationTests : IntegrationTestBase
     public async Task GetPanoramaById_WithValidId_ReturnsPanorama()
     {
         // Arrange - Get all panoramas first to get a valid ID
-        var allPanoramas = await _panoramaService.GetPanoramasAsync(
+        var allPanoramas = await RebuildThenList(
             rovers: "curiosity",
             pageNumber: 1,
             pageSize: 25);
@@ -266,7 +312,7 @@ public class PanoramasIntegrationTests : IntegrationTestBase
     public async Task GetPanoramas_CalculatesCorrectCoverage()
     {
         // Act
-        var response = await _panoramaService.GetPanoramasAsync(
+        var response = await RebuildThenList(
             rovers: "curiosity",
             solMin: 1000,
             solMax: 1000,
@@ -283,7 +329,7 @@ public class PanoramasIntegrationTests : IntegrationTestBase
     public async Task GetPanoramas_IncludesMarsTimeRange()
     {
         // Act
-        var response = await _panoramaService.GetPanoramasAsync(
+        var response = await RebuildThenList(
             rovers: "curiosity",
             pageNumber: 1,
             pageSize: 25);
@@ -298,7 +344,7 @@ public class PanoramasIntegrationTests : IntegrationTestBase
     public async Task GetPanoramas_IncludesAverageElevation()
     {
         // Act
-        var response = await _panoramaService.GetPanoramasAsync(
+        var response = await RebuildThenList(
             rovers: "curiosity",
             solMin: 1000,
             solMax: 1000,
@@ -314,7 +360,7 @@ public class PanoramasIntegrationTests : IntegrationTestBase
     public async Task GetPanoramas_IncludesCameraName()
     {
         // Act
-        var response = await _panoramaService.GetPanoramasAsync(
+        var response = await RebuildThenList(
             rovers: "curiosity",
             pageNumber: 1,
             pageSize: 25);

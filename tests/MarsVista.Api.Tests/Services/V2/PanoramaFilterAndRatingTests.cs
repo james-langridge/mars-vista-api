@@ -25,6 +25,31 @@ public class PanoramaFilterAndRatingTests : IntegrationTestBase
         services.AddScoped<PanoramaService>();
     }
 
+    // Populates the panoramas table from the seeded photos (as the scraper does),
+    // then delegates to the table-backed GetPanoramasAsync.
+    private async Task RebuildPanoramaTableAsync()
+    {
+        var detector = ServiceProvider.GetRequiredService<MarsVista.Core.Services.PanoramaDetector>();
+        var builder = new MarsVista.Core.Services.PanoramaTableBuilder(
+            DbContext, detector,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<MarsVista.Core.Services.PanoramaTableBuilder>.Instance);
+        var runner = new MarsVista.Core.Services.PanoramaBackfillRunner(
+            DbContext, builder,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<MarsVista.Core.Services.PanoramaBackfillRunner>.Instance);
+        await runner.RunAsync();
+    }
+
+    private async Task<MarsVista.Api.DTOs.V2.ApiResponse<List<MarsVista.Api.DTOs.V2.PanoramaResource>>> RebuildThenList(
+        string? rovers = null, int? solMin = null, int? solMax = null, int? minPhotos = null,
+        string? stitchStatus = null, string? stitchMethod = null, string? mosaicType = null,
+        string? quality = null, double? minRating = null, string? sort = null, string? order = null,
+        int pageNumber = 1, int pageSize = 25, CancellationToken cancellationToken = default)
+    {
+        await RebuildPanoramaTableAsync();
+        return await _service.GetPanoramasAsync(rovers, solMin, solMax, minPhotos, stitchStatus,
+            stitchMethod, mosaicType, quality, minRating, sort, order, pageNumber, pageSize, cancellationToken);
+    }
+
     protected override async Task SeedAdditionalDataAsync()
     {
         _service = ServiceProvider.GetRequiredService<PanoramaService>();
@@ -126,7 +151,7 @@ public class PanoramaFilterAndRatingTests : IntegrationTestBase
     [Fact]
     public async Task GetPanoramasAsync_StitchStatusCompleted_FiltersToStitchedOnly()
     {
-        var result = await _service.GetPanoramasAsync(
+        var result = await RebuildThenList(
             stitchStatus: "completed",
             pageNumber: 1,
             pageSize: 25);
@@ -140,7 +165,7 @@ public class PanoramaFilterAndRatingTests : IntegrationTestBase
     [Fact]
     public async Task GetPanoramasAsync_StitchStatusFailed_FiltersToFailedOnly()
     {
-        var result = await _service.GetPanoramasAsync(
+        var result = await RebuildThenList(
             stitchStatus: "failed",
             pageNumber: 1,
             pageSize: 25);
@@ -155,7 +180,7 @@ public class PanoramaFilterAndRatingTests : IntegrationTestBase
     public async Task GetPanoramasAsync_StitchStatusNotStarted_ExcludesStitched()
     {
         // Both panoramas have stitch records, so not_started should return empty
-        var result = await _service.GetPanoramasAsync(
+        var result = await RebuildThenList(
             stitchStatus: "not_started",
             pageNumber: 1,
             pageSize: 25);
@@ -168,7 +193,7 @@ public class PanoramaFilterAndRatingTests : IntegrationTestBase
     [Fact]
     public async Task GetPanoramasAsync_StitchMethodFeatureMatch_FiltersCorrectly()
     {
-        var result = await _service.GetPanoramasAsync(
+        var result = await RebuildThenList(
             stitchMethod: "feature_match",
             pageNumber: 1,
             pageSize: 25);
@@ -181,7 +206,7 @@ public class PanoramaFilterAndRatingTests : IntegrationTestBase
     [Fact]
     public async Task GetPanoramasAsync_StitchMethodTelemetryProjection_ReturnsEmpty()
     {
-        var result = await _service.GetPanoramasAsync(
+        var result = await RebuildThenList(
             stitchMethod: "telemetry_projection",
             pageNumber: 1,
             pageSize: 25);
@@ -194,7 +219,7 @@ public class PanoramaFilterAndRatingTests : IntegrationTestBase
     [Fact]
     public async Task GetPanoramasAsync_QualityWide_FiltersCorrectly()
     {
-        var result = await _service.GetPanoramasAsync(
+        var result = await RebuildThenList(
             quality: "wide",
             pageNumber: 1,
             pageSize: 25);
@@ -207,7 +232,7 @@ public class PanoramaFilterAndRatingTests : IntegrationTestBase
     [Fact]
     public async Task GetPanoramasAsync_QualityPartial_FiltersCorrectly()
     {
-        var result = await _service.GetPanoramasAsync(
+        var result = await RebuildThenList(
             quality: "partial",
             pageNumber: 1,
             pageSize: 25);
@@ -222,7 +247,7 @@ public class PanoramaFilterAndRatingTests : IntegrationTestBase
     [Fact]
     public async Task GetPanoramasAsync_MosaicTypeSingleRow_FiltersCorrectly()
     {
-        var result = await _service.GetPanoramasAsync(
+        var result = await RebuildThenList(
             mosaicType: "single_row",
             pageNumber: 1,
             pageSize: 25);
@@ -234,7 +259,7 @@ public class PanoramaFilterAndRatingTests : IntegrationTestBase
     [Fact]
     public async Task GetPanoramasAsync_MosaicTypeMultiRow_ReturnsEmpty()
     {
-        var result = await _service.GetPanoramasAsync(
+        var result = await RebuildThenList(
             mosaicType: "multi_row",
             pageNumber: 1,
             pageSize: 25);
@@ -248,7 +273,7 @@ public class PanoramaFilterAndRatingTests : IntegrationTestBase
     public async Task GetPanoramasAsync_MinRating4_FiltersToHighRatedOnly()
     {
         // Panorama 2 has ratings 5+3=8/2=4.0 avg
-        var result = await _service.GetPanoramasAsync(
+        var result = await RebuildThenList(
             minRating: 4.0,
             pageNumber: 1,
             pageSize: 25);
@@ -261,7 +286,7 @@ public class PanoramaFilterAndRatingTests : IntegrationTestBase
     public async Task GetPanoramasAsync_MinRating5_ReturnsEmpty()
     {
         // Average is 4.0, so min_rating=5 excludes everything
-        var result = await _service.GetPanoramasAsync(
+        var result = await RebuildThenList(
             minRating: 5.0,
             pageNumber: 1,
             pageSize: 25);
@@ -274,7 +299,7 @@ public class PanoramaFilterAndRatingTests : IntegrationTestBase
     [Fact]
     public async Task GetPanoramasAsync_SortByPhotosDesc_HighestFirst()
     {
-        var result = await _service.GetPanoramasAsync(
+        var result = await RebuildThenList(
             sort: "photos",
             order: "desc",
             pageNumber: 1,
@@ -288,7 +313,7 @@ public class PanoramaFilterAndRatingTests : IntegrationTestBase
     [Fact]
     public async Task GetPanoramasAsync_SortByPhotosAsc_LowestFirst()
     {
-        var result = await _service.GetPanoramasAsync(
+        var result = await RebuildThenList(
             sort: "photos",
             order: "asc",
             pageNumber: 1,
@@ -304,7 +329,7 @@ public class PanoramaFilterAndRatingTests : IntegrationTestBase
     [Fact]
     public async Task GetPanoramasAsync_CompletedStitch_IncludesStitchInfo()
     {
-        var result = await _service.GetPanoramasAsync(
+        var result = await RebuildThenList(
             stitchStatus: "completed",
             pageNumber: 1,
             pageSize: 25);
