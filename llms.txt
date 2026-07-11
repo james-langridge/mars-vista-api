@@ -18,5 +18,3 @@ swagger: https://api.marsvista.dev/swagger
 
 # Repository documentation
 github: https://github.com/james-langridge/mars-vista-api
-deployment: https://github.com/james-langridge/mars-vista-api/blob/main/docs/DEPLOYMENT.md
-configuration: https://github.com/james-langridge/mars-vista-api/blob/main/docs/CONFIGURATION.md

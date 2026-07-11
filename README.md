@@ -16,33 +16,14 @@ A modern REST API for Mars rover imagery, providing unified access to over 1.5 m
 
 ## Quick Start
 
-### Using the Public API
-
-Get a free API key at [marsvista.dev/signin](https://marsvista.dev/signin), then:
+Get a free API key at [marsvista.dev/signin](https://marsvista.dev/signin), then send it in the `X-API-Key` header:
 
 ```bash
 curl -H "X-API-Key: YOUR_KEY" \
   "https://api.marsvista.dev/api/v2/photos?rovers=perseverance&sol=1000"
 ```
 
-### Self-Hosting
-
-```bash
-# Clone and start
-git clone https://github.com/james-langridge/mars-vista-api.git
-cd mars-vista-api
-
-# Start dependencies
-docker compose up -d
-
-# Apply migrations
-dotnet ef database update --project src/MarsVista.Core
-
-# Run the API
-dotnet run --project src/MarsVista.Api
-```
-
-API runs at `http://localhost:5127`. See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for production setup.
+The base URL is `https://api.marsvista.dev`. Every request needs a valid API key.
 
 ## API Documentation
 
@@ -80,11 +61,11 @@ curl -H "X-API-Key: YOUR_KEY" \
 
 # By date range
 curl -H "X-API-Key: YOUR_KEY" \
-  "https://api.marsvista.dev/api/v2/photos?earth_date_min=2024-01-01&earth_date_max=2024-01-31"
+  "https://api.marsvista.dev/api/v2/photos?date_min=2024-01-01&date_max=2024-01-31"
 
 # Golden hour photos
 curl -H "X-API-Key: YOUR_KEY" \
-  "https://api.marsvista.dev/api/v2/photos?rovers=perseverance&is_golden_hour=true"
+  "https://api.marsvista.dev/api/v2/photos?rovers=perseverance&mars_time_golden_hour=true"
 ```
 
 ### Include Related Data
@@ -94,98 +75,17 @@ curl -H "X-API-Key: YOUR_KEY" \
   "https://api.marsvista.dev/api/v2/photos?include=rover,camera&per_page=10"
 ```
 
-## Project Structure
-
-```
-mars-vista-api/
-├── src/
-│   ├── MarsVista.Api/         # REST API service
-│   ├── MarsVista.Core/        # Shared library (entities, DbContext)
-│   └── MarsVista.Scraper/     # NASA data ingestion
-├── tests/                     # Unit and integration tests
-├── docs/                      # Documentation
-│   ├── DEPLOYMENT.md          # Deployment guide
-│   ├── CONFIGURATION.md       # Environment variables
-│   ├── ARCHITECTURE.md        # System design
-│   └── CONTRIBUTING.md        # Contribution guidelines
-├── examples/                  # API collection examples
-├── scripts/                   # Utility scripts
-├── openapi.json              # OpenAPI specification
-└── docker-compose.yml        # Local development
-```
+See the [API Reference](https://marsvista.dev/docs) for the full list of endpoints, query parameters, and response fields.
 
 ## Tech Stack
 
 - **.NET 9** - ASP.NET Core, Entity Framework Core
 - **PostgreSQL 15** - JSONB for metadata preservation
 - **Redis** - Two-level caching (L1 memory + L2 distributed)
-- **Docker** - Containerized deployment
-
-## Development
-
-### Prerequisites
-
-- .NET 9.0 SDK
-- Docker and Docker Compose
-- PostgreSQL 15+ (or use Docker)
-- Redis 7+ (optional, for caching)
-
-### Setup
-
-```bash
-# Clone repository
-git clone https://github.com/james-langridge/mars-vista-api.git
-cd mars-vista-api
-
-# Start PostgreSQL and Redis
-docker compose up -d
-
-# Apply database migrations
-dotnet ef database update --project src/MarsVista.Core
-
-# Run the API
-dotnet run --project src/MarsVista.Api
-
-# Run tests
-dotnet test
-```
-
-### Populating Data
-
-```bash
-# Scrape photos for a sol range
-curl -X POST "http://localhost:5127/api/v1/admin/scraper/perseverance?startSol=1000&endSol=1010" \
-  -H "X-API-Key: YOUR_ADMIN_KEY"
-```
-
-See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for bulk data ingestion.
-
-## Deployment
-
-### Docker
-
-```bash
-docker compose -f docker-compose.production.yml up -d
-```
-
-### Railway
-
-See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for Railway deployment instructions.
-
-### Environment Variables
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `DATABASE_URL` | Yes | PostgreSQL connection string |
-| `REDIS_URL` | No | Redis connection (falls back to memory) |
-| `INTERNAL_API_SECRET` | No | For dashboard integration |
-| `ADMIN_API_KEY` | No | For scraper control |
-
-See [docs/CONFIGURATION.md](docs/CONFIGURATION.md) for complete reference.
 
 ## Contributing
 
-Contributions are welcome! Please read [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for guidelines.
+Contributions are welcome. To work on the project locally, run `docker compose up -d` to start PostgreSQL and Redis, apply migrations with `dotnet ef database update --project src/MarsVista.Core`, and start the API with `dotnet run --project src/MarsVista.Api`. Please open an issue to discuss significant changes before submitting a pull request against `main`, and make sure `dotnet test` passes. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for an overview of the codebase.
 
 ## License
 
