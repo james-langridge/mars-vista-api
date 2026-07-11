@@ -14,13 +14,16 @@ public class UsageTrackingMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<UsageTrackingMiddleware> _logger;
+    private readonly IServiceScopeFactory _scopeFactory;
 
     public UsageTrackingMiddleware(
         RequestDelegate next,
-        ILogger<UsageTrackingMiddleware> logger)
+        ILogger<UsageTrackingMiddleware> logger,
+        IServiceScopeFactory scopeFactory)
     {
         _next = next;
         _logger = logger;
+        _scopeFactory = scopeFactory;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -59,8 +62,16 @@ public class UsageTrackingMiddleware
             await responseBody.CopyToAsync(originalBodyStream);
             context.Response.Body = originalBodyStream;
 
-            // Track usage (fire-and-forget)
-            _ = TrackUsageAsync(context, stopwatch.ElapsedMilliseconds, errorDetail);
+            // Build the usage event while the HttpContext is still alive, then
+            // persist it fire-and-forget. The detached task must NOT touch the
+            // HttpContext: once the response completes the framework recycles the
+            // context and its IFeatureCollection, so any later access throws
+            // ObjectDisposedException on the unobserved task.
+            var usageEvent = BuildUsageEvent(context, stopwatch.ElapsedMilliseconds, errorDetail);
+            if (usageEvent is not null)
+            {
+                _ = TrackUsageAsync(usageEvent);
+            }
         }
     }
 
@@ -120,60 +131,77 @@ public class UsageTrackingMiddleware
     }
 
     /// <summary>
-    /// Asynchronously tracks the usage event without blocking the response.
+    /// Builds the usage event from the request/response while the HttpContext is
+    /// still alive. Returns null for unauthenticated requests (nothing to track).
     /// </summary>
-    private async Task TrackUsageAsync(HttpContext context, long responseTimeMs, string? errorDetail)
+    private static UsageEvent? BuildUsageEvent(HttpContext context, long responseTimeMs, string? errorDetail)
+    {
+        // Extract user context (set by authentication middleware)
+        var userEmail = context.Items["UserEmail"] as string;
+        if (string.IsNullOrEmpty(userEmail))
+        {
+            // No authenticated user - nothing to track
+            return null;
+        }
+
+        var userTier = context.Items["UserTier"] as string;
+
+        // Count photos returned (if applicable)
+        var photosReturned = context.Items.TryGetValue("PhotosReturned", out var value) && value is int count
+            ? count
+            : 0;
+
+        // Capture query string for error requests
+        var queryString = context.Request.QueryString.HasValue
+            ? context.Request.QueryString.Value
+            : null;
+
+        return new UsageEvent
+        {
+            UserEmail = userEmail,
+            Tier = userTier ?? "free",
+            Endpoint = context.Request.Path,
+            StatusCode = context.Response.StatusCode,
+            ResponseTimeMs = (int)responseTimeMs,
+            PhotosReturned = photosReturned,
+            QueryString = queryString,
+            ErrorDetail = errorDetail,
+            CreatedAt = DateTime.UtcNow
+        };
+    }
+
+    /// <summary>
+    /// Persists the usage event fire-and-forget, without blocking the response.
+    /// Detached from the request: it works only with the pre-built
+    /// <paramref name="usageEvent"/> and never dereferences the HttpContext, which
+    /// may already be disposed by the time this runs.
+    /// </summary>
+    private async Task TrackUsageAsync(UsageEvent usageEvent)
     {
         try
         {
-            // Extract user context (set by authentication middleware)
-            var userEmail = context.Items["UserEmail"] as string;
-            var userTier = context.Items["UserTier"] as string;
-
-            if (string.IsNullOrEmpty(userEmail))
-            {
-                // No authenticated user - skip tracking
-                return;
-            }
-
-            // Count photos returned (if applicable)
-            var photosReturned = 0;
-            if (context.Items.ContainsKey("PhotosReturned"))
-            {
-                photosReturned = (int)(context.Items["PhotosReturned"] ?? 0);
-            }
-
-            // Capture query string for error requests
-            var queryString = context.Request.QueryString.HasValue
-                ? context.Request.QueryString.Value
-                : null;
-
-            // Create usage event
-            var usageEvent = new UsageEvent
-            {
-                UserEmail = userEmail,
-                Tier = userTier ?? "free",
-                Endpoint = context.Request.Path,
-                StatusCode = context.Response.StatusCode,
-                ResponseTimeMs = (int)responseTimeMs,
-                PhotosReturned = photosReturned,
-                QueryString = queryString,
-                ErrorDetail = errorDetail,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            // Save to database (use a new scope to avoid issues with disposed contexts)
-            using var scope = context.RequestServices.CreateScope();
-            var dbContext = scope.ServiceProvider.GetRequiredService<MarsVistaDbContext>();
-
-            dbContext.UsageEvents.Add(usageEvent);
-            await dbContext.SaveChangesAsync();
+            await PersistAsync(usageEvent);
         }
         catch (Exception ex)
         {
-            // Log error but don't fail the request
-            _logger.LogError(ex, "Failed to track usage event for {Path}", context.Request.Path);
+            // Log with the captured endpoint - touching the HttpContext here would
+            // throw a second, unobserved ObjectDisposedException on this task.
+            _logger.LogError(ex, "Failed to track usage event for {Path}", usageEvent.Endpoint);
         }
+    }
+
+    /// <summary>
+    /// Writes the usage event to the database using a fresh DI scope from the
+    /// application root, independent of the request scope (which ends with the
+    /// response). Virtual so tests can simulate persistence failures.
+    /// </summary>
+    protected virtual async Task PersistAsync(UsageEvent usageEvent)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MarsVistaDbContext>();
+
+        dbContext.UsageEvents.Add(usageEvent);
+        await dbContext.SaveChangesAsync();
     }
 
     /// <summary>
