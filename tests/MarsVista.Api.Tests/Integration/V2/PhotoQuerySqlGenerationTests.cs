@@ -99,6 +99,153 @@ public class PhotoQuerySqlGenerationTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task SingleRoverDefaultSort_OrdersBySolThenDate()
+    {
+        SqlCapture.Clear();
+
+        var parameters = new PhotoQueryParameters
+        {
+            Rovers = "curiosity",
+            RoverList = new List<string> { "curiosity" },
+            SolMin = 1, SolMax = 1000,
+            Page = 1, PerPage = 10,
+        };
+
+        await _photoQueryService.QueryPhotosAsync(parameters, default);
+
+        // The default "most recent first" sort must be expressed sol-first for a
+        // single-rover query so the planner serves it from
+        // ix_photos_rover_id_camera_id_sol / ix_photos_rover_id_sol_covering with
+        // an incremental sort, instead of backward-scanning ix_photos_date_taken_utc
+        // past every newer photo of every rover (~1.2M rows discarded, 4-5s per
+        // request in production for wide sol ranges).
+        var dataSql = SqlCapture.ExecutedSql
+            .Where(s => s.Contains("ORDER BY", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        dataSql.Should().NotBeEmpty("the paginated data query must be ordered");
+        foreach (var sql in dataSql)
+        {
+            sql.Should().MatchRegex(
+                @"ORDER BY\s+\S*\.?""?sol""?\s+DESC\s*,\s*\S*\.?""?date_taken_utc""?\s+DESC",
+                "single-rover default sort must be sol DESC, date_taken_utc DESC");
+        }
+    }
+
+    [Fact]
+    public async Task MultiRoverDefaultSort_OrdersByDateAlone()
+    {
+        SqlCapture.Clear();
+
+        var parameters = new PhotoQueryParameters
+        {
+            Rovers = "curiosity,perseverance",
+            RoverList = new List<string> { "curiosity", "perseverance" },
+            Page = 1, PerPage = 10,
+        };
+
+        await _photoQueryService.QueryPhotosAsync(parameters, default);
+
+        // Across rovers, sol numbers are not comparable (Spirit sol 1 is 2004,
+        // Curiosity sol 1 is 2012), so the multi-rover default sort must stay
+        // date-only.
+        var dataSql = SqlCapture.ExecutedSql
+            .Where(s => s.Contains("ORDER BY", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        dataSql.Should().NotBeEmpty();
+        foreach (var sql in dataSql)
+        {
+            sql.Should().NotMatchRegex(
+                @"ORDER BY\s+\S*\.?""?sol""?",
+                "multi-rover queries must not sort by sol - sols are not comparable across rovers");
+        }
+    }
+
+    [Fact]
+    public async Task SingleRoverExplicitDateSort_KeepsDateOnlyOrder()
+    {
+        SqlCapture.Clear();
+
+        var parameters = new PhotoQueryParameters
+        {
+            Rovers = "curiosity",
+            RoverList = new List<string> { "curiosity" },
+            // The validator normally parses Sort into SortFields before the
+            // service runs; the service only reads SortFields.
+            Sort = "-date_taken_utc",
+            SortFields = new List<SortField>
+            {
+                new() { Field = "date_taken_utc", Direction = SortDirection.Descending },
+            },
+            Page = 1, PerPage = 10,
+        };
+
+        await _photoQueryService.QueryPhotosAsync(parameters, default);
+
+        // An explicit sort is the caller's contract; only the default sort is
+        // rewritten to the sol-first equivalent.
+        var dataSql = SqlCapture.ExecutedSql
+            .Where(s => s.Contains("ORDER BY", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        dataSql.Should().NotBeEmpty();
+        foreach (var sql in dataSql)
+        {
+            sql.Should().NotMatchRegex(
+                @"ORDER BY\s+\S*\.?""?sol""?",
+                "explicit sort=-date_taken_utc must be honoured as given");
+        }
+    }
+
+    [Fact]
+    public async Task SingleRoverDefaultSort_ReturnsPhotosMostRecentFirst()
+    {
+        // Three curiosity photos out of sol order in the table; the default sort
+        // must return them newest-first regardless of how it is expressed in SQL.
+        var now = DateTime.UtcNow;
+        DbContext.Photos.AddRange(
+            new Photo
+            {
+                NasaId = "ORD-MID", ImgSrcFull = "x", ImgSrcLarge = "x", ImgSrcMedium = "x", ImgSrcSmall = "x",
+                Sol = 500, EarthDate = new DateTime(2014, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                DateTakenUtc = new DateTime(2014, 1, 1, 12, 0, 0, DateTimeKind.Utc),
+                SampleType = "Full", RoverId = 1, CameraId = 1,
+                CreatedAt = now, UpdatedAt = now,
+            },
+            new Photo
+            {
+                NasaId = "ORD-NEW", ImgSrcFull = "x", ImgSrcLarge = "x", ImgSrcMedium = "x", ImgSrcSmall = "x",
+                Sol = 900, EarthDate = new DateTime(2015, 2, 1, 0, 0, 0, DateTimeKind.Utc),
+                DateTakenUtc = new DateTime(2015, 2, 1, 8, 0, 0, DateTimeKind.Utc),
+                SampleType = "Full", RoverId = 1, CameraId = 1,
+                CreatedAt = now, UpdatedAt = now,
+            },
+            new Photo
+            {
+                NasaId = "ORD-OLD", ImgSrcFull = "x", ImgSrcLarge = "x", ImgSrcMedium = "x", ImgSrcSmall = "x",
+                Sol = 100, EarthDate = new DateTime(2013, 3, 1, 0, 0, 0, DateTimeKind.Utc),
+                DateTakenUtc = new DateTime(2013, 3, 1, 9, 0, 0, DateTimeKind.Utc),
+                SampleType = "Full", RoverId = 1, CameraId = 1,
+                CreatedAt = now, UpdatedAt = now,
+            });
+        await DbContext.SaveChangesAsync();
+
+        var parameters = new PhotoQueryParameters
+        {
+            Rovers = "curiosity",
+            RoverList = new List<string> { "curiosity" },
+            SolMin = 50, SolMax = 950,
+            Page = 1, PerPage = 10,
+        };
+
+        var response = await _photoQueryService.QueryPhotosAsync(parameters, default);
+
+        response.Data.Select(p => p.Attributes!.NasaId).Should().ContainInOrder(
+            "ORD-NEW", "ORD-MID", "ORD-OLD");
+    }
+
+    [Fact]
     public async Task MultiRoverFilter_EmitsAnyArrayOnRoverId()
     {
         SqlCapture.Clear();

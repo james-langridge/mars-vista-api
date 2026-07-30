@@ -642,13 +642,38 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
     }
 
     /// <summary>
+    /// True when the query's rover filter resolves to exactly one rover, which
+    /// is what makes the sol-first default sort equivalent to date order.
+    /// </summary>
+    private bool IsSingleRoverQuery(PhotoQueryParameters parameters) =>
+        parameters.RoverList.Count > 0
+        && _referenceCache.GetRoverIdsByNames(parameters.RoverList).Count == 1;
+
+    /// <summary>
     /// Apply sorting to the query
     /// </summary>
     private IQueryable<Photo> ApplySorting(IQueryable<Photo> query, PhotoQueryParameters parameters)
     {
         if (parameters.SortFields.Count == 0)
         {
-            // Default sort: most recent first
+            // Default sort: most recent first. For a single-rover query this is
+            // expressed sol-first: within one rover, sol order IS date order (a
+            // sol is one Mars day, so sol N+1 photos are always taken after
+            // sol N), but sol-first lets the planner serve wide sol-range
+            // queries from ix_photos_rover_id_camera_id_sol with an incremental
+            // sort (12 ms measured) instead of backward-scanning
+            // ix_photos_date_taken_utc past every newer photo of every rover
+            // (~1.2M rows discarded, 4-5 s warm / 95 s cold measured).
+            // Across rovers sols are not comparable (Spirit sol 1 is 2004,
+            // Curiosity sol 1 is 2012), so multi-rover queries keep the
+            // date-only sort.
+            if (IsSingleRoverQuery(parameters))
+            {
+                return query
+                    .OrderByDescending(p => p.Sol)
+                    .ThenByDescending(p => p.DateTakenUtc);
+            }
+
             return query.OrderByDescending(p => p.DateTakenUtc);
         }
 
