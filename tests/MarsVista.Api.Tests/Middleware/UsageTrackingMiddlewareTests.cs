@@ -190,6 +190,18 @@ public class UsageTrackingMiddlewareTests
     }
 
     [Fact]
+    public async Task PanoramaList_DataWrapperWithoutRootPhotos_CountsZero()
+    {
+        // The panoramas LIST wraps panoramas in a "data" array and omits their
+        // photos entirely (Photos is null and JsonIgnored), so nothing counts.
+        var captured = await TrackRequest(
+            "/api/v2/panoramas",
+            """{"data":[{"id":"pano_curiosity_4919_1","type":"panorama","attributes":{"total_photos":6}}],"meta":{}}""");
+
+        captured!.PhotosReturned.Should().Be(0);
+    }
+
+    [Fact]
     public async Task StatsResponse_DataObjectWithoutPhotoType_CountsZero()
     {
         var captured = await TrackRequest(
