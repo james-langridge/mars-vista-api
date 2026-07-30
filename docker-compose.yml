@@ -10,6 +10,11 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-marsvista_dev}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
+    # Docker's default /dev/shm is 64MB; the parallel integration-test suite
+    # (one database per test class, concurrent parallel workers) can exhaust it,
+    # crashing the backend with "53100: could not resize shared memory segment"
+    # followed by minutes of crash recovery.
+    shm_size: 256mb
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
