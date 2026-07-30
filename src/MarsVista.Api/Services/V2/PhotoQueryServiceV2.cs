@@ -421,6 +421,10 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
         // the planner to backward-scan ix_photos_sol (4 GB of buffer reads per call).
         // Scalar = is also critical for the single-rover case (the planner does not
         // use ix_photos_rover_id_sol_covering when it sees `rover_id = ANY(ARRAY[x])`).
+        // NOTE: IsSingleRoverQuery repeats this resolution to pick the default sort;
+        // the sol-first sort is only valid when this filter matches exactly one
+        // rover, so any change to how rover ids are resolved here must be
+        // mirrored there.
         if (parameters.RoverList.Count > 0)
         {
             var roverIds = _referenceCache.GetRoverIdsByNames(parameters.RoverList);
@@ -643,7 +647,10 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
 
     /// <summary>
     /// True when the query's rover filter resolves to exactly one rover, which
-    /// is what makes the sol-first default sort equivalent to date order.
+    /// is what makes the sol-first default sort equivalent to date order. Must
+    /// stay consistent with BuildQuery's rover filter: both resolve the same
+    /// RoverList through the same cache, so within a request they cannot
+    /// disagree - a change to either resolution must be mirrored in the other.
     /// </summary>
     private bool IsSingleRoverQuery(PhotoQueryParameters parameters) =>
         parameters.RoverList.Count > 0
