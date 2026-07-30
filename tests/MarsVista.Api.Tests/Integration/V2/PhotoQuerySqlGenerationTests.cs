@@ -246,6 +246,85 @@ public class PhotoQuerySqlGenerationTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task SingleRoverDefaultSort_SolWinsOverDiscordantDate()
+    {
+        // Pins the one deliberate semantic choice of the sol-first rewrite:
+        // when sol and date disagree (17 early-Perseverance sol boundaries in
+        // production have date_taken_utc overlapping the neighbouring sol by up
+        // to 17 days - NASA data quirks), the default order follows sol, i.e.
+        // NASA's mission attribution, not the unreliable timestamp. Under the
+        // old date-only sort these two photos would come back reversed.
+        var now = DateTime.UtcNow;
+        DbContext.Photos.AddRange(
+            new Photo
+            {
+                NasaId = "DIS-SOL-WINS", ImgSrcFull = "x", ImgSrcLarge = "x", ImgSrcMedium = "x", ImgSrcSmall = "x",
+                Sol = 2100, EarthDate = new DateTime(2013, 6, 1, 0, 0, 0, DateTimeKind.Utc),
+                DateTakenUtc = new DateTime(2013, 6, 1, 10, 0, 0, DateTimeKind.Utc),
+                SampleType = "Full", RoverId = 1, CameraId = 1,
+                CreatedAt = now, UpdatedAt = now,
+            },
+            new Photo
+            {
+                NasaId = "DIS-DATE-LOSES", ImgSrcFull = "x", ImgSrcLarge = "x", ImgSrcMedium = "x", ImgSrcSmall = "x",
+                Sol = 2000, EarthDate = new DateTime(2015, 6, 1, 0, 0, 0, DateTimeKind.Utc),
+                DateTakenUtc = new DateTime(2015, 6, 1, 10, 0, 0, DateTimeKind.Utc),
+                SampleType = "Full", RoverId = 1, CameraId = 1,
+                CreatedAt = now, UpdatedAt = now,
+            });
+        await DbContext.SaveChangesAsync();
+
+        var parameters = new PhotoQueryParameters
+        {
+            Rovers = "curiosity",
+            RoverList = new List<string> { "curiosity" },
+            SolMin = 2000, SolMax = 2200,
+            Page = 1, PerPage = 10,
+        };
+
+        var response = await _photoQueryService.QueryPhotosAsync(parameters, default);
+
+        response.Data.Select(p => p.Attributes!.NasaId).Should().Equal(
+            "DIS-SOL-WINS", "DIS-DATE-LOSES");
+    }
+
+    [Fact]
+    public async Task SingleRoverMultiCameraFilter_KeepsSolFirstDefaultSort()
+    {
+        SqlCapture.Clear();
+
+        // FHAZ resolves to two camera ids (duplicate name across rovers) and
+        // MAST to one, so the camera predicate is a multi-id ANY/IN - the sort
+        // decision must still be sol-first because it depends only on the
+        // rover filter resolving to a single rover.
+        var parameters = new PhotoQueryParameters
+        {
+            Rovers = "curiosity",
+            RoverList = new List<string> { "curiosity" },
+            Cameras = "FHAZ,MAST",
+            CameraList = new List<string> { "FHAZ", "MAST" },
+            Page = 1, PerPage = 10,
+        };
+
+        await _photoQueryService.QueryPhotosAsync(parameters, default);
+
+        var dataSql = SqlCapture.ExecutedSql
+            .Where(s => s.Contains("ORDER BY", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        dataSql.Should().NotBeEmpty();
+        foreach (var sql in dataSql)
+        {
+            sql.Should().Contain("camera_id");
+            (sql.Contains("= ANY (") || sql.Contains("camera_id IN ("))
+                .Should().BeTrue("multi-id camera filter must keep all camera ids");
+            sql.Should().MatchRegex(
+                @"ORDER BY\s+\S*\.?""?sol""?\s+DESC\s*,\s*\S*\.?""?date_taken_utc""?\s+DESC",
+                "a multi-camera filter must not flip the single-rover sol-first sort");
+        }
+    }
+
+    [Fact]
     public async Task MultiRoverFilter_EmitsAnyArrayOnRoverId()
     {
         SqlCapture.Clear();
