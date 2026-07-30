@@ -476,7 +476,11 @@ app.UseMiddleware<ApiKeyMiddleware>();
 // User API key authentication (protects /api/v1/* public endpoints)
 app.UseMiddleware<UserApiKeyAuthenticationMiddleware>();
 
-// Usage tracking for admin dashboard analytics
+// Usage tracking for admin dashboard analytics. Must stay INSIDE (after)
+// UseResponseCompression: its body buffer captures controller output before
+// the outer compression stream runs, so error_detail/photos_returned parse
+// plaintext JSON. Registered before compression, it would buffer compressed
+// bytes and both would silently read as null/0.
 app.UseMiddleware<UsageTrackingMiddleware>();
 
 app.UseAuthorization();

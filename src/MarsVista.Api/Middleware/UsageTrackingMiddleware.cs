@@ -136,25 +136,20 @@ public class UsageTrackingMiddleware
     }
 
     /// <summary>
-    /// Counts the photos in a successful photo-endpoint response by inspecting
-    /// the buffered body. Derived centrally here - rather than set by each
-    /// controller - so every photo endpoint, v1 and v2, present and future, is
-    /// counted without per-endpoint wiring. Handles both response conventions:
-    /// v2 JSON:API ("data" array, or "data" object with type "photo") and v1
-    /// NASA-compatible ("photos" array, or "photo" object). Non-photo endpoints,
-    /// empty bodies, and unparseable bodies count 0.
+    /// Counts the photos in a successful response by inspecting the buffered
+    /// body. Derived centrally here - rather than set by each controller - so
+    /// every photo endpoint, v1 and v2, present and future, is counted without
+    /// per-endpoint wiring. Handles both response conventions: v1
+    /// NASA-compatible ("photos" array, or "photo" object - unambiguous keys,
+    /// matched on any path, which covers /rovers/{name}/latest alongside
+    /// /photos and /latest_photos) and v2 JSON:API ("data" array, or "data"
+    /// object with type "photo" - ambiguous key shared by rovers/cameras/
+    /// panoramas lists, so matched only under a photos path). Empty and
+    /// unparseable bodies count 0.
     /// </summary>
     private static int CountPhotosReturned(MemoryStream responseBody, PathString path)
     {
         if (responseBody.Length == 0)
-        {
-            return 0;
-        }
-
-        // Only photo endpoints: /api/v*/photos*, /api/v1/rovers/{name}/photos,
-        // /api/v1/rovers/{name}/latest_photos. Excludes rovers/cameras/panoramas
-        // lists, whose v2 responses also carry a "data" array.
-        if (path.Value?.Contains("photos", StringComparison.OrdinalIgnoreCase) != true)
         {
             return 0;
         }
@@ -169,7 +164,18 @@ public class UsageTrackingMiddleware
                 return 0;
             }
 
-            if (root.TryGetProperty("data", out var data))
+            if (root.TryGetProperty("photos", out var photos) && photos.ValueKind == JsonValueKind.Array)
+            {
+                return photos.GetArrayLength();
+            }
+
+            if (root.TryGetProperty("photo", out var photo) && photo.ValueKind == JsonValueKind.Object)
+            {
+                return 1;
+            }
+
+            if (path.Value?.Contains("photos", StringComparison.OrdinalIgnoreCase) == true
+                && root.TryGetProperty("data", out var data))
             {
                 if (data.ValueKind == JsonValueKind.Array)
                 {
@@ -185,20 +191,13 @@ public class UsageTrackingMiddleware
                     : 0;
             }
 
-            if (root.TryGetProperty("photos", out var photos) && photos.ValueKind == JsonValueKind.Array)
-            {
-                return photos.GetArrayLength();
-            }
-
-            if (root.TryGetProperty("photo", out var photo) && photo.ValueKind == JsonValueKind.Object)
-            {
-                return 1;
-            }
-
             return 0;
         }
-        catch (JsonException)
+        catch
         {
+            // Counting must never corrupt the response: an exception escaping
+            // here fires in InvokeAsync's finally before the buffered body is
+            // copied back to the client. Same posture as ExtractErrorDetail.
             return 0;
         }
     }

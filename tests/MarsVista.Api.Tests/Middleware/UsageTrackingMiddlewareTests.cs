@@ -130,6 +130,7 @@ public class UsageTrackingMiddlewareTests
     [Theory]
     [InlineData("""{"data":[{"id":1,"type":"photo"},{"id":2,"type":"photo"},{"id":3,"type":"photo"}],"meta":{"returned_count":3}}""", 3)]
     [InlineData("""{"data":[]}""", 0)]
+    [InlineData("""{"data":null}""", 0)]
     [InlineData("""{"data":{"id":42,"type":"photo","attributes":{}}}""", 1)]
     public async Task CountsPhotos_FromV2ResponseBody(string body, int expected)
     {
@@ -147,6 +148,31 @@ public class UsageTrackingMiddlewareTests
         var captured = await TrackRequest("/api/v1/rovers/curiosity/photos", body);
 
         captured!.PhotosReturned.Should().Be(expected);
+    }
+
+    [Fact]
+    public async Task V1LatestEndpoint_PathWithoutPhotosSegment_StillCountsPhotos()
+    {
+        // /api/v1/rovers/{name}/latest returns the same {"photos":[...]} shape
+        // as /photos and /latest_photos, but its path has no "photos" substring.
+        // The v1 root keys are unambiguous, so counting must not be path-gated.
+        var captured = await TrackRequest(
+            "/api/v1/rovers/curiosity/latest",
+            """{"photos":[{"id":1},{"id":2}],"pagination":{"page":1}}""");
+
+        captured!.PhotosReturned.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task RatingEndpoint_FlatResponseOnPhotosPath_CountsZero()
+    {
+        // /api/v2/photos/{id}/rating lives under a photos path but returns a
+        // flat RatingResponse with no data/photos/photo root key.
+        var captured = await TrackRequest(
+            "/api/v2/photos/42/rating",
+            """{"average_rating":4.5,"rating_count":2,"user_rating":5}""");
+
+        captured!.PhotosReturned.Should().Be(0);
     }
 
     [Fact]
