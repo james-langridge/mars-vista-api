@@ -52,9 +52,14 @@ public class UsageTrackingMiddleware
 
             // Read error detail from response body before copying back
             string? errorDetail = null;
+            var photosReturned = 0;
             if (context.Response.StatusCode >= 400)
             {
                 errorDetail = ExtractErrorDetail(responseBody);
+            }
+            else if (context.Response.StatusCode < 300)
+            {
+                photosReturned = CountPhotosReturned(responseBody, context.Request.Path);
             }
 
             // Copy response back to original stream
@@ -67,7 +72,7 @@ public class UsageTrackingMiddleware
             // HttpContext: once the response completes the framework recycles the
             // context and its IFeatureCollection, so any later access throws
             // ObjectDisposedException on the unobserved task.
-            var usageEvent = BuildUsageEvent(context, stopwatch.ElapsedMilliseconds, errorDetail);
+            var usageEvent = BuildUsageEvent(context, stopwatch.ElapsedMilliseconds, errorDetail, photosReturned);
             if (usageEvent is not null)
             {
                 _ = TrackUsageAsync(usageEvent);
@@ -131,10 +136,79 @@ public class UsageTrackingMiddleware
     }
 
     /// <summary>
+    /// Counts the photos in a successful photo-endpoint response by inspecting
+    /// the buffered body. Derived centrally here - rather than set by each
+    /// controller - so every photo endpoint, v1 and v2, present and future, is
+    /// counted without per-endpoint wiring. Handles both response conventions:
+    /// v2 JSON:API ("data" array, or "data" object with type "photo") and v1
+    /// NASA-compatible ("photos" array, or "photo" object). Non-photo endpoints,
+    /// empty bodies, and unparseable bodies count 0.
+    /// </summary>
+    private static int CountPhotosReturned(MemoryStream responseBody, PathString path)
+    {
+        if (responseBody.Length == 0)
+        {
+            return 0;
+        }
+
+        // Only photo endpoints: /api/v*/photos*, /api/v1/rovers/{name}/photos,
+        // /api/v1/rovers/{name}/latest_photos. Excludes rovers/cameras/panoramas
+        // lists, whose v2 responses also carry a "data" array.
+        if (path.Value?.Contains("photos", StringComparison.OrdinalIgnoreCase) != true)
+        {
+            return 0;
+        }
+
+        try
+        {
+            responseBody.Seek(0, SeekOrigin.Begin);
+            using var doc = JsonDocument.Parse(responseBody);
+            var root = doc.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
+            {
+                return 0;
+            }
+
+            if (root.TryGetProperty("data", out var data))
+            {
+                if (data.ValueKind == JsonValueKind.Array)
+                {
+                    return data.GetArrayLength();
+                }
+
+                // A "data" object is a single photo only when typed as one -
+                // /photos/stats also returns a "data" object, of aggregates.
+                return data.ValueKind == JsonValueKind.Object
+                       && data.TryGetProperty("type", out var type)
+                       && type.ValueEquals("photo")
+                    ? 1
+                    : 0;
+            }
+
+            if (root.TryGetProperty("photos", out var photos) && photos.ValueKind == JsonValueKind.Array)
+            {
+                return photos.GetArrayLength();
+            }
+
+            if (root.TryGetProperty("photo", out var photo) && photo.ValueKind == JsonValueKind.Object)
+            {
+                return 1;
+            }
+
+            return 0;
+        }
+        catch (JsonException)
+        {
+            return 0;
+        }
+    }
+
+    /// <summary>
     /// Builds the usage event from the request/response while the HttpContext is
     /// still alive. Returns null for unauthenticated requests (nothing to track).
     /// </summary>
-    private static UsageEvent? BuildUsageEvent(HttpContext context, long responseTimeMs, string? errorDetail)
+    private static UsageEvent? BuildUsageEvent(
+        HttpContext context, long responseTimeMs, string? errorDetail, int photosReturned)
     {
         // Extract user context (set by authentication middleware)
         var userEmail = context.Items["UserEmail"] as string;
@@ -145,11 +219,6 @@ public class UsageTrackingMiddleware
         }
 
         var userTier = context.Items["UserTier"] as string;
-
-        // Count photos returned (if applicable)
-        var photosReturned = context.Items.TryGetValue("PhotosReturned", out var value) && value is int count
-            ? count
-            : 0;
 
         // Capture query string for error requests
         var queryString = context.Request.QueryString.HasValue

@@ -104,13 +104,12 @@ public class UsageTrackingMiddlewareTests
         UsageEvent? captured = null;
 
         var middleware = new TestableUsageTrackingMiddleware(
-            next: ctx => { ctx.Response.StatusCode = 200; return Task.CompletedTask; },
+            next: WriteJsonResponse("""{"data":{"id":42,"type":"photo","attributes":{}}}"""),
             logger: Mock.Of<ILogger<UsageTrackingMiddleware>>(),
             persist: usageEvent => { captured = usageEvent; return Task.CompletedTask; });
 
         var context = BuildAuthenticatedContext(
             "/api/v2/photos/42", tier: "pro", query: "?include=rover,camera");
-        context.Items["PhotosReturned"] = 1;
 
         await middleware.InvokeAsync(context);
 
@@ -121,6 +120,80 @@ public class UsageTrackingMiddlewareTests
         captured.StatusCode.Should().Be(200);
         captured.QueryString.Should().Be("?include=rover,camera");
         captured.PhotosReturned.Should().Be(1);
+    }
+
+    // photos_returned is derived centrally from the buffered response body, not
+    // set by controllers: nothing ever wrote HttpContext.Items["PhotosReturned"],
+    // so every production row carried 0. These tests pin the counting rules for
+    // each real response shape (v2 JSON:API, v1 NASA-compatible).
+
+    [Theory]
+    [InlineData("""{"data":[{"id":1,"type":"photo"},{"id":2,"type":"photo"},{"id":3,"type":"photo"}],"meta":{"returned_count":3}}""", 3)]
+    [InlineData("""{"data":[]}""", 0)]
+    [InlineData("""{"data":{"id":42,"type":"photo","attributes":{}}}""", 1)]
+    public async Task CountsPhotos_FromV2ResponseBody(string body, int expected)
+    {
+        var captured = await TrackRequest("/api/v2/photos", body);
+
+        captured!.PhotosReturned.Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("""{"photos":[{"id":1},{"id":2}]}""", 2)]
+    [InlineData("""{"photos":[]}""", 0)]
+    [InlineData("""{"photo":{"id":42}}""", 1)]
+    public async Task CountsPhotos_FromV1ResponseBody(string body, int expected)
+    {
+        var captured = await TrackRequest("/api/v1/rovers/curiosity/photos", body);
+
+        captured!.PhotosReturned.Should().Be(expected);
+    }
+
+    [Fact]
+    public async Task StatsResponse_DataObjectWithoutPhotoType_CountsZero()
+    {
+        var captured = await TrackRequest(
+            "/api/v2/photos/stats",
+            """{"data":{"total_photos":571,"groups":[{"key":"MAST","count":553}]}}""");
+
+        captured!.PhotosReturned.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task NonPhotoEndpoint_WithDataArray_CountsZero()
+    {
+        var captured = await TrackRequest(
+            "/api/v2/rovers",
+            """{"data":[{"id":1,"type":"rover"},{"id":2,"type":"rover"}]}""");
+
+        captured!.PhotosReturned.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task ErrorResponse_CountsZero()
+    {
+        var captured = await TrackRequest(
+            "/api/v2/photos",
+            """{"detail":"Validation Error","errors":[{"message":"bad sol"}]}""",
+            statusCode: 400);
+
+        captured!.PhotosReturned.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task EmptyBody_NotModifiedResponse_CountsZero()
+    {
+        var captured = await TrackRequest("/api/v2/photos", body: null, statusCode: 304);
+
+        captured!.PhotosReturned.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task MalformedJsonBody_CountsZero_WithoutThrowing()
+    {
+        var captured = await TrackRequest("/api/v2/photos", "not json {");
+
+        captured!.PhotosReturned.Should().Be(0);
     }
 
     [Fact]
@@ -140,6 +213,40 @@ public class UsageTrackingMiddlewareTests
         await middleware.InvokeAsync(context);
 
         persisted.Should().BeFalse();
+    }
+
+    /// <summary>
+    /// A pipeline terminal that writes <paramref name="json"/> as the response
+    /// body, mimicking a controller result the middleware must count from.
+    /// </summary>
+    private static RequestDelegate WriteJsonResponse(string json, int statusCode = 200) =>
+        async ctx =>
+        {
+            ctx.Response.StatusCode = statusCode;
+            ctx.Response.ContentType = "application/json";
+            await ctx.Response.WriteAsync(json);
+        };
+
+    /// <summary>
+    /// Runs one authenticated request through the middleware with the given
+    /// response body and returns the captured usage event.
+    /// </summary>
+    private static async Task<UsageEvent?> TrackRequest(
+        string path, string? body, int statusCode = 200)
+    {
+        UsageEvent? captured = null;
+
+        var middleware = new TestableUsageTrackingMiddleware(
+            next: body is null
+                ? ctx => { ctx.Response.StatusCode = statusCode; return Task.CompletedTask; }
+                : WriteJsonResponse(body, statusCode),
+            logger: Mock.Of<ILogger<UsageTrackingMiddleware>>(),
+            persist: usageEvent => { captured = usageEvent; return Task.CompletedTask; });
+
+        await middleware.InvokeAsync(BuildAuthenticatedContext(path));
+
+        captured.Should().NotBeNull();
+        return captured;
     }
 
     private static DefaultHttpContext BuildAuthenticatedContext(
