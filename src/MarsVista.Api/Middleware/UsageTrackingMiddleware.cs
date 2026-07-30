@@ -139,13 +139,14 @@ public class UsageTrackingMiddleware
     /// Counts the photos in a successful response by inspecting the buffered
     /// body. Derived centrally here - rather than set by each controller - so
     /// every photo endpoint, v1 and v2, present and future, is counted without
-    /// per-endpoint wiring. Handles both response conventions: v1
-    /// NASA-compatible ("photos" array, or "photo" object - unambiguous keys,
-    /// matched on any path, which covers /rovers/{name}/latest alongside
-    /// /photos and /latest_photos) and v2 JSON:API ("data" array, or "data"
-    /// object with type "photo" - ambiguous key shared by rovers/cameras/
-    /// panoramas lists, so matched only under a photos path). Empty and
-    /// unparseable bodies count 0.
+    /// per-endpoint wiring. Handles both response conventions: root "photos"
+    /// array or "photo" object (v1 endpoints including /rovers/{name}/latest,
+    /// and the v2 panorama detail, whose unwrapped resource carries its member
+    /// photos as a root "photos" array - those are real photo payloads and are
+    /// deliberately counted), matched on any path; and v2 JSON:API ("data"
+    /// array, or "data" object with type "photo" - ambiguous key shared by
+    /// rovers/cameras/panoramas lists, so matched only under a photos path).
+    /// Empty and unparseable bodies count 0.
     /// </summary>
     private static int CountPhotosReturned(MemoryStream responseBody, PathString path)
     {
