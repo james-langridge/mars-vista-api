@@ -176,6 +176,20 @@ public class UsageTrackingMiddlewareTests
     }
 
     [Fact]
+    public async Task PanoramaDetail_WithRootPhotosArray_CountsMemberPhotos()
+    {
+        // /api/v2/panoramas/{id} embeds the panorama's member photos as a root
+        // "photos" array (no "data" wrapper - verified against production).
+        // Those are real photo payloads served to the caller, so they count;
+        // the panoramas LIST response has no root "photos" key and counts 0.
+        var captured = await TrackRequest(
+            "/api/v2/panoramas/pano_curiosity_4919_1",
+            """{"id":"pano_curiosity_4919_1","type":"panorama","attributes":{"total_photos":2},"photos":[{"id":1},{"id":2}],"links":{}}""");
+
+        captured!.PhotosReturned.Should().Be(2);
+    }
+
+    [Fact]
     public async Task StatsResponse_DataObjectWithoutPhotoType_CountsZero()
     {
         var captured = await TrackRequest(
