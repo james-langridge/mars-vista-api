@@ -250,16 +250,22 @@ try
         using var checkScope = host.Services.CreateScope();
         var monotonicityCheck = checkScope.ServiceProvider
             .GetRequiredService<MarsVista.Core.Services.IEarthDateMonotonicityCheck>();
-        var violations = await monotonicityCheck.CountViolationsAsync();
-        if (violations > 0)
+        var invariant = await monotonicityCheck.CheckAsync();
+        if (invariant.OrderingViolations > 0)
         {
             Log.Error(
                 "sol/earth_date ordering violations detected: {Violations} sol boundaries out of order - the API's sol-first earth_date sort no longer preserves earth_date order",
-                violations);
+                invariant.OrderingViolations);
         }
-        else
+        if (invariant.NullEarthDates > 0)
         {
-            Log.Information("sol/earth_date ordering invariant holds (0 violations)");
+            Log.Error(
+                "photos with NULL earth_date detected: {Count} - invisible to the ordering check and ordered differently by the sol-prefixed sort than by a plain earth_date sort",
+                invariant.NullEarthDates);
+        }
+        if (invariant.OrderingViolations == 0 && invariant.NullEarthDates == 0)
+        {
+            Log.Information("sol/earth_date ordering invariant holds (0 violations, 0 NULLs)");
         }
     }
     catch (Exception ex)
