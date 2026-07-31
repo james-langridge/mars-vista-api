@@ -13,14 +13,31 @@ using Serilog;
 using Serilog.Formatting.Compact;
 
 // Configure Serilog
-Log.Logger = new LoggerConfiguration()
+var loggerConfiguration = new LoggerConfiguration()
     .MinimumLevel.Information()
     // Silence EF Core's per-command logging (matches the API config) so scrape
     // and backfill progress is not buried under a flood of SQL command logs.
     .MinimumLevel.Override("Microsoft.EntityFrameworkCore", Serilog.Events.LogEventLevel.Warning)
     .Enrich.FromLogContext()
-    .WriteTo.Console(new CompactJsonFormatter())
-    .CreateLogger();
+    .WriteTo.Console(new CompactJsonFormatter());
+
+// Error-level events go to Sentry so scrape failures, retention failures, and
+// data-quality alarms are actually seen - Railway console logs are not
+// actively watched. Without SENTRY_DSN (e.g. local runs) logging is
+// console-only, matching the API's opt-in behavior.
+var sentryDsn = Environment.GetEnvironmentVariable("SENTRY_DSN");
+if (!string.IsNullOrEmpty(sentryDsn))
+{
+    loggerConfiguration = loggerConfiguration.WriteTo.Sentry(options =>
+    {
+        options.Dsn = sentryDsn;
+        options.MinimumEventLevel = Serilog.Events.LogEventLevel.Error;
+        options.MinimumBreadcrumbLevel = Serilog.Events.LogEventLevel.Information;
+        options.Environment = Environment.GetEnvironmentVariable("RAILWAY_ENVIRONMENT_NAME") ?? "production";
+    });
+}
+
+Log.Logger = loggerConfiguration.CreateLogger();
 
 try
 {
