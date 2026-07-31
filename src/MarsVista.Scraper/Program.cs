@@ -80,6 +80,11 @@ try
     builder.Services.AddScoped<MarsVista.Core.Services.IUsageEventRetentionService,
         MarsVista.Core.Services.UsageEventRetentionService>();
 
+    // Data-quality tripwire for the API's sol-first earth_date sort; see the
+    // post-scrape maintenance block below.
+    builder.Services.AddScoped<MarsVista.Core.Services.IEarthDateMonotonicityCheck,
+        MarsVista.Core.Services.EarthDateMonotonicityCheck>();
+
     // Panorama pre-compute services (backfill mode + daily incremental refresh)
     builder.Services.AddScoped<MarsVista.Core.Services.PanoramaDetector>();
     builder.Services.AddScoped<MarsVista.Core.Services.IPanoramaTableBuilder,
@@ -233,6 +238,33 @@ try
     catch (Exception ex)
     {
         Log.Error(ex, "Usage-event retention failed (scrape result unaffected)");
+    }
+
+    // Data-quality tripwire: the API's sol-first earth_date sort optimization
+    // is order-preserving only while sol/earth_date stay monotone per rover;
+    // current scrapers derive earth_date from NASA timestamps, which have
+    // produced sol-misaligned values before. Loud here, on the run that
+    // ingests, instead of silently reordering API responses.
+    try
+    {
+        using var checkScope = host.Services.CreateScope();
+        var monotonicityCheck = checkScope.ServiceProvider
+            .GetRequiredService<MarsVista.Core.Services.IEarthDateMonotonicityCheck>();
+        var violations = await monotonicityCheck.CountViolationsAsync();
+        if (violations > 0)
+        {
+            Log.Error(
+                "sol/earth_date ordering violations detected: {Violations} sol boundaries out of order - the API's sol-first earth_date sort no longer preserves earth_date order",
+                violations);
+        }
+        else
+        {
+            Log.Information("sol/earth_date ordering invariant holds (0 violations)");
+        }
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "sol/earth_date monotonicity check failed (scrape result unaffected)");
     }
 
     Log.Information("Mars Vista Scraper finished");
