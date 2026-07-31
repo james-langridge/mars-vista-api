@@ -211,12 +211,94 @@ public class PhotoQuerySqlGenerationTests : IntegrationTestBase
 
         foreach (var sql in dataSql)
         {
-            // EF emits no keyword for ascending, so sol must be followed
-            // directly by the comma.
+            // EF emits no keyword for ascending, so both keys must be followed
+            // directly by a comma / end - not DESC.
             sql.Should().MatchRegex(
-                @"ORDER BY\s+\S*\.?""?sol""?\s*,\s*\S*\.?""?earth_date""?",
-                "ascending earth_date must get an ascending sol prefix");
+                @"ORDER BY\s+\S*\.?""?sol""?\s*,\s*\S*\.?""?earth_date""?(?!\s+DESC)",
+                "ascending earth_date must get an ascending sol prefix, both ascending");
         }
+    }
+
+    [Fact]
+    public async Task SingleRoverExplicitDateTakenAscending_GetsAscendingSolPrefix()
+    {
+        var dataSql = await CaptureOrderedSql("curiosity", new List<SortField>
+        {
+            new() { Field = "date_taken_utc", Direction = SortDirection.Ascending },
+        });
+
+        foreach (var sql in dataSql)
+        {
+            sql.Should().MatchRegex(
+                @"ORDER BY\s+\S*\.?""?sol""?\s*,\s*\S*\.?""?date_taken_utc""?(?!\s+DESC)",
+                "ascending date_taken_utc must get an ascending sol prefix, both ascending");
+        }
+    }
+
+    [Fact]
+    public async Task SingleRoverDateTakenSortWithNavigationTail_KeepsJoinedTail()
+    {
+        var dataSql = await CaptureOrderedSql("curiosity", new List<SortField>
+        {
+            new() { Field = "date_taken_utc", Direction = SortDirection.Descending },
+            new() { Field = "camera", Direction = SortDirection.Ascending },
+        });
+
+        foreach (var sql in dataSql)
+        {
+            // The camera tail sorts on the joined cameras.name; the sol seed
+            // must not disturb how the navigation tail is composed.
+            sql.Should().MatchRegex(
+                @"ORDER BY\s+\S*\.?""?sol""?\s+DESC\s*,\s*\S*\.?""?date_taken_utc""?\s+DESC\s*,\s*\S*\.?""?name""?",
+                "a navigation-property tail must follow the sol prefix intact");
+        }
+    }
+
+    [Fact]
+    public async Task SingleRoverExplicitDateTakenSort_SolWinsOverDiscordantDate()
+    {
+        // Pins the accepted trade-off consciously for the EXPLICIT sort, not
+        // just the default: where sol and timestamp disagree (the 17
+        // early-Perseverance boundary anomalies in production), sol-attributed
+        // order wins even though the caller literally asked for timestamp
+        // order. Under a pure -date_taken_utc sort these would come back
+        // reversed.
+        var now = DateTime.UtcNow;
+        DbContext.Photos.AddRange(
+            new Photo
+            {
+                NasaId = "XDIS-SOL-WINS", ImgSrcFull = "x", ImgSrcLarge = "x", ImgSrcMedium = "x", ImgSrcSmall = "x",
+                Sol = 3100, EarthDate = new DateTime(2013, 7, 1, 0, 0, 0, DateTimeKind.Utc),
+                DateTakenUtc = new DateTime(2013, 7, 1, 10, 0, 0, DateTimeKind.Utc),
+                SampleType = "Full", RoverId = 1, CameraId = 1,
+                CreatedAt = now, UpdatedAt = now,
+            },
+            new Photo
+            {
+                NasaId = "XDIS-DATE-LOSES", ImgSrcFull = "x", ImgSrcLarge = "x", ImgSrcMedium = "x", ImgSrcSmall = "x",
+                Sol = 3000, EarthDate = new DateTime(2015, 7, 1, 0, 0, 0, DateTimeKind.Utc),
+                DateTakenUtc = new DateTime(2015, 7, 1, 10, 0, 0, DateTimeKind.Utc),
+                SampleType = "Full", RoverId = 1, CameraId = 1,
+                CreatedAt = now, UpdatedAt = now,
+            });
+        await DbContext.SaveChangesAsync();
+
+        var parameters = new PhotoQueryParameters
+        {
+            Rovers = "curiosity",
+            RoverList = new List<string> { "curiosity" },
+            SolMin = 3000, SolMax = 3200,
+            SortFields = new List<SortField>
+            {
+                new() { Field = "date_taken_utc", Direction = SortDirection.Descending },
+            },
+            Page = 1, PerPage = 10,
+        };
+
+        var response = await _photoQueryService.QueryPhotosAsync(parameters, default);
+
+        response.Data.Select(p => p.Attributes!.NasaId).Should().Equal(
+            "XDIS-SOL-WINS", "XDIS-DATE-LOSES");
     }
 
     [Fact]

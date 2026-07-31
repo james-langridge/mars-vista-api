@@ -421,10 +421,10 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
         // the planner to backward-scan ix_photos_sol (4 GB of buffer reads per call).
         // Scalar = is also critical for the single-rover case (the planner does not
         // use ix_photos_rover_id_sol_covering when it sees `rover_id = ANY(ARRAY[x])`).
-        // NOTE: IsSingleRoverQuery repeats this resolution to pick the default sort;
-        // the sol-first sort is only valid when this filter matches exactly one
-        // rover, so any change to how rover ids are resolved here must be
-        // mirrored there.
+        // NOTE: IsSingleRoverQuery repeats this resolution to gate the sol-first
+        // default sort AND the explicit-sort sol prefix; both are only valid
+        // when this filter matches exactly one rover, so any change to how
+        // rover ids are resolved here must be mirrored there.
         if (parameters.RoverList.Count > 0)
         {
             var roverIds = _referenceCache.GetRoverIdsByNames(parameters.RoverList);
@@ -657,18 +657,33 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
         && _referenceCache.GetRoverIdsByNames(parameters.RoverList).Count == 1;
 
     /// <summary>
-    /// True when prefixing sol to the requested sort can only refine ties the
-    /// caller left unspecified, never reorder what they asked for. Holds for
-    /// date_taken_utc-first sorts (within one rover, sol order is timestamp
-    /// order; identical timestamps spanning two sols are a 27-in-1.5M data
-    /// quirk) and for a lone earth_date sort (earth_date is exactly
-    /// sol-monotone in the data - it derives from NASA's per-sol attribution).
+    /// True when a single-rover query's explicit sort should be served with a
+    /// sol prefix. The two included cases rest on different arguments:
+    ///
+    /// date_taken_utc-first sorts (any tail): within one rover, sol order is
+    /// timestamp order EXCEPT at 17 early-Perseverance sol boundaries whose
+    /// timestamps overlap the neighbouring sol (NASA data errors, up to 17
+    /// days adrift) - there the prefix genuinely inverts the literal request.
+    /// Accepted trade-off, same as DECISION-023 made for the default sort:
+    /// those timestamps are unreliable, sol order matches NASA's mission
+    /// attribution, and default and explicit timestamp sorts stay identical.
+    /// It does mean strict raw-timestamp order across those boundaries is not
+    /// obtainable for a single-rover query. An explicit tail is preserved
+    /// intact except for 27 (rover, timestamp) groups that span two sols.
+    ///
+    /// A lone earth_date sort: order-preserving on all current data - zero
+    /// sol/earth_date ordering violations on any rover (legacy rows carry
+    /// NASA's sol-aligned attribution; rows from the current scrapers derive
+    /// earth_date from date_taken_utc). That invariant is empirical, not
+    /// structural, so the daily scrape tripwires it (EarthDateMonotonicityCheck).
+    ///
     /// earth_date with an explicit tiebreak is excluded: a sol spans two Earth
     /// dates, so adjacent sols share earth_dates and the prefix would override
     /// the caller's tiebreak for same-date photos.
     /// </summary>
-    private static bool SolPrefixPreservesRequestedOrder(List<SortField> sortFields) =>
-        sortFields[0].Field switch
+    private static bool ShouldPrefixSolToExplicitSort(List<SortField> sortFields) =>
+        sortFields.Count > 0
+        && sortFields[0].Field switch
         {
             "date_taken_utc" => true,
             "earth_date" => sortFields.Count == 1,
@@ -713,7 +728,7 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
         // measured); with the sol prefix the covering index satisfies the
         // ORDER BY outright (0.13 ms measured). Seeding orderedQuery here
         // makes the loop below append every requested field unchanged.
-        if (IsSingleRoverQuery(parameters) && SolPrefixPreservesRequestedOrder(parameters.SortFields))
+        if (IsSingleRoverQuery(parameters) && ShouldPrefixSolToExplicitSort(parameters.SortFields))
         {
             orderedQuery = parameters.SortFields[0].Direction == SortDirection.Descending
                 ? query.OrderByDescending(p => p.Sol)
