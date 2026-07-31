@@ -157,7 +157,7 @@ public class PhotoQuerySqlGenerationTests : IntegrationTestBase
         foreach (var sql in dataSql)
         {
             sql.Should().NotMatchRegex(
-                @"ORDER BY\s+\S*\.?""?sol""?",
+                @"ORDER BY[\s\S]*\bsol\b",
                 "multi-rover queries must not sort by sol - sols are not comparable across rovers");
         }
     }
@@ -332,7 +332,7 @@ public class PhotoQuerySqlGenerationTests : IntegrationTestBase
             // Adjacent sols share earth_dates, so a sol prefix would override
             // the caller's camera tiebreak for same-date photos.
             sql.Should().NotMatchRegex(
-                @"ORDER BY\s+\S*\.?""?sol""?",
+                @"ORDER BY[\s\S]*\bsol\b",
                 "earth_date with an explicit tiebreak must be honoured exactly as given");
         }
     }
@@ -348,7 +348,7 @@ public class PhotoQuerySqlGenerationTests : IntegrationTestBase
         foreach (var sql in dataSql)
         {
             sql.Should().NotMatchRegex(
-                @"ORDER BY\s+\S*\.?""?sol""?",
+                @"ORDER BY[\s\S]*\bsol\b",
                 "sols are not comparable across rovers");
         }
     }
@@ -364,7 +364,7 @@ public class PhotoQuerySqlGenerationTests : IntegrationTestBase
         foreach (var sql in dataSql)
         {
             sql.Should().NotMatchRegex(
-                @"ORDER BY\s+\S*\.?""?sol""?",
+                @"ORDER BY[\s\S]*\bsol\b",
                 "only date-family sorts benefit from a sol prefix");
         }
     }

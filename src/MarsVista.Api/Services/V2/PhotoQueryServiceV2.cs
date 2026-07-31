@@ -647,10 +647,12 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
 
     /// <summary>
     /// True when the query's rover filter resolves to exactly one rover, which
-    /// is what makes the sol-first default sort equivalent to date order. Must
-    /// stay consistent with BuildQuery's rover filter: both resolve the same
-    /// RoverList through the same cache, so within a request they cannot
-    /// disagree - a change to either resolution must be mirrored in the other.
+    /// is what makes sol order equivalent to date order - the precondition for
+    /// both the sol-first default sort and the explicit-sort sol prefix
+    /// (ShouldPrefixSolToExplicitSort). Must stay consistent with BuildQuery's
+    /// rover filter: both resolve the same RoverList through the same cache,
+    /// so within a request they cannot disagree - a change to either
+    /// resolution must be mirrored in the other.
     /// </summary>
     private bool IsSingleRoverQuery(PhotoQueryParameters parameters) =>
         parameters.RoverList.Count > 0
@@ -672,10 +674,13 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
     /// intact except for 27 (rover, timestamp) groups that span two sols.
     ///
     /// A lone earth_date sort: order-preserving on all current data - zero
-    /// sol/earth_date ordering violations on any rover (legacy rows carry
-    /// NASA's sol-aligned attribution; rows from the current scrapers derive
-    /// earth_date from date_taken_utc). That invariant is empirical, not
-    /// structural, so the daily scrape tripwires it (EarthDateMonotonicityCheck).
+    /// sol/earth_date ordering violations AND zero NULL earth_dates on any
+    /// rover (legacy rows carry NASA's sol-aligned attribution; rows from the
+    /// current scrapers derive earth_date from date_taken_utc). Both
+    /// preconditions matter: a NULL row sorts NULLS-first under a plain
+    /// earth_date DESC but inside its sol group under the prefixed sort. The
+    /// invariant is empirical, not structural, so the daily scrape tripwires
+    /// both counts (EarthDateMonotonicityCheck).
     ///
     /// earth_date with an explicit tiebreak is excluded: a sol spans two Earth
     /// dates, so adjacent sols share earth_dates and the prefix would override
