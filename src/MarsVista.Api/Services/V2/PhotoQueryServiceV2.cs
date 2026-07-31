@@ -657,6 +657,25 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
         && _referenceCache.GetRoverIdsByNames(parameters.RoverList).Count == 1;
 
     /// <summary>
+    /// True when prefixing sol to the requested sort can only refine ties the
+    /// caller left unspecified, never reorder what they asked for. Holds for
+    /// date_taken_utc-first sorts (within one rover, sol order is timestamp
+    /// order; identical timestamps spanning two sols are a 27-in-1.5M data
+    /// quirk) and for a lone earth_date sort (earth_date is exactly
+    /// sol-monotone in the data - it derives from NASA's per-sol attribution).
+    /// earth_date with an explicit tiebreak is excluded: a sol spans two Earth
+    /// dates, so adjacent sols share earth_dates and the prefix would override
+    /// the caller's tiebreak for same-date photos.
+    /// </summary>
+    private static bool SolPrefixPreservesRequestedOrder(List<SortField> sortFields) =>
+        sortFields[0].Field switch
+        {
+            "date_taken_utc" => true,
+            "earth_date" => sortFields.Count == 1,
+            _ => false,
+        };
+
+    /// <summary>
     /// Apply sorting to the query
     /// </summary>
     private IQueryable<Photo> ApplySorting(IQueryable<Photo> query, PhotoQueryParameters parameters)
@@ -685,6 +704,21 @@ public class PhotoQueryServiceV2 : IPhotoQueryServiceV2
         }
 
         IOrderedQueryable<Photo>? orderedQuery = null;
+
+        // Explicit date-family sorts get the same sol prefix as the default
+        // sort, in the requested direction, when the prefix cannot change the
+        // order the caller observes. Same planner pathology, same cure:
+        // explicit -earth_date over a wide sol range backward-scanned
+        // ix_photos_rover_id_earth_date discarding 639K rows (2,010 ms
+        // measured); with the sol prefix the covering index satisfies the
+        // ORDER BY outright (0.13 ms measured). Seeding orderedQuery here
+        // makes the loop below append every requested field unchanged.
+        if (IsSingleRoverQuery(parameters) && SolPrefixPreservesRequestedOrder(parameters.SortFields))
+        {
+            orderedQuery = parameters.SortFields[0].Direction == SortDirection.Descending
+                ? query.OrderByDescending(p => p.Sol)
+                : query.OrderBy(p => p.Sol);
+        }
 
         foreach (var sortField in parameters.SortFields)
         {
