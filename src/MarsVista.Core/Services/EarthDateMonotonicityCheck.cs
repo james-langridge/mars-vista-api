@@ -14,19 +14,28 @@ namespace MarsVista.Core.Services;
 /// crossing UTC midnight would break the invariant silently. The daily scrape
 /// runs this check so a break is loud instead.
 /// </summary>
+/// <summary>
+/// Result of the invariant check. <paramref name="OrderingViolations"/> counts
+/// consecutive-sol pairs (per rover) where the earlier sol's latest earth_date
+/// exceeds the later sol's earliest. <paramref name="NullEarthDates"/> counts
+/// photos with no earth_date at all - counted separately because SQL NULL
+/// comparisons silently drop out of the ordering check, so NULLs would
+/// otherwise blind it (an all-NULL sol even masks a real violation across it).
+/// The invariant holds only when both are zero.
+/// </summary>
+public record EarthDateInvariantResult(int OrderingViolations, int NullEarthDates);
+
 public interface IEarthDateMonotonicityCheck
 {
     /// <summary>
-    /// Counts pairs of consecutive sols (per rover) where the earlier sol's
-    /// latest earth_date exceeds the later sol's earliest. Zero means the
-    /// invariant holds.
+    /// Checks the sol/earth_date ordering invariant across all photos.
     /// </summary>
-    Task<int> CountViolationsAsync(CancellationToken cancellationToken = default);
+    Task<EarthDateInvariantResult> CheckAsync(CancellationToken cancellationToken = default);
 }
 
 public class EarthDateMonotonicityCheck : IEarthDateMonotonicityCheck
 {
-    private const string ViolationCountSql = @"
+    private const string InvariantCheckSql = @"
 WITH per_sol AS (
     SELECT rover_id, sol, MIN(earth_date) AS min_date, MAX(earth_date) AS max_date
     FROM photos
@@ -37,10 +46,13 @@ paired AS (
            LEAD(min_date) OVER (PARTITION BY rover_id ORDER BY sol) AS next_sol_min_date
     FROM per_sol
 )
-SELECT COUNT(*) FROM paired WHERE max_date > next_sol_min_date";
+SELECT
+    (SELECT COUNT(*) FROM paired WHERE max_date > next_sol_min_date) AS ordering_violations,
+    (SELECT COUNT(*) FROM photos WHERE earth_date IS NULL) AS null_earth_dates";
 
-    // Aggregates ~1.5M rows via the rover/sol covering index; well under this,
-    // but the scrape runs unattended so give it headroom.
+    // One aggregate pass over ~1.5M rows (seq scan or index-only scan on the
+    // rover/sol covering index; ~100 ms class either way) - the timeout is
+    // generous headroom because the scrape runs unattended.
     private const int CommandTimeoutSeconds = 120;
 
     private readonly MarsVistaDbContext _context;
@@ -50,7 +62,7 @@ SELECT COUNT(*) FROM paired WHERE max_date > next_sol_min_date";
         _context = context;
     }
 
-    public async Task<int> CountViolationsAsync(CancellationToken cancellationToken = default)
+    public async Task<EarthDateInvariantResult> CheckAsync(CancellationToken cancellationToken = default)
     {
         var connection = _context.Database.GetDbConnection();
 
@@ -63,11 +75,14 @@ SELECT COUNT(*) FROM paired WHERE max_date > next_sol_min_date";
         try
         {
             await using var command = connection.CreateCommand();
-            command.CommandText = ViolationCountSql;
+            command.CommandText = InvariantCheckSql;
             command.CommandTimeout = CommandTimeoutSeconds;
 
-            var result = await command.ExecuteScalarAsync(cancellationToken);
-            return Convert.ToInt32(result);
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            await reader.ReadAsync(cancellationToken);
+            return new EarthDateInvariantResult(
+                Convert.ToInt32(reader.GetValue(0)),
+                Convert.ToInt32(reader.GetValue(1)));
         }
         finally
         {
