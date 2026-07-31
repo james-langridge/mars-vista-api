@@ -162,40 +162,156 @@ public class PhotoQuerySqlGenerationTests : IntegrationTestBase
         }
     }
 
+    // Explicit date-family sorts on single-rover queries get the same sol
+    // prefix as the default sort, in the requested direction - the prefix only
+    // refines ties the caller left unspecified (earth_date is verified
+    // perfectly sol-monotone in production; date_taken_utc modulo the known
+    // early-Perseverance anomalies). Sorts where the prefix could reorder an
+    // explicit tiebreak (earth_date with a tail) are left exactly as given.
+
     [Fact]
-    public async Task SingleRoverExplicitDateSort_KeepsDateOnlyOrder()
+    public async Task SingleRoverExplicitDateTakenSort_GetsSolPrefix()
+    {
+        var dataSql = await CaptureOrderedSql("curiosity", new List<SortField>
+        {
+            new() { Field = "date_taken_utc", Direction = SortDirection.Descending },
+        });
+
+        foreach (var sql in dataSql)
+        {
+            sql.Should().MatchRegex(
+                @"ORDER BY\s+\S*\.?""?sol""?\s+DESC\s*,\s*\S*\.?""?date_taken_utc""?\s+DESC",
+                "explicit -date_taken_utc on a single rover must be served sol-first");
+        }
+    }
+
+    [Fact]
+    public async Task SingleRoverExplicitEarthDateSort_GetsSolPrefix()
+    {
+        var dataSql = await CaptureOrderedSql("curiosity", new List<SortField>
+        {
+            new() { Field = "earth_date", Direction = SortDirection.Descending },
+        });
+
+        foreach (var sql in dataSql)
+        {
+            sql.Should().MatchRegex(
+                @"ORDER BY\s+\S*\.?""?sol""?\s+DESC\s*,\s*\S*\.?""?earth_date""?\s+DESC",
+                "explicit -earth_date on a single rover must be served sol-first");
+        }
+    }
+
+    [Fact]
+    public async Task SingleRoverExplicitEarthDateAscending_GetsAscendingSolPrefix()
+    {
+        var dataSql = await CaptureOrderedSql("curiosity", new List<SortField>
+        {
+            new() { Field = "earth_date", Direction = SortDirection.Ascending },
+        });
+
+        foreach (var sql in dataSql)
+        {
+            // EF emits no keyword for ascending, so sol must be followed
+            // directly by the comma.
+            sql.Should().MatchRegex(
+                @"ORDER BY\s+\S*\.?""?sol""?\s*,\s*\S*\.?""?earth_date""?",
+                "ascending earth_date must get an ascending sol prefix");
+        }
+    }
+
+    [Fact]
+    public async Task SingleRoverDateTakenSortWithTail_KeepsTailAfterSolPrefix()
+    {
+        var dataSql = await CaptureOrderedSql("curiosity", new List<SortField>
+        {
+            new() { Field = "date_taken_utc", Direction = SortDirection.Descending },
+            new() { Field = "id", Direction = SortDirection.Descending },
+        });
+
+        foreach (var sql in dataSql)
+        {
+            sql.Should().MatchRegex(
+                @"ORDER BY\s+\S*\.?""?sol""?\s+DESC\s*,\s*\S*\.?""?date_taken_utc""?\s+DESC\s*,\s*\S*\.?""?id""?\s+DESC",
+                "the caller's tiebreak tail must follow the sol prefix intact");
+        }
+    }
+
+    [Fact]
+    public async Task SingleRoverEarthDateSortWithTail_StaysAsGiven()
+    {
+        var dataSql = await CaptureOrderedSql("curiosity", new List<SortField>
+        {
+            new() { Field = "earth_date", Direction = SortDirection.Descending },
+            new() { Field = "camera", Direction = SortDirection.Ascending },
+        });
+
+        foreach (var sql in dataSql)
+        {
+            // Adjacent sols share earth_dates, so a sol prefix would override
+            // the caller's camera tiebreak for same-date photos.
+            sql.Should().NotMatchRegex(
+                @"ORDER BY\s+\S*\.?""?sol""?",
+                "earth_date with an explicit tiebreak must be honoured exactly as given");
+        }
+    }
+
+    [Fact]
+    public async Task MultiRoverExplicitEarthDateSort_StaysAsGiven()
+    {
+        var dataSql = await CaptureOrderedSql("curiosity,perseverance", new List<SortField>
+        {
+            new() { Field = "earth_date", Direction = SortDirection.Descending },
+        });
+
+        foreach (var sql in dataSql)
+        {
+            sql.Should().NotMatchRegex(
+                @"ORDER BY\s+\S*\.?""?sol""?",
+                "sols are not comparable across rovers");
+        }
+    }
+
+    [Fact]
+    public async Task SingleRoverNonDateSort_StaysAsGiven()
+    {
+        var dataSql = await CaptureOrderedSql("curiosity", new List<SortField>
+        {
+            new() { Field = "id", Direction = SortDirection.Descending },
+        });
+
+        foreach (var sql in dataSql)
+        {
+            sql.Should().NotMatchRegex(
+                @"ORDER BY\s+\S*\.?""?sol""?",
+                "only date-family sorts benefit from a sol prefix");
+        }
+    }
+
+    /// <summary>
+    /// Runs a query with the given rovers and explicit sort, returning the
+    /// captured ORDER BY SQL. The validator normally parses Sort into
+    /// SortFields before the service runs; tests set SortFields directly.
+    /// </summary>
+    private async Task<List<string>> CaptureOrderedSql(string rovers, List<SortField> sortFields)
     {
         SqlCapture.Clear();
 
         var parameters = new PhotoQueryParameters
         {
-            Rovers = "curiosity",
-            RoverList = new List<string> { "curiosity" },
-            // The validator normally parses Sort into SortFields before the
-            // service runs; the service only reads SortFields.
-            Sort = "-date_taken_utc",
-            SortFields = new List<SortField>
-            {
-                new() { Field = "date_taken_utc", Direction = SortDirection.Descending },
-            },
+            Rovers = rovers,
+            RoverList = rovers.Split(',').ToList(),
+            SortFields = sortFields,
             Page = 1, PerPage = 10,
         };
 
         await _photoQueryService.QueryPhotosAsync(parameters, default);
 
-        // An explicit sort is the caller's contract; only the default sort is
-        // rewritten to the sol-first equivalent.
         var dataSql = SqlCapture.ExecutedSql
             .Where(s => s.Contains("ORDER BY", StringComparison.OrdinalIgnoreCase))
             .ToList();
 
         dataSql.Should().NotBeEmpty();
-        foreach (var sql in dataSql)
-        {
-            sql.Should().NotMatchRegex(
-                @"ORDER BY\s+\S*\.?""?sol""?",
-                "explicit sort=-date_taken_utc must be honoured as given");
-        }
+        return dataSql;
     }
 
     [Fact]
