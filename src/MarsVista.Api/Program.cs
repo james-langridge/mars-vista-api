@@ -104,9 +104,14 @@ builder.Services.AddDbContext<MarsVistaDbContext>((serviceProvider, options) =>
             // Split queries for better performance with Include()
             npgsqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
 
-            // Command timeout: 120s for migrations (computed columns on 630K+ photos), 30s for queries
-            // Migrations run at startup, so longer timeout is acceptable
-            npgsqlOptions.CommandTimeout(120);
+            // Seconds. Bounds a single request's wait on the database: the
+            // slowest legitimate query observed in production is ~7 s, so this
+            // is headroom, not a target. Startup migrations need far longer and
+            // raise it on their own connection (see MigrateAsync below) rather
+            // than widening it for every request - a request that waits minutes
+            // holds a pool slot, and enough of those exhaust the pool and take
+            // the API down with the database.
+            npgsqlOptions.CommandTimeout(30);
 
             // Batch multiple operations
             npgsqlOptions.MaxBatchSize(100);
@@ -392,6 +397,10 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<MarsVistaDbContext>();
+    // Migrations are the one operation that legitimately runs for minutes -
+    // adding a computed column rewrites every row of a 1.5M-row table. Raised
+    // here so the request path can keep its short timeout.
+    dbContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(10));
     await dbContext.Database.MigrateAsync();
 }
 
