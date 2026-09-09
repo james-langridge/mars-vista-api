@@ -53,6 +53,19 @@ public class ForwardedHeadersPolicyTests
         context.Connection.RemoteIpAddress.Should().Be(IPAddress.Parse(expected));
     }
 
+    [Theory]
+    [InlineData("100.64.0.7", "https")]
+    [InlineData("10.140.54.74", "http")]
+    public async Task SchemeFollowsXForwardedProto_OnlyFromEdge(string remoteIp, string expectedScheme)
+    {
+        var context = Context(remoteIp, xRealIp: null);
+        context.Request.Headers["X-Forwarded-Proto"] = "https";
+
+        await Apply(context);
+
+        context.Request.Scheme.Should().Be(expectedScheme);
+    }
+
     // Documents the fallback rather than guarding the policy: no change to
     // Configure can make these rows fail.
     [Theory]
@@ -130,6 +143,7 @@ public class ForwardedHeadersPolicyTests
     private static DefaultHttpContext Context(string remoteIp, string? xRealIp)
     {
         var context = new DefaultHttpContext();
+        context.Request.Scheme = "http";
         context.Connection.RemoteIpAddress = IPAddress.Parse(remoteIp);
         if (xRealIp is not null)
         {
