@@ -4,13 +4,14 @@ using Microsoft.AspNetCore.HttpOverrides;
 namespace MarsVista.Api.Middleware;
 
 /// <summary>
-/// Restores the client address behind Railway's edge. The edge reports the
-/// client in <see cref="ClientAddressHeader"/> with no X-Forwarded-For chain,
-/// so the framework's forwarded-for slot is pointed at that header. The edge
-/// connects from the 100.64.0.0/10 range as observed in production logs
-/// (2026-09-09); only connections from that range are trusted to assert a
-/// client address, so private-network callers and anything else keep their
-/// connection address.
+/// Restores the client address and scheme behind Railway's edge, which
+/// terminates TLS and forwards plain HTTP. The edge reports the client in
+/// <see cref="ClientAddressHeader"/> with no X-Forwarded-For chain, so the
+/// framework's forwarded-for slot is pointed at that header, and the original
+/// scheme in X-Forwarded-Proto. The edge connects from the 100.64.0.0/10 range
+/// as observed in production logs (2026-09-09); only connections from that
+/// range are trusted to assert either, so private-network callers and
+/// anything else keep their connection address and scheme.
 /// </summary>
 internal static class ForwardedHeadersPolicy
 {
@@ -18,7 +19,7 @@ internal static class ForwardedHeadersPolicy
 
     internal static void Configure(ForwardedHeadersOptions options)
     {
-        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor;
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
         options.ForwardedForHeaderName = ClientAddressHeader;
         options.KnownNetworks.Add(new Microsoft.AspNetCore.HttpOverrides.IPNetwork(IPAddress.Parse("100.64.0.0"), 10));
     }
