@@ -383,6 +383,7 @@ if (app.Environment.IsDevelopment())
 // Configure the HTTP request pipeline.
 // First, so every later middleware and log line sees the client address.
 app.UseForwardedHeaders();
+app.Use(ForwardedHeadersPolicy.WarnOnUnconsumedClientAddress);
 
 // Enable Swagger in both development and production for API documentation
 app.UseSwagger();

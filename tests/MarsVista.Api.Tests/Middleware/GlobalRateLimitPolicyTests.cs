@@ -5,6 +5,7 @@ using MarsVista.Api.Middleware;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -123,6 +124,47 @@ public class GlobalRateLimitPolicyTests
             (await client.GetAsync("/api/v2/photos")).StatusCode.Should().Be(HttpStatusCode.OK, $"request {i + 1}");
         }
     }
+
+    [Fact]
+    public async Task Pipeline_ClientsBehindTheSameEdgeAddress_GetSeparateWindows()
+    {
+        using var host = await StartPipelineBehindEdge();
+        var server = host.GetTestServer();
+
+        for (var i = 0; i < 100; i++)
+        {
+            (await SendFromEdge(server, client: "203.0.113.9")).Response.StatusCode.Should().Be(200);
+        }
+
+        (await SendFromEdge(server, client: "203.0.113.9")).Response.StatusCode.Should().Be(429, "client A used its window");
+        (await SendFromEdge(server, client: "198.51.100.1")).Response.StatusCode.Should().Be(200, "client B has its own window");
+    }
+
+    /// <summary>Forwarded headers then the limiter, in the order Program.cs registers them.</summary>
+    private static Task<IHost> StartPipelineBehindEdge() =>
+        new HostBuilder()
+            .ConfigureWebHost(web => web
+                .UseTestServer()
+                .ConfigureServices(services =>
+                {
+                    services.Configure<ForwardedHeadersOptions>(ForwardedHeadersPolicy.Configure);
+                    services.AddRateLimiter(GlobalRateLimitPolicy.Configure);
+                })
+                .Configure(app =>
+                {
+                    app.UseForwardedHeaders();
+                    app.UseRateLimiter();
+                    app.Run(context => context.Response.WriteAsync("ok"));
+                }))
+            .StartAsync();
+
+    private static Task<HttpContext> SendFromEdge(TestServer server, string client) =>
+        server.SendAsync(context =>
+        {
+            context.Connection.RemoteIpAddress = IPAddress.Parse("100.64.0.7");
+            context.Request.Headers["X-Real-IP"] = client;
+            context.Request.Path = "/api/v2/photos";
+        });
 
     /// <summary>The limiter exactly as Program.cs builds it, over a trivial terminal handler.</summary>
     private static Task<IHost> StartPipeline() =>
