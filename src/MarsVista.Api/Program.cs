@@ -257,6 +257,7 @@ builder.Services.AddControllers()
     });
 
 builder.Services.AddRateLimiter(GlobalRateLimitPolicy.Configure);
+builder.Services.Configure<ForwardedHeadersOptions>(ForwardedHeadersPolicy.Configure);
 
 // Configure Swashbuckle for enhanced OpenAPI documentation
 builder.Services.AddEndpointsApiExplorer();
@@ -380,6 +381,9 @@ if (app.Environment.IsDevelopment())
 }
 
 // Configure the HTTP request pipeline.
+// First, so every later middleware and log line sees the client address.
+app.UseForwardedHeaders();
+
 // Enable Swagger in both development and production for API documentation
 app.UseSwagger();
 app.UseSwaggerUI(options =>
