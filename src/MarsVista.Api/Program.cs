@@ -260,21 +260,8 @@ builder.Services.AddControllers()
 
 builder.Services.AddRateLimiter(options =>
 {
-    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
-    {
-        // Get IP address for rate limiting
-        var ipAddress = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-
-        return RateLimitPartition.GetFixedWindowLimiter(
-            partitionKey: ipAddress,
-            factory: _ => new FixedWindowRateLimiterOptions
-            {
-                PermitLimit = 100,                          // 100 requests
-                Window = TimeSpan.FromMinutes(1),           // per minute
-                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-                QueueLimit = 0                              // no queueing
-            });
-    });
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(
+        GlobalRateLimitPartition.Resolve);
 
     // Customize response when rate limit is exceeded
     options.OnRejected = async (context, cancellationToken) =>
@@ -283,7 +270,7 @@ builder.Services.AddRateLimiter(options =>
         await context.HttpContext.Response.WriteAsJsonAsync(new
         {
             error = "Too Many Requests",
-            message = "Rate limit exceeded. Maximum 100 requests per minute per IP address.",
+            message = $"Rate limit exceeded. Maximum {GlobalRateLimitPartition.AnonymousPermitLimit} requests per minute per IP address without an API key.",
             retryAfter = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter)
                 ? retryAfter.TotalSeconds
                 : 60
