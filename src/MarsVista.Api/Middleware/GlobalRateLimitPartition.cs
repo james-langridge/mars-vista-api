@@ -16,7 +16,8 @@ public static class GlobalRateLimitPartition
 
     public static RateLimitPartition<string> Resolve(HttpContext context)
     {
-        if (context.Request.Headers.ContainsKey("X-API-Key"))
+        var apiKey = context.Request.Headers["X-API-Key"].FirstOrDefault();
+        if (!string.IsNullOrEmpty(apiKey) && UserApiKeyAuthenticationMiddleware.RequiresApiKey(context.Request.Path))
         {
             return RateLimitPartition.GetNoLimiter("keyed");
         }

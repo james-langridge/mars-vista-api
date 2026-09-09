@@ -28,8 +28,7 @@ public class UserApiKeyAuthenticationMiddleware
         IApiKeyService apiKeyService,
         IRateLimitService rateLimitService)
     {
-        // Skip authentication for these paths
-        if (ShouldSkipAuthentication(context.Request.Path))
+        if (!RequiresApiKey(context.Request.Path))
         {
             await _next(context);
             return;
@@ -174,11 +173,12 @@ public class UserApiKeyAuthenticationMiddleware
     }
 
     /// <summary>
-    /// Determines if authentication should be skipped for a given path.
+    /// Whether requests to this path are authenticated and quota-counted by
+    /// this middleware. The global rate limiter uses the same answer to decide
+    /// whether a keyed request is exempt from the per-IP window.
     /// </summary>
-    private static bool ShouldSkipAuthentication(PathString path)
+    internal static bool RequiresApiKey(PathString path)
     {
-        // Skip authentication for these paths
         var skippedPaths = new[]
         {
             "/health",
@@ -188,6 +188,6 @@ public class UserApiKeyAuthenticationMiddleware
             "/api/v1/statistics" // Public statistics for landing page
         };
 
-        return skippedPaths.Any(p => path.StartsWithSegments(p));
+        return !skippedPaths.Any(p => path.StartsWithSegments(p));
     }
 }
