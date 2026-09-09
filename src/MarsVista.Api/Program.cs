@@ -1,10 +1,8 @@
-using System.Threading.RateLimiting;
 using MarsVista.Core.Data;
 using MarsVista.Api.Data;
 using MarsVista.Api.Middleware;
 using MarsVista.Api.Services;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
-using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.OpenApi.Models;
@@ -258,25 +256,7 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
     });
 
-builder.Services.AddRateLimiter(options =>
-{
-    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(
-        GlobalRateLimitPartition.Resolve);
-
-    // Customize response when rate limit is exceeded
-    options.OnRejected = async (context, cancellationToken) =>
-    {
-        context.HttpContext.Response.StatusCode = 429;
-        await context.HttpContext.Response.WriteAsJsonAsync(new
-        {
-            error = "Too Many Requests",
-            message = $"Rate limit exceeded. Maximum {GlobalRateLimitPartition.AnonymousPermitLimit} requests per minute per IP address without an API key.",
-            retryAfter = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter)
-                ? retryAfter.TotalSeconds
-                : 60
-        }, cancellationToken);
-    };
-});
+builder.Services.AddRateLimiter(GlobalRateLimitPolicy.Configure);
 
 // Configure Swashbuckle for enhanced OpenAPI documentation
 builder.Services.AddEndpointsApiExplorer();
