@@ -2,7 +2,7 @@
   "openapi": "3.0.1",
   "info": {
     "title": "Mars Vista API",
-    "description": "Unified API for NASA Mars rover photos with advanced filtering, location queries, and scientific metadata. Access 680,000+ photos from Curiosity, Perseverance, Opportunity, and Spirit rovers.",
+    "description": "Unified API for NASA Mars rover photos with advanced filtering, location queries, and scientific metadata. Covers photos from the Curiosity, Perseverance, Opportunity, and Spirit rovers.",
     "contact": {
       "name": "Mars Vista API",
       "url": "https://marsvista.dev"
