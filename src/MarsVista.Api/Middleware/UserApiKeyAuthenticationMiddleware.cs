@@ -1,4 +1,5 @@
 using MarsVista.Core.Data;
+using MarsVista.Core.Entities;
 using MarsVista.Api.Services;
 using Microsoft.EntityFrameworkCore;
 
@@ -148,28 +149,41 @@ public class UserApiKeyAuthenticationMiddleware
         context.Items["UserRole"] = apiKeyRecord.Role;
         context.Items["ApiKeyId"] = apiKeyRecord.Id;
 
-        // Update last_used_at timestamp (fire and forget - don't block request)
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                using var scope = context.RequestServices.CreateScope();
-                var db = scope.ServiceProvider.GetRequiredService<MarsVistaDbContext>();
-                var key = await db.ApiKeys.FindAsync(apiKeyRecord.Id);
-                if (key != null)
-                {
-                    key.LastUsedAt = DateTime.UtcNow;
-                    await db.SaveChangesAsync();
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to update last_used_at for API key {Id}", apiKeyRecord.Id);
-            }
-        });
+        await RecordLastUsedAsync(dbContext, apiKeyRecord);
 
         // Valid API key - continue to next middleware
         await _next(context);
+    }
+
+    /// <summary>
+    /// Sets last_used_at on the key to now. It writes at most once a minute
+    /// per key, so a busy key does not update its row on every request.
+    /// ExecuteUpdateAsync sends one UPDATE statement. It works with the
+    /// no-tracking default of the DbContext, where a loaded entity is not
+    /// tracked and SaveChangesAsync writes nothing. A failed write is logged
+    /// and does not fail the request.
+    /// </summary>
+    private async Task RecordLastUsedAsync(MarsVistaDbContext dbContext, ApiKey apiKeyRecord)
+    {
+        var now = DateTime.UtcNow;
+        var oneMinuteAgo = now.AddMinutes(-1);
+
+        var usedWithinLastMinute = apiKeyRecord.LastUsedAt != null && apiKeyRecord.LastUsedAt > oneMinuteAgo;
+        if (usedWithinLastMinute)
+        {
+            return;
+        }
+
+        try
+        {
+            await dbContext.ApiKeys
+                .Where(k => k.Id == apiKeyRecord.Id)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(k => k.LastUsedAt, now));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to update last_used_at for API key {Id}", apiKeyRecord.Id);
+        }
     }
 
     /// <summary>
